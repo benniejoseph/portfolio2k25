@@ -31,8 +31,8 @@ const ModernHero: React.FC = () => {
 
   const socialLinks = [
     { icon: FiGithub, href: 'https://github.com/benniejoseph', label: 'GitHub' },
-    { icon: FiLinkedin, href: 'https://linkedin.com/in/benniejoseph', label: 'LinkedIn' },
-    { icon: FiMail, href: 'mailto:hello@benniejoseph.com', label: 'Email' },
+    { icon: FiLinkedin, href: 'https://linkedin.com/in/benniejosephrichard', label: 'LinkedIn' },
+    { icon: FiMail, href: 'mailto:benniejoseph.r@gmail.com', label: 'Email' },
   ];
 
   return (
@@ -63,7 +63,7 @@ const ModernHero: React.FC = () => {
                   className="relative w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold z-10"
                   style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                 >
-                  BJ
+                  BJR
                 </div>
               </div>
             </motion.div>
@@ -93,8 +93,8 @@ const ModernHero: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.6, type: "spring", bounce: 0.4 }}
             >
-              <span className="gradient-text block">Bennie</span>
-              <span className="gradient-text block">Joseph</span>
+              <span className="gradient-text block">Bennie J</span>
+              <span className="gradient-text block">Richard</span>
             </motion.h1>
 
             {/* Professional title with typewriter effect */}
@@ -106,7 +106,7 @@ const ModernHero: React.FC = () => {
               transition={{ duration: 0.8, delay: 1 }}
             >
               <span className="font-mono text-blue-500">{'<'}</span>
-              <span className="mx-2">Salesforce Senior Consultant</span>
+              <span className="mx-2">Full Stack Application Developer</span>
               <span className="font-mono text-blue-500">{'/>'}</span>
             </motion.h2>
 
@@ -121,8 +121,8 @@ const ModernHero: React.FC = () => {
               Specializing in integrating Salesforce with{' '}
               <span className="gradient-text font-semibold">Generative AI</span>, 
               creating intelligent solutions that transform business processes. 
-              Expert in <span className="gradient-text font-semibold">React</span>, 
-              <span className="gradient-text font-semibold"> Next.js</span>, and 
+              Expert in <span className="gradient-text font-semibold">Lightning Web Components, Apex, </span>, 
+              <span className="gradient-text font-semibold"> JavaScript, Python, React Framewok</span>, and 
               enterprise-scale development.
             </motion.p>
 

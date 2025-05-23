@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-// import { FaBriefcase } from 'react-icons/fa';
+import { FiBriefcase, FiMapPin, FiCalendar, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 // Updated workData structure based on the reference image
 const workData = [
   {
     company: 'Deloitte',
-    logo: '/images/deloitte.webp', // Add this image to your public/images/
+    logo: '/images/deloitte.webp',
     duration: 'Full-time · 4 yrs 1 mo',
     roles: [
       {
@@ -37,7 +37,7 @@ const workData = [
   },
   {
     company: 'Accenture',
-    logo: '/images/acn.webp', // Add this image to your public/images/
+    logo: '/images/acn.webp',
     duration: '4 yrs 6 mos',
     roles: [
       {
@@ -76,7 +76,6 @@ const workData = [
     ]
   }
 ];
-// --- END OF REPLACE SECTION ---
 
 const Work = () => {
   const [open, setOpen] = useState<{ companyIdx: number; roleIdx: number } | null>(null);
@@ -90,85 +89,288 @@ const Work = () => {
   };
 
   return (
-    <section id="work" className="relative min-h-[100vh] py-20 bg-gradient-to-br from-blue-900 via-sky-900/60 to-purple-900/80 flex flex-col items-center overflow-x-hidden">
-      {/* Consistent Heading */}
-      <div className="w-full max-w-4xl mx-auto text-center mb-16">
-        <motion.h2
-          className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent"
-          initial={{ opacity: 0, y: -20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.6 }}
-        >
-          My Career Journey
-        </motion.h2>
+    <section id="work" className="section relative overflow-hidden">
+      <div className="container">
+        {/* Section Header */}
         <motion.div
-          className="h-1 w-20 bg-gradient-to-r from-blue-600 to-sky-500 mx-auto mt-4 rounded-full"
-          initial={{ width: 0 }}
-          whileInView={{ width: 80 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        />
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.8 }}
+        >
+          <motion.div
+            className="inline-flex items-center gap-3 mb-6"
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="p-3 glass rounded-xl">
+              <FiBriefcase 
+                size={24} 
+                style={{ color: 'var(--color-accent-primary)' }}
+              />
+            </div>
+            <span 
+              className="font-mono text-sm font-medium tracking-wider uppercase"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
+              Experience
+            </span>
+          </motion.div>
+
+          <motion.h2
+            className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6"
+            style={{ color: 'var(--color-text-primary)' }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
+            Professional{' '}
+            <span className="gradient-text">Journey</span>
+          </motion.h2>
+
+          <motion.p
+            className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            My career progression through leading consulting firms, building enterprise solutions and driving digital transformation.
+          </motion.p>
+        </motion.div>
+
+        {/* Work Experience Timeline */}
+        <div className="max-w-4xl mx-auto space-y-8">
+          {workData.map((company, cIdx) => (
+            <motion.div
+              key={cIdx}
+              className="glass p-8 rounded-2xl relative overflow-hidden group"
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.8, delay: cIdx * 0.2 }}
+            >
+              {/* Company Header */}
+              <div className="flex items-start gap-6 mb-8">
+                {company.logo && (
+                  <motion.div
+                    className="p-4 glass rounded-xl shrink-0"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Image 
+                      src={company.logo} 
+                      alt={company.company} 
+                      width={48} 
+                      height={48} 
+                      className="object-contain rounded-lg" 
+                    />
+                  </motion.div>
+                )}
+                
+                <div className="flex-1">
+                  <h3 
+                    className="text-2xl md:text-3xl font-heading font-bold mb-2"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {company.company}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FiCalendar 
+                      size={16} 
+                      style={{ color: 'var(--color-accent-primary)' }}
+                    />
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      {company.duration}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Roles */}
+              <div className="space-y-6">
+                {company.roles.map((role, rIdx) => (
+                  <motion.div
+                    key={rIdx}
+                    className="relative"
+                    initial={{ opacity: 0, x: -30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: (cIdx * 0.1) + (rIdx * 0.1) }}
+                  >
+                    <div 
+                      className="neomorph p-6 cursor-pointer transition-all duration-300 hover:shadow-xl"
+                      onClick={() => handleToggle(cIdx, rIdx)}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h4 
+                            className="text-xl font-semibold mb-2"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {role.title}
+                          </h4>
+                          
+                          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 mb-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              <FiCalendar 
+                                size={14} 
+                                style={{ color: 'var(--color-accent-primary)' }}
+                              />
+                              <span style={{ color: 'var(--color-text-secondary)' }}>
+                                {role.period}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm">
+                              <FiMapPin 
+                                size={14} 
+                                style={{ color: 'var(--color-accent-primary)' }}
+                              />
+                              <span style={{ color: 'var(--color-text-tertiary)' }}>
+                                {role.location}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <p 
+                            className="text-sm mb-4 leading-relaxed"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {role.description}
+                          </p>
+                          
+                          {/* Skills */}
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {role.skills.map((skill, sIdx) => (
+                              <span
+                                key={sIdx}
+                                className="px-3 py-1 text-xs font-medium rounded-full"
+                                style={{
+                                  background: 'var(--color-accent-gradient)',
+                                  color: 'white'
+                                }}
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <motion.button
+                          className="p-2 rounded-lg transition-colors duration-300"
+                          style={{ 
+                            backgroundColor: 'var(--color-bg-tertiary)',
+                            color: 'var(--color-text-primary)'
+                          }}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          {open && open.companyIdx === cIdx && open.roleIdx === rIdx ? (
+                            <FiChevronUp size={20} />
+                          ) : (
+                            <FiChevronDown size={20} />
+                          )}
+                        </motion.button>
+                      </div>
+                      
+                      {/* Expandable Details */}
+                      <AnimatePresence initial={false}>
+                        {open && open.companyIdx === cIdx && open.roleIdx === rIdx && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.4, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div 
+                              className="pt-4 mt-4 border-t"
+                              style={{ borderColor: 'var(--color-border)' }}
+                            >
+                              <h5 
+                                className="font-semibold mb-3"
+                                style={{ color: 'var(--color-text-primary)' }}
+                              >
+                                Key Achievements:
+                              </h5>
+                              <ul className="space-y-2">
+                                {role.details.map((detail, dIdx) => (
+                                  <motion.li
+                                    key={dIdx}
+                                    className="flex items-start gap-3"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3, delay: dIdx * 0.1 }}
+                                  >
+                                    <div 
+                                      className="w-2 h-2 rounded-full mt-2 shrink-0"
+                                      style={{ backgroundColor: 'var(--color-accent-primary)' }}
+                                    />
+                                    <span 
+                                      className="text-sm leading-relaxed"
+                                      style={{ color: 'var(--color-text-secondary)' }}
+                                    >
+                                      {detail}
+                                    </span>
+                                  </motion.li>
+                                ))}
+                              </ul>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Decorative gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            </motion.div>
+          ))}
+        </div>
       </div>
 
-      {/* Centered Column of Company Cards */}
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-12 z-10">
-        {workData.map((company, cIdx) => (
-          <div key={cIdx} className="relative w-full bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl flex flex-col items-center px-6 py-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-1 text-center drop-shadow flex items-center gap-2">
-              {company.logo && (
-                <Image src={company.logo} alt={company.company} width={32} height={32} className="object-contain rounded-full" />
-              )}
-              {company.company}
-            </h3>
-            <span className="text-xs text-sky-100/80 font-medium mb-2">{company.duration}</span>
-            <div className="w-full flex flex-col gap-6 mt-2">
-              {company.roles.map((role, rIdx) => (
-                <motion.div
-                  key={rIdx}
-                  className="relative group cursor-pointer bg-white/10 rounded-xl p-4 shadow-lg border border-white/10 w-full"
-                  initial={false}
-                  animate={{}}
-                  onClick={() => handleToggle(cIdx, rIdx)}
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <span className="text-lg font-semibold text-white drop-shadow">{role.title}</span>
-                      <span className="text-xs text-sky-200/80 font-medium">{role.period}</span>
-                    </div>
-                    <span className="text-xs text-sky-100/60 mb-1">{role.location}</span>
-                    <span className="text-sm text-sky-200/90 mb-2">{role.description}</span>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {role.skills.map((skill, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-sky-500 text-white text-xs rounded-full shadow">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                    <button className="mt-1 px-3 py-1 rounded-full bg-gradient-to-r from-blue-500 to-sky-500 text-white text-xs font-semibold shadow hover:from-blue-600 hover:to-sky-600 transition-colors w-max">
-                      {open && open.companyIdx === cIdx && open.roleIdx === rIdx ? 'Hide Details' : 'Show Details'}
-                    </button>
-                  </div>
-                  <AnimatePresence initial={false}>
-                    {open && open.companyIdx === cIdx && open.roleIdx === rIdx && (
-                      <motion.ul
-                        className="list-disc list-inside text-sm text-blue-900/90 space-y-1 mt-4 text-left max-h-40 overflow-y-auto bg-white/30 rounded-xl p-3"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                      >
-                        {role.details.map((point: string, i: number) => (
-                          <li key={i}>{point}</li>
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        ))}
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-1/4 -right-32 w-64 h-64 rounded-full opacity-10"
+          style={{ 
+            background: 'var(--color-accent-gradient)',
+            filter: 'blur(40px)'
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 180, 360],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 -left-32 w-48 h-48 rounded-full opacity-10"
+          style={{ 
+            background: 'var(--color-accent-gradient)',
+            filter: 'blur(40px)'
+          }}
+          animate={{
+            scale: [1.2, 1, 1.2],
+            rotate: [360, 180, 0],
+          }}
+          transition={{
+            duration: 15,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        />
       </div>
     </section>
   );
