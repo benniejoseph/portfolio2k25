@@ -1,103 +1,112 @@
-import Image from "next/image";
+// src/app/page.jsx (or page.tsx)
+// Make this a client component because it likely orchestrates
+// other client components and potentially hooks like react-scroll
+"use client"; // <--- Add this if using react-scroll or similar client logic here
+
+import Navbar from '../components/Navbar';
+import Hero from '../components/Hero';
+import Skills from '../components/Skills';
+import Projects from '../components/Projects';
+import Work from '../components/Work';
+import Contact from '../components/Contact';
+import Certifications from '../components/Certifications';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    const [scrollProgress, setScrollProgress] = useState(0);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+    useEffect(() => {
+        const handleScroll = () => {
+            const totalScroll = document.documentElement.scrollTop;
+            const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scroll = `${totalScroll / windowHeight}`;
+            setScrollProgress(Number(scroll));
+        };
+
+        const handleVisibility = () => {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                if (rect.top <= window.innerHeight * 0.75) {
+                    section.classList.add('section-enter-active');
+                }
+            });
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', handleVisibility);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('scroll', handleVisibility);
+        };
+    }, []);
+
+    useEffect(() => {
+        console.log("EmailJS Service ID:", process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID);
+    }, []);
+
+    return (
+        <>
+            {/* Metadata is better handled in layout.tsx */}
+            {/* <Head>
+                <title>Bennie J Richard - Salesforce Developer</title>
+                <meta name="description" content="Portfolio of Bennie J Richard..." />
+                <link rel="icon" href="/favicon.ico" />
+            </Head> */}
+
+            <div className="animated-bg" />
+            <div 
+                className="scroll-progress" 
+                style={{ transform: `scaleX(${scrollProgress})` }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+            <Navbar />
+
+            <main className="relative">
+                <section id="home" className="section section-enter">
+                    <div className="container">
+                        <Hero />
+                    </div>
+                </section>
+
+                <section id="skills" className="section section-enter">
+                    <div className="container">
+                        <Skills />
+                    </div>
+                </section>
+
+                <section id="certifications" className="section section-enter">
+                    <div className="container">
+                        <Certifications />
+                    </div>
+                </section>
+
+                <section id="projects" className="section section-enter">
+                    <div className="container">
+                        <Projects />
+                    </div>
+                </section>
+
+                <section id="work" className="section section-enter">
+                    <div className="container">
+                        <Work />
+                    </div>
+                </section>
+
+                <section id="contact" className="section section-enter">
+                    <div className="container">
+                        <Contact />
+                    </div>
+                </section>
+            </main>
+
+            <footer className="text-center py-6 bg-dark text-lightText/50 text-sm">
+                <div className="container">
+                    <p>© {new Date().getFullYear()} Bennie J Richard. Built with Next.js, Tailwind, Three.js & Framer Motion.</p>
+                    <p className="mt-2 text-xs">
+                        <span className="code-text">Designed & Built by Bennie J Richard</span>
+                    </p>
+                </div>
+            </footer>
+        </>
+    );
 }

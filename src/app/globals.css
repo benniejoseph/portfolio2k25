@@ -1,26 +1,637 @@
+/* src/app/globals.css */
 @import "tailwindcss";
+/* src/app/globals.css */
+@tailwindcss/preflight base;
+@tailwind utilities;
 
+/* Import the font used (still needed) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+/* Define custom properties for your theme colors here if you want */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Modern Color Palette */
+  --color-primary: #64ffda; /* Mint Green */
+  --color-primary-dark: #45e6c3;
+  --color-secondary: #0a192f; /* Navy */
+  --color-accent: #ff6b6b; /* Coral */
+  --color-dark: #020c1b; /* Dark Navy */
+  --color-light-text: #ccd6f6; /* Light Blue */
+  --color-dark-text: #8892b0; /* Slate */
+  --color-background-dark: #0a192f; /* Navy */
+  --color-background-slightly-darker: #112240; /* Lighter Navy */
+  --color-success: #64ffda; /* Mint Green */
+  --color-warning: #ffd700; /* Gold */
+  --color-error: #ff6b6b; /* Coral */
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  --gradient-dark: linear-gradient(135deg, var(--color-background-dark) 0%, var(--color-background-slightly-darker) 100%);
+  --gradient-text: linear-gradient(120deg, var(--color-primary) 0%, var(--color-accent) 100%);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-sans); /* Use CSS variable */
+  background-color: var(--color-background-dark); /* Use CSS variable */
+  color: var(--color-light-text); /* Use CSS variable */
+  scroll-behavior: smooth;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body::-webkit-scrollbar {
+  width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+   background: var(--color-dark); /* Use CSS variable */
+}
+
+body::-webkit-scrollbar-thumb {
+   background: var(--color-primary);
+   border-radius: 10px;
+   border: 2px solid var(--color-dark); /* Use CSS variable */
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Keep .section, .container, .glass-card definitions */
+.section {
+  min-height: 100vh;
+  padding: 80px 0;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  z-index: 1;
+  position: relative;
+}
+
+.glass-card {
+  background: rgba(17, 34, 64, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 16px;
+  border: 1px solid rgba(100, 255, 218, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(100, 255, 218, 0.2);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+  background: rgba(17, 34, 64, 0.5);
+}
+
+/* Section Backgrounds with Gradients */
+#home { 
+  background: transparent;
+  position: relative;
+}
+
+#home::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+#skills { 
+  background: transparent;
+  position: relative;
+}
+
+#skills::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+#projects { 
+  background: transparent;
+  position: relative;
+}
+
+#projects::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(244, 114, 182, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+#work { 
+  background: transparent;
+  position: relative;
+}
+
+#work::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+#contact { 
+  background: transparent;
+  position: relative;
+}
+
+#contact::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.section-heading {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.5rem;
+    color: var(--color-light-text);
+}
+
+/* Update section numbers */
+#home .section-heading::before {
+    /* content: '01.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+#skills .section-heading::before {
+    /* content: '02.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+#certifications .section-heading::before {
+    /* content: '03.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+#projects .section-heading::before {
+    /* content: '04.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+#work .section-heading::before {
+    /* content: '05.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+#contact .section-heading::before {
+    /* content: '06.'; */
+    position: absolute;
+    left: -60px;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+}
+
+.section-heading::after {
+    /* content: ''; */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.section-heading:hover::after {
+    transform: scaleX(1);
+}
+
+/* Modern Button Styles */
+.modern-button {
+  background: transparent;
+  color: var(--color-primary);
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.modern-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(100, 255, 218, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: -1;
+}
+
+.modern-button:hover {
+  color: var(--color-background-dark);
+  transform: translateY(-2px);
+}
+
+.modern-button:hover::before {
+  transform: translateX(0);
+}
+
+/* Animated Background Elements */
+.animated-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.animated-bg::before,
+.animated-bg::after {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  filter: blur(100px);
+  opacity: 0.15;
+  animation: float 20s infinite alternate;
+}
+
+.animated-bg::before {
+  top: 20%;
+  left: 20%;
+  animation-delay: -5s;
+}
+
+.animated-bg::after {
+  bottom: 20%;
+  right: 20%;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(50px, 50px) scale(1.1);
+  }
+  100% {
+    transform: translate(-50px, -50px) scale(0.9);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Interactive Section Styles */
+.interactive-section {
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.interactive-section:hover {
+  transform: translateY(-5px);
+}
+
+/* Skill Card Animations */
+.skill-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.skill-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+}
+
+.skill-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.skill-card:hover::before {
+  opacity: 0.1;
+}
+
+.skill-card:hover .skill-icon {
+  transform: scale(1.2) rotate(5deg);
+  color: var(--color-primary);
+}
+
+/* Project Card Hover Effects */
+.project-card {
+  position: relative;
+  background: var(--color-background-slightly-darker);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.project-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-5px);
+}
+
+.project-card:hover::before {
+  opacity: 0.1;
+}
+
+/* Work Experience Timeline Animations */
+.timeline-item {
+  position: relative;
+  padding-left: 2rem;
+  border-left: 2px solid var(--color-primary);
+  margin-bottom: 2rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-background-dark);
+}
+
+/* Certification Card Effects */
+.certification-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.certification-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+  transform: rotate(45deg);
+  transition: transform 0.6s ease;
+  opacity: 0;
+}
+
+.certification-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.certification-card:hover::before {
+  transform: rotate(45deg) translate(50%, 50%);
+  opacity: 1;
+}
+
+/* Contact Form Animations */
+.form-input {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.form-input::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.form-input:focus::after {
+  transform: scaleX(1);
+}
+
+/* Navbar Link Hover Effects */
+.nav-link {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--gradient-primary);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--color-primary);
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Scroll Progress Indicator */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--gradient-primary);
+  transform-origin: left;
+  transform: scaleX(0);
+  z-index: 1000;
+}
+
+/* Section Transition Effects */
+.section-enter {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Floating Elements Animation */
+.floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+@keyframes floating {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Gradient Text Effect */
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: all 0.3s ease;
+}
+
+.gradient-text:hover {
+  filter: brightness(1.2);
+}
+
+/* Interactive Grid Layout */
+.interactive-grid {
+  display: grid;
+  gap: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.interactive-grid:hover .grid-item:not(:hover) {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+.grid-item {
+  transition: all 0.3s ease;
+}
+
+.grid-item:hover {
+  transform: scale(1.02);
+  z-index: 1;
+}
+
+/* Code-like styling for certain elements */
+.code-text {
+  font-family: var(--font-mono);
+  color: var(--color-primary);
+}
+
+/* Modern Scrollbar */
+body::-webkit-scrollbar {
+  width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: var(--color-dark);
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 10px;
+  border: 2px solid var(--color-dark);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .section-heading::before {
+    display: none;
+  }
+  
+  .container {
+    padding: 0 1rem;
+  }
 }
