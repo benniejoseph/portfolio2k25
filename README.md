@@ -160,7 +160,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🌟 Live Demo
 
-Visit the live portfolio at: [Your Vercel URL will be here]
+Visit the live portfolio at: https://portfolio2k25-mu.vercel.app/
 
 ---
 
