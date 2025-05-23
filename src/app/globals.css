@@ -1,7 +1,6 @@
 /* src/app/globals.css */
-@import "tailwindcss";
-/* src/app/globals.css */
-@tailwindcss/preflight base;
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
 
 /* Import the font used (still needed) */

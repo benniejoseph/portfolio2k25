@@ -10,31 +10,31 @@ const config: Config = {
   ],
   theme: {
     extend: {
-       // --- Paste the theme customizations from the previous example ---
       colors: {
-        primary: '#0070D2', // Salesforce Blue
-        secondary: '#00A1E0', // Lighter Blue
-        accent: '#FAFAFA', // Light Gray / White accent
-        dark: '#16325c', // Dark Blue/Navy
-        lightText: '#E0E0E0',
-        darkText: '#2c2c2c',
-        // Add your dark background if not defined globally
-        backgroundDark: '#0a192f',
-        backgroundSlightlyDarker: '#0f213d',
+        primary: '#64ffda',
+        'primary-dark': '#45e6c3',
+        secondary: '#0a192f',
+        accent: '#ff6b6b',
+        dark: '#020c1b',
+        'light-text': '#ccd6f6',
+        'dark-text': '#8892b0',
+        'background-dark': '#0a192f',
+        'background-slightly-darker': '#112240',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'], // Example font (ensure imported in layout/globals)
+        sans: ['Inter', 'sans-serif'],
+        mono: ['Fira Code', 'monospace'],
       },
       backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic':
-          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'gradient-primary': 'linear-gradient(135deg, #64ffda 0%, #45e6c3 100%)',
+        'gradient-dark': 'linear-gradient(135deg, #0a192f 0%, #112240 100%)',
+        'gradient-text': 'linear-gradient(120deg, #64ffda 0%, #ff6b6b 100%)',
       },
-       animation: {
+      animation: {
         'fade-in': 'fadeIn 1s ease-out forwards',
         'slide-in-up': 'slideInUp 0.8s ease-out forwards',
         // Add bounce if needed (like for the down arrow)
-         'bounce-slow': 'bounce 2s infinite',
+        'bounce-slow': 'bounce 2s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -45,7 +45,7 @@ const config: Config = {
           '0%': { transform: 'translateY(30px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
-         // Ensure bounce keyframes exist if used in animation
+        // Ensure bounce keyframes exist if used in animation
         bounce: {
           '0%, 100%': {
             transform: 'translateY(-15%)', // Adjusted intensity
@@ -57,7 +57,6 @@ const config: Config = {
           },
         },
       },
-       // --- End of pasted theme ---
     },
   },
   plugins: [],
