@@ -11,10 +11,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#64ffda',
-        'primary-dark': '#45e6c3',
-        secondary: '#0a192f',
-        accent: '#ff6b6b',
+        primary: '#667eea',
+        'primary-dark': '#58a6ff',
+        secondary: '#764ba2',
+        accent: '#bc8cff',
+        success: '#48bb78',
+        warning: '#ed8936',
+        error: '#f56565',
         dark: '#020c1b',
         'light-text': '#ccd6f6',
         'dark-text': '#8892b0',
@@ -22,33 +25,38 @@ const config: Config = {
         'background-slightly-darker': '#112240',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['Fira Code', 'monospace'],
+        heading: ['Poppins', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #64ffda 0%, #45e6c3 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #0a192f 0%, #112240 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'gradient-dark': 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+        'gradient-cosmic': 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #bc8cff 100%)',
         'gradient-text': 'linear-gradient(120deg, #64ffda 0%, #ff6b6b 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 1s ease-out forwards',
         'slide-in-up': 'slideInUp 0.8s ease-out forwards',
-        // Add bounce if needed (like for the down arrow)
         'bounce-slow': 'bounce 2s infinite',
+        'spin-slow': 'spin 3s linear infinite',
+        'pulse-slow': 'pulse 3s ease-in-out infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {
-          '0%': { opacity: '0' }, // Use string values for opacity keyframes
+          '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
         slideInUp: {
           '0%': { transform: 'translateY(30px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
-        // Ensure bounce keyframes exist if used in animation
         bounce: {
           '0%, 100%': {
-            transform: 'translateY(-15%)', // Adjusted intensity
+            transform: 'translateY(-15%)',
             animationTimingFunction: 'cubic-bezier(0.8, 0, 1, 1)',
           },
           '50%': {
@@ -56,6 +64,29 @@ const config: Config = {
             animationTimingFunction: 'cubic-bezier(0, 0, 0.2, 1)',
           },
         },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        glow: {
+          '0%': { boxShadow: '0 0 20px rgba(102, 126, 234, 0.5)' },
+          '100%': { boxShadow: '0 0 30px rgba(102, 126, 234, 0.8)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
+      },
+      borderRadius: {
+        '4xl': '2rem',
+      },
+      backdropBlur: {
+        xs: '2px',
       },
     },
   },
