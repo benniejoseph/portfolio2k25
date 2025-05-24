@@ -25,11 +25,12 @@ const FloatingDock: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const dockRef = useRef<HTMLDivElement>(null);
 
   const dockItems: DockItem[] = [
     { id: 'home', icon: FiHome, label: 'Home', href: '#home' },
-    { id: 'about', icon: FiUser, label: 'About', href: '#skills' },
+    { id: 'skills', icon: FiUser, label: 'Skills', href: '#skills' },
     { id: 'certifications', icon: FiAward, label: 'Certifications', href: '#certifications' },
     { id: 'projects', icon: FiCode, label: 'Projects', href: '#projects' },
     { id: 'work', icon: FiBriefcase, label: 'Experience', href: '#work' },
@@ -44,8 +45,18 @@ const FloatingDock: React.FC = () => {
   ];
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (dockRef.current) {
+      if (dockRef.current && !isMobile) {
         const rect = dockRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -56,14 +67,14 @@ const FloatingDock: React.FC = () => {
       }
     };
 
-    if (hoveredItem) {
+    if (hoveredItem && !isMobile) {
       document.addEventListener('mousemove', handleMouseMove);
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [hoveredItem]);
+  }, [hoveredItem, isMobile]);
 
   const handleClick = (item: DockItem) => {
     if (item.action) {
@@ -77,7 +88,7 @@ const FloatingDock: React.FC = () => {
   };
 
   const getDockItemTransform = (itemId: string) => {
-    if (hoveredItem !== itemId) return 'scale(1) translateY(0)';
+    if (hoveredItem !== itemId || isMobile) return 'scale(1) translateY(0)';
     
     const distance = Math.sqrt(mousePosition.x ** 2 + mousePosition.y ** 2);
     const maxDistance = 100;
@@ -90,28 +101,32 @@ const FloatingDock: React.FC = () => {
   return (
     <motion.div
       ref={dockRef}
-      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
+      className="fixed bottom-4 md:bottom-6 left-0 right-0 z-50 flex justify-center px-4"
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 1, duration: 0.8, type: "spring", bounce: 0.3 }}
     >
-      <div className="glass p-3 rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl">
-        <div className="flex items-center space-x-2">
+      <div className="glass p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl max-w-[90vw] overflow-x-auto">
+        <div className="flex items-center space-x-1 md:space-x-2 min-w-max">
           {dockItems.map((item, index) => (
             <div key={item.id} className="relative">
               <motion.button
-                className="relative p-3 rounded-xl transition-all duration-300 group magnetic"
+                className="relative p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-300 group magnetic touch-manipulation"
                 style={{
                   transform: getDockItemTransform(item.id),
+                  minWidth: '44px',
+                  minHeight: '44px'
                 }}
-                onMouseEnter={() => setHoveredItem(item.id)}
-                onMouseLeave={() => setHoveredItem(null)}
+                onMouseEnter={() => !isMobile && setHoveredItem(item.id)}
+                onMouseLeave={() => !isMobile && setHoveredItem(null)}
+                onTouchStart={() => setHoveredItem(item.id)}
+                onTouchEnd={() => setTimeout(() => setHoveredItem(null), 1000)}
                 onClick={() => handleClick(item)}
-                whileHover={{ 
+                whileHover={!isMobile ? { 
                   scale: 1.2,
                   backgroundColor: 'var(--color-accent-primary)',
                   color: 'white'
-                }}
+                } : {}}
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -122,26 +137,26 @@ const FloatingDock: React.FC = () => {
                 }}
               >
                 {React.createElement(item.icon, {
-                  size: 20,
+                  size: isMobile ? 18 : 20,
                   className: "transition-colors duration-300 group-hover:text-white",
                   style: { color: 'var(--color-text-primary)' }
                 })}
                 
                 {/* Glow effect */}
-                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl -z-10" />
+                <div className="absolute inset-0 rounded-lg md:rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl -z-10" />
               </motion.button>
 
               {/* Tooltip */}
               <AnimatePresence>
                 {hoveredItem === item.id && (
                   <motion.div
-                    className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2"
+                    className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 pointer-events-none"
                     initial={{ opacity: 0, y: 10, scale: 0.8 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.8 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="glass px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap">
+                    <div className="glass px-2 md:px-3 py-1 rounded-lg text-xs md:text-sm font-medium whitespace-nowrap">
                       {item.label}
                     </div>
                   </motion.div>
@@ -153,7 +168,7 @@ const FloatingDock: React.FC = () => {
       </div>
 
       {/* Dock reflection effect */}
-      <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent rounded-2xl pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent rounded-xl md:rounded-2xl pointer-events-none" />
     </motion.div>
   );
 };

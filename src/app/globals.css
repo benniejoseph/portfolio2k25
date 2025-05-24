@@ -392,14 +392,46 @@ a {
   
   .section {
     padding: var(--space-2xl) 0;
+    min-height: auto;
   }
   
   h1 { font-size: 2rem; }
   h2 { font-size: 1.75rem; }
   h3 { font-size: 1.5rem; }
+  
+  /* Improve touch targets */
+  button, a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better glass effects on mobile */
+  .glass {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+  }
+  
+  /* Improved scrolling */
+  body {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Floating dock mobile optimizations */
+  .magnetic {
+    transform: none !important;
+  }
 }
 
 @media (max-width: 480px) {
+  .container {
+    padding: 0 var(--space-sm);
+  }
+  
+  .section {
+    padding: var(--space-xl) 0;
+  }
+  
   h1 { font-size: 1.75rem; }
   h2 { font-size: 1.5rem; }
   h3 { font-size: 1.25rem; }
@@ -407,5 +439,27 @@ a {
   .btn-modern {
     padding: var(--space-sm) var(--space-lg);
     font-size: 0.9rem;
+  }
+  
+  /* Stack elements vertically on very small screens */
+  .flex {
+    flex-direction: column;
+  }
+  
+  /* Improve touch interactions */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Better text sizing */
+  .text-lg { font-size: 1rem; }
+  .text-xl { font-size: 1.125rem; }
+  
+  /* Ensure floating dock doesn't overflow on very small screens */
+  .fixed.bottom-4 {
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 2rem);
   }
 }
