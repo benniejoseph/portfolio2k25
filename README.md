@@ -114,7 +114,7 @@ public/
 ## 🎨 Customization
 
 ### Colors
-Update the CSS variables in `src/app/globals.css`:
+Update CSS variables in `src/app/globals.css`:
 ```css
 :root {
   --color-primary: #64ffda;     /* Mint Green */
