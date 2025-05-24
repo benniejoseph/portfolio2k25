@@ -15,9 +15,10 @@ interface Particle {
 
 const ParticleBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const mousePositionRef = useRef({ x: 0, y: 0 });
+  const animationFrameRef = useRef<number | undefined>(undefined);
   const { isDark } = useTheme();
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const particleCount = 80;
@@ -54,22 +55,22 @@ const ParticleBackground: React.FC = () => {
           connectionDistance: connectionDistance + Math.random() * 50
         });
       }
-      setParticles(newParticles);
+      particlesRef.current = newParticles;
     };
 
     if (dimensions.width && dimensions.height) {
       initParticles();
     }
-  }, [dimensions, isDark]);
+  }, [dimensions, isDark, particleCount, connectionDistance]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        setMousePosition({
+        mousePositionRef.current = {
           x: e.clientX - rect.left,
           y: e.clientY - rect.top
-        });
+        };
       }
     };
 
@@ -78,26 +79,27 @@ const ParticleBackground: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let animationFrame: number;
-
     const animate = () => {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext('2d');
-      if (!canvas || !ctx) return;
+      if (!canvas || !ctx || particlesRef.current.length === 0) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+        return;
+      }
 
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Update particles
-      const updatedParticles = particles.map(particle => {
+      particlesRef.current = particlesRef.current.map(particle => {
         let newX = particle.x + particle.vx;
         let newY = particle.y + particle.vy;
         let newVx = particle.vx;
         let newVy = particle.vy;
 
         // Mouse interaction
-        const dx = mousePosition.x - newX;
-        const dy = mousePosition.y - newY;
+        const dx = mousePositionRef.current.x - newX;
+        const dy = mousePositionRef.current.y - newY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < mouseInfluence) {
@@ -123,33 +125,31 @@ const ParticleBackground: React.FC = () => {
         return { ...particle, x: newX, y: newY, vx: newVx, vy: newVy };
       });
 
-      setParticles(updatedParticles);
-
       // Draw connections
       ctx.strokeStyle = isDark 
         ? 'rgba(88, 166, 255, 0.1)' 
         : 'rgba(102, 126, 234, 0.08)';
       ctx.lineWidth = 1;
 
-      for (let i = 0; i < updatedParticles.length; i++) {
-        for (let j = i + 1; j < updatedParticles.length; j++) {
-          const dx = updatedParticles[i].x - updatedParticles[j].x;
-          const dy = updatedParticles[i].y - updatedParticles[j].y;
+      for (let i = 0; i < particlesRef.current.length; i++) {
+        for (let j = i + 1; j < particlesRef.current.length; j++) {
+          const dx = particlesRef.current[i].x - particlesRef.current[j].x;
+          const dy = particlesRef.current[i].y - particlesRef.current[j].y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < updatedParticles[i].connectionDistance) {
-            const opacity = (1 - distance / updatedParticles[i].connectionDistance) * 0.5;
+          if (distance < particlesRef.current[i].connectionDistance) {
+            const opacity = (1 - distance / particlesRef.current[i].connectionDistance) * 0.5;
             ctx.globalAlpha = opacity;
             ctx.beginPath();
-            ctx.moveTo(updatedParticles[i].x, updatedParticles[i].y);
-            ctx.lineTo(updatedParticles[j].x, updatedParticles[j].y);
+            ctx.moveTo(particlesRef.current[i].x, particlesRef.current[i].y);
+            ctx.lineTo(particlesRef.current[j].x, particlesRef.current[j].y);
             ctx.stroke();
           }
         }
       }
 
       // Draw particles
-      updatedParticles.forEach(particle => {
+      particlesRef.current.forEach(particle => {
         const gradient = ctx.createRadialGradient(
           particle.x, particle.y, 0,
           particle.x, particle.y, particle.size
@@ -176,19 +176,18 @@ const ParticleBackground: React.FC = () => {
       });
 
       ctx.globalAlpha = 1;
-      animationFrame = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animate);
     };
 
-    if (particles.length > 0) {
-      animate();
-    }
+    // Start animation
+    animationFrameRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [particles, mousePosition, isDark]);
+  }, [isDark, mouseInfluence]);
 
   return (
     <div className="fixed inset-0 -z-10 particles">

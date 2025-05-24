@@ -121,7 +121,7 @@ const Projects = () => {
               className="font-mono text-sm font-medium tracking-wider uppercase"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-               Portfolio
+               Projects
             </span>
           </motion.div>
 

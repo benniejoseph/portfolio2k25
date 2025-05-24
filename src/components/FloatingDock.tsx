@@ -101,21 +101,21 @@ const FloatingDock: React.FC = () => {
   return (
     <motion.div
       ref={dockRef}
-      className="fixed bottom-4 md:bottom-6 left-0 right-0 z-50 flex justify-center px-4"
+      className="fixed bottom-4 md:bottom-6 left-0 right-0 z-50 flex justify-center px-2 md:px-4"
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 1, duration: 0.8, type: "spring", bounce: 0.3 }}
     >
-      <div className="glass p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl max-w-[90vw] overflow-x-auto">
-        <div className="flex items-center space-x-1 md:space-x-2 min-w-max">
+      <div className="glass p-2 md:p-3 rounded-xl md:rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl">
+        <div className="flex flex-row items-center justify-center space-x-1 md:space-x-2 min-w-max">
           {dockItems.map((item, index) => (
-            <div key={item.id} className="relative">
+            <div key={item.id} className="relative flex-shrink-0">
               <motion.button
-                className="relative p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-300 group magnetic touch-manipulation"
+                className="relative p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-300 group magnetic touch-manipulation flex items-center justify-center"
                 style={{
                   transform: getDockItemTransform(item.id),
-                  minWidth: '44px',
-                  minHeight: '44px'
+                  minWidth: '40px',
+                  minHeight: '40px'
                 }}
                 onMouseEnter={() => !isMobile && setHoveredItem(item.id)}
                 onMouseLeave={() => !isMobile && setHoveredItem(null)}

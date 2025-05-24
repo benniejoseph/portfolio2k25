@@ -10,12 +10,12 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
   // --- Update Title/Description ---
-  title: 'Bennie Joseph - Salesforce Senior Consultant',
+  title: 'Bennie Joseph - Application Developer',
   description: 'Expert Salesforce consultant specializing in AI integration, React, Next.js, and enterprise solutions.',
   keywords: 'Salesforce, AI, React, Next.js, Developer, Consultant',
   authors: [{ name: 'Bennie Joseph' }],
   openGraph: {
-    title: 'Bennie Joseph - Salesforce Senior Consultant',
+    title: 'Bennie Joseph - Application Developer',
     description: 'Expert Salesforce consultant specializing in AI integration, React, Next.js, and enterprise solutions.',
     type: 'website',
   },

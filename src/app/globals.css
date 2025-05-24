@@ -395,20 +395,31 @@ a {
     min-height: auto;
   }
   
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.75rem; }
-  h3 { font-size: 1.5rem; }
+  h1 { 
+    font-size: 2.5rem; 
+    line-height: 1.2;
+  }
+  h2 { 
+    font-size: 2rem; 
+    line-height: 1.3;
+  }
+  h3 { 
+    font-size: 1.5rem; 
+    line-height: 1.4;
+  }
   
   /* Improve touch targets */
-  button, a {
+  button, a, .clickable {
     min-height: 44px;
     min-width: 44px;
+    touch-action: manipulation;
   }
   
   /* Better glass effects on mobile */
   .glass {
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
   
   /* Improved scrolling */
@@ -417,9 +428,72 @@ a {
     scroll-behavior: smooth;
   }
   
-  /* Floating dock mobile optimizations */
+  /* Ensure floating dock stays horizontal */
+  .floating-dock {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  /* Disable magnetic effects on mobile */
   .magnetic {
     transform: none !important;
+  }
+  
+  /* Better spacing for mobile */
+  .grid {
+    gap: 1rem;
+  }
+  
+  /* Ensure text is readable */
+  p {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  /* Better form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.75rem;
+  }
+  
+  /* Hero section mobile adjustments */
+  .hero-content {
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+  
+  /* Skills grid responsive */
+  .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  /* Projects carousel mobile */
+  .project-nav-arrow {
+    position: absolute;
+    z-index: 30;
+    padding: 0.75rem;
+  }
+  
+  /* Work experience mobile */
+  .work-card {
+    padding: 1.5rem;
+  }
+  
+  .work-company-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  /* Contact form mobile */
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
 }
 
@@ -432,34 +506,179 @@ a {
     padding: var(--space-xl) 0;
   }
   
-  h1 { font-size: 1.75rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
+  h1 { 
+    font-size: 2rem; 
+  }
+  h2 { 
+    font-size: 1.75rem; 
+  }
+  h3 { 
+    font-size: 1.25rem; 
+  }
   
-  .btn-modern {
-    padding: var(--space-sm) var(--space-lg);
+  /* Extra small spacing adjustments */
+  .grid {
+    gap: 0.75rem;
+  }
+  
+  /* Floating dock very small screens */
+  .floating-dock {
+    padding: 0.5rem;
+    bottom: 1rem;
+  }
+  
+  .floating-dock button {
+    padding: 0.5rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  /* Skills grid for very small screens */
+  .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  /* Text size adjustments */
+  p {
     font-size: 0.9rem;
   }
   
-  /* Stack elements vertically on very small screens */
-  .flex {
+  .text-sm {
+    font-size: 0.8rem;
+  }
+  
+  /* Button adjustments */
+  .btn-modern {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Hero adjustments for very small screens */
+  .hero-content h1 {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+  
+  .hero-content .gradient-text {
+    font-size: 2rem;
+  }
+  
+  /* Work experience very small screens */
+  .work-card {
+    padding: 1rem;
+  }
+  
+  .work-role-details {
     flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Landscape phone specific */
+@media (max-width: 896px) and (orientation: landscape) and (max-height: 414px) {
+  .section {
+    padding: var(--space-lg) 0;
   }
   
-  /* Improve touch interactions */
+  .hero-content {
+    padding: 1rem;
+  }
+  
+  .floating-dock {
+    bottom: 0.5rem;
+  }
+}
+
+/* Tablet specific improvements */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    padding: 0 2rem;
+  }
+  
+  .skills-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .certifications-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .glass {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
   * {
-    -webkit-tap-highlight-color: transparent;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
   
-  /* Better text sizing */
-  .text-lg { font-size: 1rem; }
-  .text-xl { font-size: 1.125rem; }
+  .floating-dock {
+    animation: none !important;
+  }
+}
+
+/* Dark mode specific mobile adjustments */
+@media (max-width: 768px) and (prefers-color-scheme: dark) {
+  .glass {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
   
-  /* Ensure floating dock doesn't overflow on very small screens */
-  .fixed.bottom-4 {
-    bottom: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: calc(100vw - 2rem);
+  .neomorph {
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.4),
+      -8px -8px 16px rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* Ensure horizontal scrolling for floating dock */
+.floating-dock-container {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.floating-dock-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch-friendly hover states */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:scale-105:hover {
+    transform: scale(1);
+  }
+  
+  .hover\:scale-110:hover {
+    transform: scale(1);
+  }
+  
+  .group:hover .group-hover\:scale-110 {
+    transform: scale(1);
+  }
+}
+
+/* Fix for iOS safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .floating-dock {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }

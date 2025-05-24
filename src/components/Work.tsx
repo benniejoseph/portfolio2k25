@@ -116,7 +116,7 @@ const Work = () => {
               className="font-mono text-sm font-medium tracking-wider uppercase"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-              Experience
+               Experience
             </span>
           </motion.div>
 

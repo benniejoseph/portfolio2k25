@@ -127,7 +127,7 @@ const Contact: React.FC = () => {
               className="font-mono text-sm font-medium tracking-wider uppercase"
               style={{ color: 'var(--color-text-tertiary)' }}
             >
-               Contact Me
+               Contact
             </span>
           </motion.div>
 
