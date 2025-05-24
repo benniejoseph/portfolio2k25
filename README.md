@@ -1,6 +1,6 @@
 # 🚀  Portfolio - Bennie Joseph
 
-A modern, interactive portfolio website built with Next.js, Three.js, and Framer Motion. Features a gamified experience with 3D models, smooth animations, and a responsive design.
+A modern, interactive portfolio website built with Next.js, Three.js, and Framer Motion. Features an experience with 3D models, smooth animations, and a responsive design.
 
 ## ✨ Features
 
