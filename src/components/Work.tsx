@@ -7,70 +7,47 @@ import { FiBriefcase, FiMapPin, FiCalendar, FiChevronDown, FiChevronUp } from 'r
 // Updated workData structure based on the reference image
 const workData = [
   {
-    company: 'Deloitte',
+    company: 'Deloitte USI',
     logo: '/images/deloitte.webp',
-    duration: 'Full-time · 4 yrs 1 mo',
+    duration: 'Full-time · 4 yrs 10 mos',
     roles: [
       {
-        title: 'Senior Consultant',
-        period: 'May 2024 – Present · 1 yr 1 mo',
+        title: 'Senior Consultant – Salesforce Application Engineer (GenAI & Salesforce)',
+        period: 'May 2021 – Present',
         location: 'Bengaluru, Karnataka, India · Hybrid',
-        description: 'Designed and Built Custom AI Chatbot using LWC for multilingual conversational record creation, update, and fetch.',
-        skills: ['Service Delivery', 'Quality Assurance Standards', '+8 skills'],
+        description: 'Architected and led full-stack Salesforce + GenAI solutions for 19+ enterprise clients across the complete SDLC. Built agentic platforms, AI voice assistants, and intelligent Salesforce automations.',
+        skills: ['Apex', 'LWC', 'LangGraph', 'RAG', 'OpenAI', 'Python', 'nCino', 'CI/CD'],
         details: [
-          'Designed and Built Custom AI Chatbot using LWC, which is multilingual, Conversational Record Creation, Update and Fetch, Context based and Supports all objects and completely Dynamic using Custom Metadata.',
-          'Developed US Oregon Driving License Application Portal using Gemini AI for auto-filling form from uploaded documents, Fraud detection of Identity documents and photo validation.'
-        ]
-      },
-      {
-        title: 'Salesforce Consultant',
-        period: 'May 2021 – May 2024 · 3 yrs 1 mo',
-        location: 'Bengaluru, Karnataka, India',
-        description: 'Led Development team for Deloitte Accelerator project (nCino), implementing CI/CD using AutoRabbit and developing packaged base applications for small business clients, reducing cost by 25%.',
-        skills: ['JavaScript Libraries', 'Front-End Development', '+7 skills'],
-        details: [
-          'Architected custom base applications for 19 Loan Origination Institutions using nCino Managed Package in Salesforce and its deployment Process.',
-          'Designed apex trigger framework, exception/error logging system using platform events, and development using best practices across all Salesforce features.'
+          'Architected "Agent Assemble," a LangGraph + RAG-based agentic platform enabling users to define workflows in natural language — spawning AI agents to autonomously execute API tools, scheduling, and multi-step business processes.',
+          'Developed "Mona," a real-time AI assistant integrated into MS Teams and Zoom using Twilio, LiveKit, and OpenAI Realtime API — automating call transcription, meeting minutes, and parallel task execution (emails, reminders) during live meetings.',
+          'Engineered "GenAI Copilot" on Salesforce Service Cloud using LWC + ChatGPT for child abuse case reporting — NLP entity extraction to auto-create Salesforce cases and generate AI-powered investigation summaries.',
+          'Built a custom multilingual AI Chatbot using LWC with dynamic, context-based Salesforce record creation and retrieval via REST APIs with backend NLP services.',
+          'Developed the Oregon DMV portal on OmniScript integrated with Gemini AI for automated form-filling, Computer Vision image validation, and fraud analysis of identity documents.',
+          'Implemented CI/CD pipelines using AutoRabbit and Git for the Deloitte nCino Accelerator — reducing implementation costs by 25% across 19 Loan Origination Institutions.',
+          'Designed robust Apex trigger frameworks, Platform Event exception logging systems, and reusable LWC component libraries — reducing cross-project development effort by 30%.',
+          'Mentored 5+ engineers; conducted design and code reviews establishing standards adopted across the Salesforce practice.'
         ]
       }
     ]
   },
   {
-    company: 'Accenture',
+    company: 'Accenture Solutions',
     logo: '/images/acn.webp',
-    duration: '4 yrs 6 mos',
+    duration: 'Full-time · 4 yrs 6 mos',
     roles: [
       {
-        title: 'Salesforce Senior Developer',
-        period: 'Nov 2020 – May 2021 · 7 mos',
+        title: 'Application Senior Analyst – Salesforce Developer',
+        period: 'Dec 2016 – May 2021',
         location: 'Bengaluru, Karnataka, India',
-        description: 'JavaScript Libraries, Front-End Development and +4 skills',
-        skills: ['JavaScript Libraries', 'Front-End Development', '+4 skills'],
+        description: 'Led full-stack Salesforce Service Cloud development for a Life Sciences client supporting 10,000+ community users. Built secure portals, REST/SOAP integrations, and automation pipelines.',
+        skills: ['LWC', 'Apex', 'Service Cloud', 'SAML/SSO', 'REST APIs', 'SOAP APIs', 'Git'],
         details: [
-          'Developed a community portal using Lightning web components, integrated with external user validation system using Salesforce authentication patterns (SAML & SSO).',
-          'Integrated with multiple external systems using REST & SOAP APIs to archive, backup, and receive data updates.'
-        ]
-      },
-      {
-        title: 'Salesforce Developer',
-        period: 'May 2018 – Nov 2020 · 2 yrs 7 mos',
-        location: 'Bengaluru Area, India',
-        description: 'JavaScript Libraries, Front-End Development and +5 skills',
-        skills: ['JavaScript Libraries', 'Front-End Development', '+5 skills'],
-        details: [
-          'Developed a custom module to automatically create PDFs, reducing 80% of user manual activity.',
-          'Employed agile development practices, including sandbox environments and Tortoise SVN/Git for branching and merging.'
-        ]
-      },
-      {
-        title: 'Salesforce Analyst',
-        period: 'Dec 2016 – May 2018 · 1 yr 6 mos',
-        location: 'Bengaluru Area, India',
-        description: 'Lightning and Lightning Web Components',
-        skills: ['Lightning', 'Lightning Web Components'],
-        details: [
-          'Developed a Mass Email Send interface using lightning components for personalized emails with attachments.',
-          'Worked with client stakeholders to define requirements and manage expectations.'
+          'Led development of custom LWC components, Apex classes, and Salesforce Flows for a Life Sciences client supporting 10,000+ community users.',
+          'Developed secure community portals with external authentication using SAML & SSO integration, ensuring compliance with enterprise security standards.',
+          'Architected resilient REST and SOAP API integrations with multiple external enterprise systems — improving data reliability by 40%.',
+          'Built a custom automated PDF generation module using Apex and LWC, eliminating 80% of manual user activity and saving 200+ person-hours monthly.',
+          'Implemented Salesforce knowledge base automation, reducing help desk dependency by 50% and significantly improving case resolution time.',
+          'Managed branching, merging, and release processes using Git and SVN; followed Agile/Scrum with sprint planning, design reviews, and retrospectives.'
         ]
       }
     ]

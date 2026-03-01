@@ -106,7 +106,7 @@ const ModernHero: React.FC = () => {
               transition={{ duration: 0.8, delay: 1 }}
             >
               <span className="font-mono text-blue-500">{'<'}</span>
-              <span className="mx-2">Full Stack Application Developer</span>
+              <span className="mx-2">Salesforce Certified Application Architect</span>
               <span className="font-mono text-blue-500">{'/>'}</span>
             </motion.h2>
 
@@ -118,13 +118,29 @@ const ModernHero: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1.2 }}
             >
-              Specializing in integrating Salesforce with{' '}
-              <span className="gradient-text font-semibold">Generative AI</span>, 
-              creating intelligent solutions that transform business processes. 
-              Expert in <span className="gradient-text font-semibold">Lightning Web Components, Apex, </span>, 
-              <span className="gradient-text font-semibold"> JavaScript, Python, React Framewok</span>, and 
-              enterprise-scale development.
+              <span className="gradient-text font-semibold">9+ years</span> designing scalable, distributed Salesforce solutions for global enterprises.
+              Expert in <span className="gradient-text font-semibold">Apex, LWC, REST/SOAP APIs</span> and architecting{' '}
+              <span className="gradient-text font-semibold">Generative AI & agentic workflows</span> that automate complex business processes.
             </motion.p>
+
+            {/* Stats row */}
+            <motion.div
+              className="flex flex-wrap justify-center gap-8 pt-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.3 }}
+            >
+              {[
+                { value: '9+', label: 'Years Experience' },
+                { value: '19+', label: 'Enterprise Clients' },
+                { value: '6x', label: 'SF Certified' },
+              ].map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <div className="text-2xl md:text-3xl font-black gradient-text">{stat.value}</div>
+                  <div className="text-xs md:text-sm font-mono" style={{ color: 'var(--color-text-tertiary)' }}>{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
 
             {/* CTA Buttons */}
             <motion.div
@@ -133,8 +149,10 @@ const ModernHero: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1.4 }}
             >
-              <motion.button
-                className="btn-modern group relative overflow-hidden"
+              <motion.a
+                href="/Bennie_J_Richard_March.pdf"
+                download
+                className="btn-modern group relative overflow-hidden inline-flex items-center"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onHoverStart={() => setIsHovering(true)}
@@ -143,7 +161,7 @@ const ModernHero: React.FC = () => {
                 <FiDownload className="inline mr-2" />
                 Download Resume
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              </motion.button>
+              </motion.a>
 
               <motion.button
                 className="px-8 py-4 border-2 rounded-lg font-medium transition-all duration-300 relative group"

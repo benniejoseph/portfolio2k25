@@ -4,37 +4,66 @@ import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from '
 import Image from 'next/image';
 import { FiChevronLeft, FiChevronRight, FiExternalLink, FiGithub, FiCode } from 'react-icons/fi';
 
-// --- REPLACE WITH YOUR ACTUAL PROJECTS ---
 const projectData = [
   {
-    title: 'Custom LWC Quote Calculator',
-    description: 'Developed a complex Lightning Web Component for sales teams to generate quotes with dynamic pricing rules and product configurations.',
+    title: 'TradeTaper – Trading Journal Platform',
+    description: 'Production-grade full-stack trading journal with a NestJS backend, Next.js frontend & admin portal, real-time WebSocket data feeds, and PostgreSQL — deployed via Docker and CI/CD GitHub Actions (523 commits). Modular monorepo with auth, market-data ingestion, trade strategy modules, and automated seed/migration workflows.',
     imageUrl: '/images/about04.png',
-    tags: ['LWC', 'Apex', 'Sales Cloud', 'JavaScript'],
+    tags: ['TypeScript', 'NestJS', 'Next.js', 'WebSocket', 'PostgreSQL', 'Docker'],
     liveUrl: '#',
-    githubUrl: 'https://github.com/yourusername/project-repo',
+    githubUrl: 'https://github.com/benniejoseph/tradetaper',
+    color: 'from-green-500 to-emerald-500',
+    accentColor: 'green'
+  },
+  {
+    title: 'Audiolyse – AI Call Coaching Platform',
+    description: 'Bulk call transcription and AI coaching web app using Next.js 14 App Router and Google Gemini 2.5 Pro. Processes audio files in parallel generating transcriptions, meeting minutes, sentiment analysis, and agent performance scores (1–100). Supports English, Hindi & Hinglish with automatic language detection.',
+    imageUrl: '/images/about04.png',
+    tags: ['Next.js 14', 'Gemini 2.5 Pro', 'Supabase', 'Node.js', 'TypeScript'],
+    liveUrl: '#',
+    githubUrl: 'https://github.com/benniejoseph/audiolyse',
+    color: 'from-purple-500 to-pink-500',
+    accentColor: 'purple'
+  },
+  {
+    title: 'Doreish – Autonomous AI Agent Ops Platform',
+    description: 'Multi-agent orchestration platform serving as a single control plane for SaaS operations — agents defined as autonomous "employees" execute tasks across dev, support, marketing and sales using OpenAI APIs and vector search (pgvector). Full cloud infra via Terraform, async queuing via Upstash Redis + QStash.',
+    imageUrl: '/images/about04.png',
+    tags: ['TypeScript', 'Next.js', 'Postgres', 'Redis', 'Terraform', 'OpenAI'],
+    liveUrl: '#',
+    githubUrl: 'https://github.com/benniejoseph/doreish',
     color: 'from-blue-500 to-cyan-500',
     accentColor: 'blue'
   },
   {
-    title: 'Service Cloud Chatbot Integration',
-    description: 'Integrated an Einstein Bot with external knowledge base API for automated customer support case deflection.',
+    title: 'Agent Assemble – LangGraph Agentic Platform',
+    description: 'LangGraph and RAG-based agentic platform enabling users to define workflows in natural language. Spawns AI agents to autonomously execute API-based tools, scheduling, and multi-step business processes — built at Deloitte to automate enterprise operations.',
     imageUrl: '/images/about04.png',
-    tags: ['Service Cloud', 'Einstein Bots', 'Apex', 'REST API'],
+    tags: ['LangGraph', 'RAG', 'Python', 'OpenAI', 'REST APIs'],
     liveUrl: '#',
-    githubUrl: 'https://github.com/yourusername/project-repo',
-    color: 'from-purple-500 to-pink-500',
-    accentColor: 'purple'
-  },
-   {
-    title: 'Community Portal Enhancement',
-    description: 'Redesigned and implemented new features for a customer community portal using Experience Cloud and custom components.',
-    imageUrl: '/images/about04.png',
-    tags: ['Experience Cloud', 'LWC', 'Apex', 'CSS'],
-    liveUrl: '#',
-    githubUrl: 'https://github.com/yourusername/another-repo',
-    color: 'from-orange-500 to-red-500',
+    githubUrl: '#',
+    color: 'from-orange-500 to-amber-500',
     accentColor: 'orange'
+  },
+  {
+    title: 'Mona – Real-Time AI Meeting Assistant',
+    description: 'Real-time AI voice assistant integrated into MS Teams and Zoom using Twilio, LiveKit, and OpenAI Realtime API. Automates call transcription, meeting minutes generation, and parallel task execution (emails, calendar reminders) during live meetings.',
+    imageUrl: '/images/about04.png',
+    tags: ['Twilio', 'LiveKit', 'OpenAI Realtime', 'MS Teams SDK', 'Zoom SDK'],
+    liveUrl: '#',
+    githubUrl: '#',
+    color: 'from-teal-500 to-green-500',
+    accentColor: 'teal'
+  },
+  {
+    title: 'Cenithos – AI-Powered Cross-Platform App',
+    description: 'Cross-platform application with mobile via Flutter, web via TypeScript, and backend via Python — AI integration with Firebase/Firestore data layer. Automated security vulnerability scanning, linting, test coverage, and performance hotspot reports built into the pipeline.',
+    imageUrl: '/images/about04.png',
+    tags: ['Flutter', 'Python', 'TypeScript', 'Firebase', 'REST APIs'],
+    liveUrl: '#',
+    githubUrl: 'https://github.com/benniejoseph/cenithos',
+    color: 'from-red-500 to-rose-500',
+    accentColor: 'red'
   },
 ];
 
