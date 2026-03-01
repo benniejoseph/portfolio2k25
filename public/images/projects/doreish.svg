@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 800" width="1400" height="800">
+  <defs>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#1a1f1a" stroke-width="0.5"/>
+    </pattern>
+    <radialGradient id="glow1" cx="25%" cy="30%" r="40%">
+      <stop offset="0%" stop-color="#86C232" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#0a0f0a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="75%" cy="70%" r="40%">
+      <stop offset="0%" stop-color="#FF6B35" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#0a0f0a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="neonGlow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="800" fill="#080c08"/>
+  <rect width="1400" height="800" fill="url(#grid)"/>
+  <rect width="1400" height="800" fill="url(#glow1)"/>
+  <rect width="1400" height="800" fill="url(#glow2)"/>
+
+  <!-- Top bar -->
+  <rect width="1400" height="42" fill="#0d120d" opacity="0.95"/>
+  <line x1="0" y1="42" x2="1400" y2="42" stroke="#1e2b1e" stroke-width="1"/>
+
+  <!-- Logo -->
+  <circle cx="22" cy="21" r="11" fill="none" stroke="#86C232" stroke-width="1.5" filter="url(#neonGlow)"/>
+  <text x="20" y="25" font-family="monospace" font-size="9" fill="#86C232" text-anchor="middle">⊙</text>
+  <text x="42" y="25" font-family="monospace" font-size="11" font-weight="bold" fill="#86C232" letter-spacing="2" filter="url(#neonGlow)">DOREISH</text>
+  <text x="110" y="24" font-family="monospace" font-size="7" fill="#3a4f3a">COMPANY OS V1</text>
+
+  <!-- Product tabs -->
+  <rect x="160" y="8" width="84" height="26" rx="4" fill="#1a2e1a" stroke="#86C232" stroke-width="1"/>
+  <text x="202" y="25" font-family="monospace" font-size="9" fill="#86C232" text-anchor="middle">■ TradeTaper</text>
+  <rect x="252" y="10" width="64" height="22" rx="4" fill="transparent"/>
+  <text x="284" y="25" font-family="monospace" font-size="9" fill="#4a5f4a" text-anchor="middle">● Cognit</text>
+  <rect x="324" y="10" width="82" height="22" rx="4" fill="transparent"/>
+  <text x="365" y="25" font-family="monospace" font-size="9" fill="#4a5f4a" text-anchor="middle">◉ SiteOperator</text>
+  <rect x="414" y="10" width="68" height="22" rx="4" fill="transparent"/>
+  <text x="448" y="25" font-family="monospace" font-size="9" fill="#4a5f4a" text-anchor="middle">♪ Audiolyse</text>
+
+  <!-- Right status -->
+  <text x="850" y="25" font-family="monospace" font-size="8" fill="#3a4f3a">ACTIVE <tspan fill="#86C232">0</tspan>   QUEUE <tspan fill="#86C232">0</tspan>   APPROVALS <tspan fill="#FF9900">1</tspan></text>
+  <circle cx="1000" cy="21" r="4" fill="#86C232" opacity="0.9" filter="url(#neonGlow)"/>
+  <text x="1010" y="25" font-family="monospace" font-size="9" fill="#86C232">LIVE</text>
+  <text x="1060" y="25" font-family="monospace" font-size="8" fill="#3a4f3a">TASKS   AGENTS   APPROVALS   AUDIT   SETTINGS</text>
+
+  <!-- ENGINEERING quadrant -->
+  <rect x="20" y="56" width="520" height="320" rx="6" fill="#0c120c" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="42" y="78" font-family="monospace" font-size="9" fill="#86C232" letter-spacing="2">⚙ ENGINEERING</text>
+
+  <!-- Ironman avatar -->
+  <circle cx="155" cy="175" r="40" fill="#1a1f1a" stroke="#FF4444" stroke-width="2"/>
+  <circle cx="155" cy="175" r="36" fill="#c0392b"/>
+  <rect x="138" y="162" width="34" height="20" rx="3" fill="#e74c3c"/>
+  <rect x="145" y="168" width="8" height="6" rx="1" fill="#FFD700" opacity="0.9"/>
+  <rect x="158" y="168" width="8" height="6" rx="1" fill="#FFD700" opacity="0.9"/>
+  <circle cx="155" cy="175" r="38" fill="none" stroke="#FF4444" stroke-width="1" opacity="0.4"/>
+  <text x="155" y="228" font-family="monospace" font-size="10" fill="#FF4444" text-anchor="middle" filter="url(#neonGlow)">Ironman</text>
+  <text x="155" y="243" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">CTO · COORD</text>
+  <rect x="130" y="250" width="50" height="14" rx="3" fill="#1e2b1e" stroke="#2a3f2a" stroke-width="1"/>
+  <text x="155" y="260" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">IDLE</text>
+
+  <!-- Hulk avatar -->
+  <circle cx="285" cy="175" r="40" fill="#1a1f1a" stroke="#27AE60" stroke-width="2"/>
+  <circle cx="285" cy="175" r="36" fill="#1e8449"/>
+  <rect x="268" y="162" width="34" height="22" rx="2" fill="#239B56"/>
+  <rect x="272" y="166" width="10" height="8" rx="1" fill="#1a5c1a" opacity="0.8"/>
+  <rect x="288" y="166" width="10" height="8" rx="1" fill="#1a5c1a" opacity="0.8"/>
+  <text x="285" y="228" font-family="monospace" font-size="10" fill="#27AE60" text-anchor="middle" filter="url(#neonGlow)">Hulk</text>
+  <text x="285" y="243" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">QA · DEBUG</text>
+  <rect x="260" y="250" width="50" height="14" rx="3" fill="#1e2b1e" stroke="#2a3f2a" stroke-width="1"/>
+  <text x="285" y="260" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">IDLE</text>
+
+  <!-- OPERATIONS quadrant -->
+  <rect x="560" y="56" width="520" height="320" rx="6" fill="#0c120c" stroke="#1e2b1e" stroke-width="1"/>
+  <circle cx="572" cy="79" r="5" fill="#FF4444" filter="url(#neonGlow)"/>
+  <text x="586" y="83" font-family="monospace" font-size="9" fill="#c0392b" letter-spacing="2">OPERATIONS</text>
+
+  <!-- Cap America avatar -->
+  <circle cx="695" cy="175" r="40" fill="#1a1f1a" stroke="#3498DB" stroke-width="2"/>
+  <circle cx="695" cy="175" r="36" fill="#2471A3"/>
+  <circle cx="695" cy="175" r="22" fill="#2980B9"/>
+  <text x="695" y="180" font-family="monospace" font-size="14" fill="white" text-anchor="middle">★</text>
+  <text x="695" y="228" font-family="monospace" font-size="10" fill="#3498DB" text-anchor="middle" filter="url(#neonGlow)">Cap. America</text>
+  <text x="695" y="243" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">OPS · COMPLIANCE</text>
+
+  <!-- Vision avatar -->
+  <circle cx="835" cy="175" r="40" fill="#1a1f1a" stroke="#E67E22" stroke-width="2"/>
+  <circle cx="835" cy="175" r="36" fill="#D35400"/>
+  <polygon points="835,155 848,175 835,195 822,175" fill="#E67E22" opacity="0.8"/>
+  <circle cx="835" cy="175" r="8" fill="#F39C12"/>
+  <text x="835" y="228" font-family="monospace" font-size="10" fill="#E67E22" text-anchor="middle" filter="url(#neonGlow)">Vision</text>
+  <text x="835" y="243" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">ANALYTICS · KPIS</text>
+
+  <!-- MARKETING quadrant -->
+  <rect x="20" y="396" width="520" height="320" rx="6" fill="#0c120c" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="60" y="418" font-family="monospace" font-size="9" fill="#E67E22" letter-spacing="2">◆ MARKETING</text>
+
+  <!-- Thor avatar -->
+  <circle cx="155" cy="520" r="40" fill="#1a1f1a" stroke="#8E44AD" stroke-width="2"/>
+  <circle cx="155" cy="520" r="36" fill="#7D3C98"/>
+  <rect x="148" y="500" width="14" height="26" rx="2" fill="#9B59B6" opacity="0.8"/>
+  <rect x="140" y="508" width="30" height="8" rx="2" fill="#A569BD"/>
+  <text x="155" y="573" font-family="monospace" font-size="10" fill="#8E44AD" text-anchor="middle" filter="url(#neonGlow)">Thor</text>
+  <text x="155" y="588" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">GROWTH · MARKETING</text>
+
+  <!-- Hawkeye avatar -->
+  <circle cx="285" cy="520" r="40" fill="#1a1f1a" stroke="#8E44AD" stroke-width="2"/>
+  <circle cx="285" cy="520" r="36" fill="#6C3483"/>
+  <circle cx="285" cy="514" r="10" fill="none" stroke="#9B59B6" stroke-width="3"/>
+  <circle cx="285" cy="514" r="4" fill="#9B59B6"/>
+  <text x="285" y="573" font-family="monospace" font-size="10" fill="#8E44AD" text-anchor="middle" filter="url(#neonGlow)">Hawkeye</text>
+  <text x="285" y="588" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">SOCIAL MEDIA</text>
+
+  <!-- BUSINESS quadrant -->
+  <rect x="560" y="396" width="520" height="320" rx="6" fill="#0c120c" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="580" y="418" font-family="monospace" font-size="9" fill="#8E44AD" letter-spacing="2">◇ BUSINESS</text>
+
+  <!-- Black Widow -->
+  <circle cx="665" cy="520" r="35" fill="#1a1f1a" stroke="#E74C3C" stroke-width="2"/>
+  <circle cx="665" cy="520" r="31" fill="#922B21"/>
+  <text x="665" y="525" font-family="monospace" font-size="14" fill="#E74C3C" text-anchor="middle">✦</text>
+  <text x="665" y="566" font-family="monospace" font-size="8" fill="#E74C3C" text-anchor="middle">Black Widow</text>
+  <text x="665" y="578" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">SUPPORT</text>
+
+  <!-- Spider-Man -->
+  <circle cx="790" cy="520" r="35" fill="#1a1f1a" stroke="#E74C3C" stroke-width="2"/>
+  <circle cx="790" cy="520" r="31" fill="#922B21"/>
+  <circle cx="778" cy="514" r="5" fill="#E74C3C" opacity="0.8"/>
+  <circle cx="802" cy="514" r="5" fill="#E74C3C" opacity="0.8"/>
+  <path d="M 778 524 Q 790 532 802 524" fill="none" stroke="#E74C3C" stroke-width="2"/>
+  <text x="790" y="566" font-family="monospace" font-size="8" fill="#E74C3C" text-anchor="middle">Spider-Man</text>
+  <text x="790" y="578" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">RETENTION · SALES</text>
+
+  <!-- Dr Strange -->
+  <circle cx="915" cy="520" r="35" fill="#1a1f1a" stroke="#E67E22" stroke-width="2"/>
+  <circle cx="915" cy="520" r="31" fill="#784212"/>
+  <circle cx="915" cy="520" r="14" fill="none" stroke="#E67E22" stroke-width="2" stroke-dasharray="4,2"/>
+  <circle cx="915" cy="520" r="5" fill="#F39C12"/>
+  <text x="915" y="566" font-family="monospace" font-size="8" fill="#E67E22" text-anchor="middle">Dr. Strange</text>
+  <text x="915" y="578" font-family="monospace" font-size="7" fill="#4a5f4a" text-anchor="middle">AUTOMATION</text>
+
+  <!-- COMMS FEED sidebar -->
+  <rect x="1105" y="56" width="275" height="660" rx="6" fill="#0c120c" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="1120" y="80" font-family="monospace" font-size="9" fill="#86C232" letter-spacing="2">◆ COMMS FEED</text>
+  <rect x="1340" y="64" width="22" height="22" rx="4" fill="#FF9900" opacity="0.9"/>
+  <text x="1351" y="79" font-family="monospace" font-size="9" fill="white" text-anchor="middle">1</text>
+
+  <!-- Feed items -->
+  <rect x="1112" y="92" width="256" height="80" rx="4" fill="#111811" stroke="#2a1f00" stroke-width="1"/>
+  <text x="1120" y="108" font-family="monospace" font-size="8" fill="#FF9900">▲ IRONMAN</text>
+  <text x="1316" y="108" font-family="monospace" font-size="7" fill="#3a4f3a">3s ago</text>
+  <text x="1120" y="122" font-family="monospace" font-size="8" fill="#aaa">▲ Needs approval: Run Audiolyse:</text>
+  <text x="1120" y="136" font-family="monospace" font-size="8" fill="#aaa">  implement saved analyses UI</text>
+  <rect x="1118" y="148" width="74" height="18" rx="3" fill="#27AE60"/>
+  <text x="1155" y="161" font-family="monospace" font-size="8" fill="white" text-anchor="middle">APPROVE</text>
+  <rect x="1200" y="148" width="60" height="18" rx="3" fill="#C0392B"/>
+  <text x="1230" y="161" font-family="monospace" font-size="8" fill="white" text-anchor="middle">REJECT</text>
+
+  <rect x="1112" y="182" width="256" height="50" rx="4" fill="#111811" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="1120" y="198" font-family="monospace" font-size="8" fill="#86C232">✓ IRONMAN</text>
+  <text x="1120" y="212" font-family="monospace" font-size="8" fill="#aaa">✓ Completed: [TradeTaper]</text>
+  <text x="1120" y="224" font-family="monospace" font-size="8" fill="#aaa">  Avoiding Common Mistakes</text>
+
+  <rect x="1112" y="242" width="256" height="38" rx="4" fill="#0e150e" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="1120" y="258" font-family="monospace" font-size="8" fill="#3a4f3a">◆ SYSTEM</text>
+  <text x="1120" y="272" font-family="monospace" font-size="8" fill="#2a3f2a">Connected — watching tradetaper</text>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="758" width="1100" height="42" fill="#0d120d" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="16" y="784" font-family="monospace" font-size="8" fill="#86C232" filter="url(#neonGlow)">▶ TASK QUEUE</text>
+  <rect x="1010" y="768" width="70" height="22" rx="4" fill="#111811" stroke="#1e2b1e" stroke-width="1"/>
+  <text x="1045" y="783" font-family="monospace" font-size="8" fill="#4a5f4a" text-anchor="middle">0 total</text>
+  <text x="200" y="784" font-family="monospace" font-size="8" fill="#3a4f3a">AGENTS: 9   WORKING: 0   PRODUCT: TRADETAPER</text>
+</svg>

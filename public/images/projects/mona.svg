@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 800" width="1400" height="800">
+  <defs>
+    <linearGradient id="bg-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#061a1a"/>
+      <stop offset="100%" stop-color="#030d0d"/>
+    </linearGradient>
+    <linearGradient id="teal-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <filter id="glow-teal">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="mic-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0D9488" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0D9488" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1400" height="800" fill="url(#bg-g)"/>
+
+  <!-- Subtle grid -->
+  <pattern id="g2" width="30" height="30" patternUnits="userSpaceOnUse">
+    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#081a1a" stroke-width="0.6"/>
+  </pattern>
+  <rect width="1400" height="800" fill="url(#g2)"/>
+
+  <!-- Header bar -->
+  <rect width="1400" height="52" fill="#061a1a" opacity="0.95"/>
+  <line x1="0" y1="52" x2="1400" y2="52" stroke="#0d2e2e" stroke-width="1"/>
+
+  <!-- Mona logo -->
+  <circle cx="28" cy="26" r="14" fill="url(#teal-grad)" opacity="0.9"/>
+  <text x="28" y="31" font-family="monospace" font-size="11" fill="white" text-anchor="middle" font-weight="bold">M</text>
+  <text x="52" y="31" font-family="monospace" font-size="14" fill="#0D9488" font-weight="bold" letter-spacing="2" filter="url(#glow-teal)">MONA</text>
+  <text x="108" y="29" font-family="monospace" font-size="8" fill="#1a4040">AI Meeting Assistant</text>
+
+  <!-- Meeting info -->
+  <circle cx="600" cy="26" r="5" fill="#10B981" filter="url(#glow-teal)"/>
+  <text x="612" y="30" font-family="monospace" font-size="9" fill="#10B981">LIVE · 00:23:41</text>
+  <text x="720" y="30" font-family="monospace" font-size="9" fill="#1a4040">|</text>
+  <text x="732" y="30" font-family="monospace" font-size="9" fill="#2a6060">Q4 Planning · 6 participants</text>
+
+  <!-- MS Teams / Zoom logos area -->
+  <rect x="1100" y="14" width="60" height="24" rx="4" fill="#464EB8" opacity="0.8"/>
+  <text x="1130" y="30" font-family="monospace" font-size="8" fill="white" text-anchor="middle">Teams</text>
+  <rect x="1170" y="14" width="60" height="24" rx="4" fill="#2D8CFF" opacity="0.8"/>
+  <text x="1200" y="30" font-family="monospace" font-size="8" fill="white" text-anchor="middle">Zoom</text>
+  <rect x="1240" y="14" width="64" height="24" rx="4" fill="#F22F46" opacity="0.8"/>
+  <text x="1272" y="30" font-family="monospace" font-size="8" fill="white" text-anchor="middle">Twilio</text>
+  <rect x="1314" y="14" width="68" height="24" rx="4" fill="#0D9488" opacity="0.8"/>
+  <text x="1348" y="30" font-family="monospace" font-size="8" fill="white" text-anchor="middle">LiveKit</text>
+
+  <!-- LEFT PANEL: Live Transcription -->
+  <rect x="20" y="68" width="500" height="640" rx="8" fill="#061a1a" stroke="#0d2e2e" stroke-width="1"/>
+  <rect x="20" y="68" width="500" height="40" rx="8" fill="#081f1f"/>
+  <text x="40" y="93" font-family="monospace" font-size="10" fill="#0D9488" letter-spacing="2">◈ LIVE TRANSCRIPTION</text>
+  <circle cx="490" cy="88" r="5" fill="#10B981" filter="url(#glow-teal)"/>
+
+  <!-- Transcript lines with speaker labels -->
+  <rect x="32" y="124" width="476" height="52" rx="4" fill="#081f1f"/>
+  <text x="42" y="141" font-family="monospace" font-size="8" fill="#0D9488">Sarah (PM)</text>
+  <text x="42" y="156" font-family="monospace" font-size="9" fill="#9ca3af">"Let's align on the Q4 OKRs. I think we need to</text>
+  <text x="42" y="169" font-family="monospace" font-size="9" fill="#9ca3af">reprioritize the API migration timeline..."</text>
+
+  <rect x="32" y="184" width="476" height="52" rx="4" fill="#061a1a"/>
+  <text x="42" y="201" font-family="monospace" font-size="8" fill="#06B6D4">Raj (Eng Lead)</text>
+  <text x="42" y="216" font-family="monospace" font-size="9" fill="#9ca3af">"We can accelerate if we pull in 2 more devs</text>
+  <text x="42" y="229" font-family="monospace" font-size="9" fill="#9ca3af">from the infra team for 3 weeks..."</text>
+
+  <rect x="32" y="244" width="476" height="52" rx="4" fill="#081f1f"/>
+  <text x="42" y="261" font-family="monospace" font-size="8" fill="#F59E0B">Amy (CTO)</text>
+  <text x="42" y="276" font-family="monospace" font-size="9" fill="#9ca3af">"Agreed. Let's set a review checkpoint for</text>
+  <text x="42" y="289" font-family="monospace" font-size="9" fill="#9ca3af">Nov 15th. Raj, can you send the updated plan?"</text>
+
+  <rect x="32" y="304" width="476" height="38" rx="4" fill="#061a1a"/>
+  <text x="42" y="321" font-family="monospace" font-size="8" fill="#0D9488">Raj (Eng Lead)</text>
+  <text x="42" y="336" font-family="monospace" font-size="9" fill="#9ca3af">"Sure, I'll send it by EOD today..."</text>
+
+  <!-- Current speaker indicator -->
+  <rect x="32" y="350" width="476" height="38" rx="4" fill="#091f1f" stroke="#0D9488" stroke-width="1" stroke-dasharray="4,2"/>
+  <circle cx="46" cy="369" r="4" fill="#10B981" filter="url(#glow-teal)"/>
+  <text x="58" y="373" font-family="monospace" font-size="8" fill="#10B981">Sarah (PM) · speaking...</text>
+  <text x="42" y="382" font-family="monospace" font-size="9" fill="#6b9090">"The deadline for the new dashboard should be—"</text>
+
+  <!-- Audio waveform -->
+  <rect x="32" y="405" width="476" height="50" rx="4" fill="#061f1f"/>
+  <text x="42" y="421" font-family="monospace" font-size="7" fill="#1a4040">AUDIO WAVEFORM</text>
+  <!-- Waveform bars -->
+  <rect x="42" y="432" width="3" height="16" rx="1" fill="#0D9488" opacity="0.7"/>
+  <rect x="48" y="426" width="3" height="22" rx="1" fill="#0D9488" opacity="0.8"/>
+  <rect x="54" y="430" width="3" height="18" rx="1" fill="#06B6D4"/>
+  <rect x="60" y="424" width="3" height="24" rx="1" fill="#0D9488" opacity="0.9"/>
+  <rect x="66" y="428" width="3" height="20" rx="1" fill="#06B6D4" opacity="0.7"/>
+  <rect x="72" y="432" width="3" height="16" rx="1" fill="#0D9488"/>
+  <rect x="78" y="425" width="3" height="23" rx="1" fill="#06B6D4"/>
+  <rect x="84" y="429" width="3" height="19" rx="1" fill="#0D9488" opacity="0.8"/>
+  <rect x="90" y="433" width="3" height="15" rx="1" fill="#06B6D4" opacity="0.6"/>
+  <rect x="96" y="427" width="3" height="21" rx="1" fill="#0D9488"/>
+  <rect x="102" y="423" width="3" height="25" rx="1" fill="#06B6D4" opacity="0.9"/>
+  <rect x="108" y="430" width="3" height="18" rx="1" fill="#0D9488"/>
+  <rect x="114" y="434" width="3" height="14" rx="1" fill="#06B6D4" opacity="0.5"/>
+  <rect x="120" y="426" width="3" height="22" rx="1" fill="#0D9488" opacity="0.8"/>
+  <rect x="126" y="424" width="3" height="24" rx="1" fill="#06B6D4"/>
+  <rect x="132" y="431" width="3" height="17" rx="1" fill="#0D9488" opacity="0.7"/>
+
+  <!-- MIDDLE PANEL: AI Actions -->
+  <rect x="540" y="68" width="380" height="640" rx="8" fill="#061a1a" stroke="#0d2e2e" stroke-width="1"/>
+  <rect x="540" y="68" width="380" height="40" rx="8" fill="#081f1f"/>
+  <text x="560" y="93" font-family="monospace" font-size="10" fill="#0D9488" letter-spacing="2">⚡ AI ACTIONS</text>
+
+  <!-- Action items being generated -->
+  <text x="556" y="130" font-family="monospace" font-size="9" fill="#1a4040" letter-spacing="1">GENERATING IN REAL-TIME...</text>
+
+  <!-- Action 1: Calendar -->
+  <rect x="552" y="142" width="356" height="62" rx="6" fill="#0a2020" stroke="#0D9488" stroke-width="1"/>
+  <rect x="552" y="142" width="4" height="62" rx="2" fill="url(#teal-grad)"/>
+  <text x="568" y="162" font-family="monospace" font-size="9" fill="#10B981">✓ CALENDAR EVENT CREATED</text>
+  <text x="568" y="178" font-family="monospace" font-size="8" fill="#6b9090">Nov 15 · API Migration Review</text>
+  <text x="568" y="192" font-family="monospace" font-size="8" fill="#4a7070">@ 10:00 AM · Raj, Sarah, Amy + 3</text>
+
+  <!-- Action 2: Email -->
+  <rect x="552" y="216" width="356" height="62" rx="6" fill="#0a2020" stroke="#0D9488" stroke-width="1"/>
+  <rect x="552" y="216" width="4" height="62" rx="2" fill="url(#teal-grad)"/>
+  <text x="568" y="236" font-family="monospace" font-size="9" fill="#10B981">✓ EMAIL DRAFTED</text>
+  <text x="568" y="252" font-family="monospace" font-size="8" fill="#6b9090">To: raj@company.com</text>
+  <text x="568" y="266" font-family="monospace" font-size="8" fill="#4a7070">"Updated API migration plan due EOD"</text>
+
+  <!-- Action 3: Task -->
+  <rect x="552" y="290" width="356" height="62" rx="6" fill="#0a2020" stroke="#0D9488" stroke-width="1"/>
+  <rect x="552" y="290" width="4" height="62" rx="2" fill="url(#teal-grad)"/>
+  <text x="568" y="310" font-family="monospace" font-size="9" fill="#10B981">✓ JIRA TASK CREATED</text>
+  <text x="568" y="326" font-family="monospace" font-size="8" fill="#6b9090">ENG-2847: API Migration Sprint Plan</text>
+  <text x="568" y="340" font-family="monospace" font-size="8" fill="#4a7070">Assignee: Raj · Due: Nov 15</text>
+
+  <!-- Action 4: In progress -->
+  <rect x="552" y="364" width="356" height="62" rx="6" fill="#091a1a" stroke="#1a4040" stroke-width="1" stroke-dasharray="4,2"/>
+  <rect x="552" y="364" width="4" height="62" rx="2" fill="#1a4040"/>
+  <circle cx="572" cy="389" r="5" fill="none" stroke="#0D9488" stroke-width="2"/>
+  <text x="586" y="384" font-family="monospace" font-size="9" fill="#0D9488">⟳ GENERATING MEETING MINUTES</text>
+  <text x="568" y="400" font-family="monospace" font-size="8" fill="#2a5050">Summarizing decisions &amp; action items...</text>
+  <text x="568" y="414" font-family="monospace" font-size="8" fill="#1a4040">━━━━━━━━━━━━━━━━━━━━░░░░░░░ 78%</text>
+
+  <!-- RIGHT PANEL: Meeting Summary -->
+  <rect x="940" y="68" width="440" height="640" rx="8" fill="#061a1a" stroke="#0d2e2e" stroke-width="1"/>
+  <rect x="940" y="68" width="440" height="40" rx="8" fill="#081f1f"/>
+  <text x="960" y="93" font-family="monospace" font-size="10" fill="#0D9488" letter-spacing="2">◎ MEETING SUMMARY</text>
+
+  <text x="956" y="130" font-family="monospace" font-size="8" fill="#0D9488" letter-spacing="1">DECISIONS</text>
+  <rect x="956" y="136" width="400" height="1" fill="#0d2e2e"/>
+
+  <text x="956" y="154" font-family="monospace" font-size="9" fill="#9ca3af">• API migration accelerated — Infra team</text>
+  <text x="956" y="170" font-family="monospace" font-size="9" fill="#9ca3af">  resources allocated for 3 weeks</text>
+  <text x="956" y="188" font-family="monospace" font-size="9" fill="#9ca3af">• Checkpoint review: Nov 15, 10:00 AM</text>
+  <text x="956" y="206" font-family="monospace" font-size="9" fill="#9ca3af">• Q4 OKRs reprioritized around API</text>
+  <text x="956" y="222" font-family="monospace" font-size="9" fill="#9ca3af">  migration as primary initiative</text>
+
+  <text x="956" y="250" font-family="monospace" font-size="8" fill="#0D9488" letter-spacing="1">ACTION ITEMS</text>
+  <rect x="956" y="256" width="400" height="1" fill="#0d2e2e"/>
+
+  <rect x="956" y="264" width="400" height="32" rx="4" fill="#081f1f"/>
+  <text x="966" y="279" font-family="monospace" font-size="9" fill="#F59E0B">○  Raj → Send updated API plan by EOD</text>
+  <text x="966" y="291" font-family="monospace" font-size="7" fill="#4a6060">Due: Today · High Priority</text>
+
+  <rect x="956" y="302" width="400" height="32" rx="4" fill="#081f1f"/>
+  <text x="966" y="317" font-family="monospace" font-size="9" fill="#F59E0B">○  Sarah → Confirm infra resource allocation</text>
+  <text x="966" y="329" font-family="monospace" font-size="7" fill="#4a6060">Due: Nov 12 · Medium Priority</text>
+
+  <rect x="956" y="340" width="400" height="32" rx="4" fill="#081f1f"/>
+  <text x="966" y="355" font-family="monospace" font-size="9" fill="#F59E0B">○  Amy → Finalize Q4 OKR document</text>
+  <text x="966" y="367" font-family="monospace" font-size="7" fill="#4a6060">Due: Nov 14 · High Priority</text>
+
+  <!-- Sentiment -->
+  <text x="956" y="402" font-family="monospace" font-size="8" fill="#0D9488" letter-spacing="1">MEETING SENTIMENT</text>
+  <rect x="956" y="408" width="400" height="1" fill="#0d2e2e"/>
+  <rect x="956" y="416" width="260" height="16" rx="8" fill="#0a2020"/>
+  <rect x="956" y="416" width="210" height="16" rx="8" fill="url(#teal-grad)" opacity="0.8"/>
+  <text x="1172" y="428" font-family="monospace" font-size="7" fill="#9ca3af">Positive 81%</text>
+
+  <!-- Participants -->
+  <text x="956" y="456" font-family="monospace" font-size="8" fill="#0D9488" letter-spacing="1">PARTICIPANTS  (6)</text>
+  <circle cx="970" cy="478" r="14" fill="#1a3040"/>
+  <text x="970" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">S</text>
+  <circle cx="1004" cy="478" r="14" fill="#1a3040"/>
+  <text x="1004" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">R</text>
+  <circle cx="1038" cy="478" r="14" fill="#1a3040"/>
+  <text x="1038" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">A</text>
+  <circle cx="1072" cy="478" r="14" fill="#1a3040"/>
+  <text x="1072" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">K</text>
+  <circle cx="1106" cy="478" r="14" fill="#1a3040"/>
+  <text x="1106" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">P</text>
+  <circle cx="1140" cy="478" r="14" fill="#1a3040"/>
+  <text x="1140" y="483" font-family="monospace" font-size="8" fill="#9ca3af" text-anchor="middle">+1</text>
+</svg>
