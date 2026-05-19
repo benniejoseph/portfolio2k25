@@ -84,11 +84,12 @@ async function generateDalleImage(
     n: 1,
     size,
     quality: 'standard',
-    response_format: 'b64_json',
   })
-  const b64 = response.data[0]?.b64_json
-  if (!b64) throw new Error('No image data returned from DALL-E 3')
-  return Buffer.from(b64, 'base64')
+  const url = response.data[0]?.url
+  if (!url) throw new Error('No image URL returned from DALL-E 3')
+  const imgResponse = await fetch(url)
+  if (!imgResponse.ok) throw new Error(`Failed to download DALL-E image: ${imgResponse.status}`)
+  return Buffer.from(await imgResponse.arrayBuffer())
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
