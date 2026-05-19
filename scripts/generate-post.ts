@@ -6,7 +6,7 @@
  *   npx ts-node scripts/generate-post.ts --index 3        ← specific topic by index
  *   npx ts-node scripts/generate-post.ts --list            ← list all topics
  *
- * Requires: ANTHROPIC_API_KEY in .env.local
+ * Requires: OPENAI_API_KEY in .env.local
  */
 
 import { config } from 'dotenv'
@@ -61,7 +61,7 @@ if (!topic) {
 console.log(`\nGenerating post: "${topic.title}"`)
 console.log(`Keyword: ${topic.keyword}`)
 console.log(`Tags: ${topic.tags.join(', ')}`)
-console.log('Calling Claude API...\n')
+console.log('Calling OpenAI API (gpt-4.5-preview)...\n')
 
 generateAndSave(topic)
   .then((slug) => {

@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import fs from 'fs'
 import path from 'path'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 export interface GeneratePostOptions {
   title: string
@@ -50,16 +50,18 @@ Now write the full post body in MDX. Remember: code snippet + real example + TL;
 }
 
 export async function generatePost(opts: GeneratePostOptions): Promise<string> {
-  const message = await client.messages.create({
-    model: 'claude-opus-4-7',
+  const response = await client.chat.completions.create({
+    model: 'gpt-4.5-preview',
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: buildPrompt(opts) }],
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildPrompt(opts) },
+    ],
   })
 
-  const content = message.content[0]
-  if (content.type !== 'text') throw new Error('Unexpected response type')
-  return content.text
+  const text = response.choices[0]?.message?.content
+  if (!text) throw new Error('No content in OpenAI response')
+  return text
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
@@ -90,10 +92,10 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     tags: ['Salesforce', 'LWC', 'React'],
   },
   {
-    title: 'Building Your First AI Agent with Claude API and Salesforce',
-    keyword: 'claude api salesforce integration',
+    title: 'Building AI Agents with OpenAI and Salesforce',
+    keyword: 'openai api salesforce integration agent',
     pillar: 'ai-agentic',
-    tags: ['AI', 'Claude', 'Salesforce', 'Agents'],
+    tags: ['AI', 'Salesforce', 'Agents'],
   },
   {
     title: 'Agentforce Custom Actions: A Builder Playbook',
