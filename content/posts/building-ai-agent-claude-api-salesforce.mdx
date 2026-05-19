@@ -1,0 +1,280 @@
+---
+title: "Building Your First AI Agent with Claude API and Salesforce"
+excerpt: "A step-by-step walkthrough of wiring Claude's tool-use API to Salesforce data — from authentication to a working agent that can query, create, and update records."
+date: "2025-05-14"
+tags: ["AI", "Claude", "Salesforce", "Agents"]
+keyword: "claude api salesforce integration"
+featured: false
+---
+
+I've built Salesforce integrations with OpenAI, Azure OpenAI, and now Anthropic's Claude API. Of these, Claude's tool-use API is the one I'd reach for first for agentic workflows — mostly because the reasoning is more reliable when action sequences get complex.
+
+This post walks through a real pattern: a Node.js agent that uses Claude to handle natural-language queries against Salesforce data. No LangChain, no abstraction layers — just the raw API so you understand what's actually happening.
+
+## What We're Building
+
+A lightweight agent that can:
+- Answer questions about Salesforce records ("What's the status of Acme's renewal opportunity?")
+- Create and update records via natural language
+- Chain multiple Salesforce operations when needed
+
+## Prerequisites
+
+- Salesforce Connected App (OAuth 2.0 Client Credentials flow)
+- Anthropic API key
+- Node.js 18+
+
+## Step 1: Salesforce Authentication
+
+We're using the Client Credentials flow — no user interaction, clean for server-side agents.
+
+```typescript
+// lib/salesforce.ts
+import axios from 'axios'
+
+interface SalesforceAuth {
+  accessToken: string
+  instanceUrl: string
+}
+
+export async function getSalesforceToken(): Promise<SalesforceAuth> {
+  const params = new URLSearchParams({
+    grant_type: 'client_credentials',
+    client_id: process.env.SF_CLIENT_ID!,
+    client_secret: process.env.SF_CLIENT_SECRET!,
+  })
+
+  const res = await axios.post(
+    `${process.env.SF_LOGIN_URL}/services/oauth2/token`,
+    params.toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+  )
+
+  return {
+    accessToken: res.data.access_token,
+    instanceUrl: res.data.instance_url,
+  }
+}
+
+export async function querySalesforce(soql: string, auth: SalesforceAuth) {
+  const res = await axios.get(
+    `${auth.instanceUrl}/services/data/v59.0/query`,
+    {
+      params: { q: soql },
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    }
+  )
+  return res.data
+}
+
+export async function createRecord(
+  objectType: string,
+  fields: Record<string, unknown>,
+  auth: SalesforceAuth
+) {
+  const res = await axios.post(
+    `${auth.instanceUrl}/services/data/v59.0/sobjects/${objectType}`,
+    fields,
+    { headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' } }
+  )
+  return res.data
+}
+```
+
+## Step 2: Define Claude Tools
+
+Claude's tool-use API lets you define functions the model can call. The key is writing descriptions that are specific enough for Claude to pick the right tool without ambiguity.
+
+```typescript
+// lib/agent-tools.ts
+import Anthropic from '@anthropic-ai/sdk'
+
+export const salesforceTools: Anthropic.Tool[] = [
+  {
+    name: 'query_salesforce',
+    description: `Execute a SOQL query against Salesforce and return the results.
+Use this when the user asks about existing records, relationships, or data in Salesforce.
+Always use SELECT with specific fields — never SELECT *.
+Limit results to 50 unless the user asks for more.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        soql: {
+          type: 'string',
+          description: 'The SOQL query to execute. Must be valid SOQL syntax.',
+        },
+      },
+      required: ['soql'],
+    },
+  },
+  {
+    name: 'create_record',
+    description: `Create a new record in Salesforce.
+Use this only when the user explicitly asks to create something.
+Confirm the object type and required fields before calling.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        object_type: {
+          type: 'string',
+          description: 'Salesforce object API name (e.g., Account, Opportunity, Contact)',
+        },
+        fields: {
+          type: 'object',
+          description: 'Key-value pairs of field API names and their values',
+        },
+      },
+      required: ['object_type', 'fields'],
+    },
+  },
+  {
+    name: 'describe_object',
+    description: `Get the field list and metadata for a Salesforce object.
+Use this when you need to know what fields are available on an object before querying or creating records.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        object_name: { type: 'string', description: 'API name of the Salesforce object' },
+      },
+      required: ['object_name'],
+    },
+  },
+]
+```
+
+## Step 3: The Agent Loop
+
+This is the core of the agent — the loop that keeps running until Claude stops requesting tool calls.
+
+```typescript
+// lib/agent.ts
+import Anthropic from '@anthropic-ai/sdk'
+import { getSalesforceToken, querySalesforce, createRecord } from './salesforce'
+import { salesforceTools } from './agent-tools'
+import axios from 'axios'
+
+const client = new Anthropic()
+
+async function executeTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  auth: Awaited<ReturnType<typeof getSalesforceToken>>
+): Promise<string> {
+  if (toolName === 'query_salesforce') {
+    const result = await querySalesforce(toolInput.soql as string, auth)
+    return JSON.stringify(result.records ?? result, null, 2)
+  }
+
+  if (toolName === 'create_record') {
+    const result = await createRecord(
+      toolInput.object_type as string,
+      toolInput.fields as Record<string, unknown>,
+      auth
+    )
+    return JSON.stringify(result, null, 2)
+  }
+
+  if (toolName === 'describe_object') {
+    const res = await axios.get(
+      `${auth.instanceUrl}/services/data/v59.0/sobjects/${toolInput.object_name}/describe`,
+      { headers: { Authorization: `Bearer ${auth.accessToken}` } }
+    )
+    // Return just field names + types to keep context lean
+    const fields = res.data.fields.map((f: { name: string; type: string; label: string }) => ({
+      name: f.name,
+      type: f.type,
+      label: f.label,
+    }))
+    return JSON.stringify(fields, null, 2)
+  }
+
+  return 'Unknown tool'
+}
+
+export async function runAgent(userMessage: string): Promise<string> {
+  const auth = await getSalesforceToken()
+  const messages: Anthropic.MessageParam[] = [
+    { role: 'user', content: userMessage }
+  ]
+
+  const systemPrompt = `You are a Salesforce assistant with read and write access to the org.
+When answering questions about records, always query Salesforce — never make up data.
+When creating records, confirm what you're about to create before doing it.
+Be concise. Format numbers and dates in a human-readable way.`
+
+  while (true) {
+    const response = await client.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 4096,
+      system: systemPrompt,
+      tools: salesforceTools,
+      messages,
+    })
+
+    // Add assistant's response to message history
+    messages.push({ role: 'assistant', content: response.content })
+
+    // If no more tool calls, return the final text response
+    if (response.stop_reason === 'end_turn') {
+      const textBlock = response.content.find((b) => b.type === 'text')
+      return textBlock?.type === 'text' ? textBlock.text : 'Done.'
+    }
+
+    // Process all tool calls in this response
+    const toolResults: Anthropic.ToolResultBlockParam[] = []
+
+    for (const block of response.content) {
+      if (block.type !== 'tool_use') continue
+
+      console.log(`→ Tool call: ${block.name}`, block.input)
+      const result = await executeTool(block.name, block.input as Record<string, unknown>, auth)
+      console.log(`← Result preview:`, result.slice(0, 200))
+
+      toolResults.push({
+        type: 'tool_result',
+        tool_use_id: block.id,
+        content: result,
+      })
+    }
+
+    messages.push({ role: 'user', content: toolResults })
+  }
+}
+```
+
+## Step 4: Wire It Up
+
+```typescript
+// index.ts
+import { runAgent } from './lib/agent'
+
+async function main() {
+  const queries = [
+    "What are the 5 most recent opportunities closing this quarter?",
+    "How many open cases does Acme Corp have right now?",
+    "Create a task for John Smith to follow up on the Q3 renewal, due next Friday.",
+  ]
+
+  for (const query of queries) {
+    console.log(`\nUser: ${query}`)
+    const result = await runAgent(query)
+    console.log(`Agent: ${result}`)
+  }
+}
+
+main().catch(console.error)
+```
+
+## What I Learned the Hard Way
+
+**SOQL hallucination is real.** Claude will occasionally generate SOQL with field names that don't exist on the object. Fix: add a `describe_object` call at the start of any query session, or include the field list in your system prompt.
+
+**Token bloat from query results.** If your SOQL returns 200 records and you dump them all into the context, you'll hit limits fast. Always `LIMIT` results and summarize in the tool execution layer before returning to Claude.
+
+**Tool descriptions are prompts.** Spend as much time on your tool descriptions as on your prompts. Vague descriptions ("query Salesforce") lead to bad decisions. Specific descriptions ("use this when the user asks about existing records") lead to reliable routing.
+
+## TL;DR
+
+- Claude's tool-use API + Salesforce Connected App = a surprisingly capable agent in under 200 lines.
+- The agent loop is simple: call Claude → execute tool → feed result back → repeat until `end_turn`.
+- Invest in tool descriptions and manage context size to keep the agent reliable in production.

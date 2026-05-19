@@ -2,16 +2,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
-import { 
-  FiHome, 
-  FiUser, 
-  FiBriefcase, 
-  FiCode, 
-  FiMail, 
-  FiSun, 
+import {
+  FiHome,
+  FiUser,
+  FiBriefcase,
+  FiCode,
+  FiMail,
+  FiSun,
   FiMoon,
-  FiAward
+  FiAward,
+  FiBookOpen
 } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
 
 interface DockItem {
   id: string;
@@ -23,6 +25,7 @@ interface DockItem {
 
 const FloatingDock: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
+  const router = useRouter();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
@@ -35,6 +38,7 @@ const FloatingDock: React.FC = () => {
     { id: 'projects', icon: FiCode, label: 'Projects', href: '#projects' },
     { id: 'work', icon: FiBriefcase, label: 'Experience', href: '#work' },
     { id: 'contact', icon: FiMail, label: 'Contact', href: '#contact' },
+    { id: 'blog', icon: FiBookOpen, label: 'Blog', href: '/blog' },
     { 
       id: 'theme', 
       icon: isDark ? FiSun : FiMoon, 
@@ -79,6 +83,8 @@ const FloatingDock: React.FC = () => {
   const handleClick = (item: DockItem) => {
     if (item.action) {
       item.action();
+    } else if (item.href.startsWith('/')) {
+      router.push(item.href);
     } else {
       const element = document.querySelector(item.href);
       if (element) {

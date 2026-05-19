@@ -9,16 +9,31 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 // const inter = Inter({ subsets: ['latin'] }) // Remove if using @import
 
 export const metadata: Metadata = {
-  // --- Update Title/Description ---
-  title: 'Bennie Joseph - Application Developer',
-  description: 'Expert Salesforce consultant specializing in AI integration, React, Next.js, and enterprise solutions.',
-  keywords: 'Salesforce, AI, React, Next.js, Developer, Consultant',
-  authors: [{ name: 'Bennie Joseph' }],
-  openGraph: {
-    title: 'Bennie Joseph - Application Developer',
-    description: 'Expert Salesforce consultant specializing in AI integration, React, Next.js, and enterprise solutions.',
-    type: 'website',
+  title: {
+    default: 'Bennie Joseph — Salesforce Architect & AI Builder',
+    template: '%s | Bennie Joseph',
   },
+  description:
+    'Salesforce Certified Application Architect with 9+ years building enterprise solutions. Also building AI agents, SaaS products, and writing about the intersection of Salesforce and AI.',
+  keywords: 'Salesforce, AI, Agentforce, Apex, LWC, Next.js, React, Application Architect',
+  authors: [{ name: 'Bennie Joseph', url: 'https://benniejoseph.dev' }],
+  metadataBase: new URL('https://benniejoseph.dev'),
+  openGraph: {
+    title: 'Bennie Joseph — Salesforce Architect & AI Builder',
+    description:
+      'Salesforce Certified Application Architect building enterprise solutions and AI-powered products.',
+    type: 'website',
+    url: 'https://benniejoseph.dev',
+    siteName: 'Bennie Joseph',
+    images: [{ url: '/api/og?title=Bennie+Joseph&tags=Salesforce,AI', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bennie Joseph — Salesforce Architect & AI Builder',
+    description: 'Salesforce Certified Application Architect building enterprise solutions and AI-powered products.',
+    images: ['/api/og?title=Bennie+Joseph&tags=Salesforce,AI'],
+  },
+  robots: { index: true, follow: true },
 }
 
 export default function RootLayout({

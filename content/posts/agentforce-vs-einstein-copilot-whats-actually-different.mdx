@@ -1,0 +1,133 @@
+---
+title: "Agentforce vs Einstein Copilot: What's Actually Different"
+excerpt: "Salesforce is betting big on autonomous AI agents. Here's a practitioner's breakdown of how Agentforce and Einstein Copilot differ—and which one you should actually build on."
+date: "2025-05-10"
+tags: ["Salesforce", "Agentforce", "AI"]
+keyword: "agentforce vs einstein copilot"
+featured: true
+---
+
+Every week I get a version of the same question from architects and admins: *"Are Agentforce and Einstein Copilot the same thing? If not, which one should I use?"*
+
+After spending the last few months building on both — including wiring up custom Agentforce actions for a global FS client — here's the honest breakdown.
+
+## The Short Answer
+
+Einstein Copilot is a **conversational assistant**. You ask it questions, it helps you draft emails, summarize cases, look up records. Think: a smarter Siri for Salesforce.
+
+Agentforce is a **task executor**. You give it a goal, it decides what steps to take and carries them out — often without a human in the loop at all.
+
+The naming is confusing because Einstein Copilot was rebranded *as part of* Agentforce at Dreamforce 2024. So technically, Copilot is now a type of Agentforce agent. But functionally, the distinction above still holds.
+
+## How They Work Under the Hood
+
+### Einstein Copilot (now: Agentforce for CRM)
+
+Copilot operates in a **request-response pattern**. A user types a prompt, the model interprets it, executes a pre-defined action (called a Copilot Action), and returns a result. The user stays in control.
+
+```apex
+// A simple Copilot action invocable from Flow or Apex
+@InvocableMethod(label='Summarize Case History' description='Uses AI to summarize case comments')
+public static List<String> summarizeCase(List<Id> caseIds) {
+    // calls ConnectApi.AiSummarize or a custom prompt template
+    List<String> results = new List<String>();
+    for (Id caseId : caseIds) {
+        ConnectApi.EinsteinPromptTemplateGenerationsInput input = new ConnectApi.EinsteinPromptTemplateGenerationsInput();
+        input.additionalConfig = new ConnectApi.EinsteinLlmAdditionalConfigInput();
+        input.additionalConfig.applicationName = 'PromptTemplateGenerationsInvocable';
+        // ... map fields from Case
+        results.add(generateSummary(caseId));
+    }
+    return results;
+}
+```
+
+The key constraint: every action Copilot can take must be **explicitly defined**. It won't freestyle.
+
+### Agentforce Agents (the autonomous kind)
+
+An Agentforce agent runs on a **planner-executor loop**. You give it a topic, configure the actions it can access, and it figures out the sequence at runtime.
+
+```
+User goal: "Qualify this lead and schedule a demo if score > 70"
+
+Agent reasoning (Atlas Reasoning Engine):
+  Step 1 → call GetLeadScore action → score = 82
+  Step 2 → score > 70, proceed
+  Step 3 → call CheckCalendarAvailability action → returns 3 slots
+  Step 4 → call CreateMeetingRequest action → sends invite
+  Done.
+```
+
+You don't define the step sequence. The model decides it. This is the meaningful difference.
+
+## Custom Actions: Where the Real Work Happens
+
+Both support custom actions, but the implementation path differs.
+
+For **Copilot Actions**, you build an Apex class or Flow, expose it as an invocable, and register it in Setup under Einstein Copilot. Straightforward.
+
+For **Agentforce Agents**, custom actions are backed by a Salesforce Function (or an external REST API via a named credential). Here's a minimal example of wiring an external scoring API:
+
+```apex
+public class LeadScoringAction {
+    @InvocableMethod(label='Score Lead' description='Calls external ML model to score a lead')
+    public static List<LeadScoreResult> scoreLead(List<LeadScoreRequest> requests) {
+        List<LeadScoreResult> results = new List<LeadScoreResult>();
+        
+        for (LeadScoreRequest req : requests) {
+            HttpRequest httpReq = new HttpRequest();
+            httpReq.setEndpoint('callout:LeadScoreAPI/score');
+            httpReq.setMethod('POST');
+            httpReq.setHeader('Content-Type', 'application/json');
+            httpReq.setBody(JSON.serialize(new Map<String, Object>{
+                'leadId' => req.leadId,
+                'industry' => req.industry,
+                'annualRevenue' => req.annualRevenue
+            }));
+            
+            Http http = new Http();
+            HttpResponse res = http.send(httpReq);
+            
+            LeadScoreResult result = new LeadScoreResult();
+            result.score = (Integer) ((Map<String, Object>) JSON.deserializeUntyped(res.getBody())).get('score');
+            results.add(result);
+        }
+        return results;
+    }
+    
+    public class LeadScoreRequest {
+        @InvocableVariable(required=true) public Id leadId;
+        @InvocableVariable public String industry;
+        @InvocableVariable public Decimal annualRevenue;
+    }
+    
+    public class LeadScoreResult {
+        @InvocableVariable public Integer score;
+    }
+}
+```
+
+## When to Use Which
+
+Here's the decision framework I use with clients:
+
+| Scenario | Use |
+|---|---|
+| User needs help drafting, summarizing, or querying | Einstein Copilot |
+| Business process can run without human in the loop | Agentforce Agent |
+| You need to automate across multiple systems (CRM + ERP + calendar) | Agentforce Agent |
+| Users want conversational UX inside a record page | Einstein Copilot |
+| Compliance requires human approval at each step | Neither — use Flow + approval process |
+
+## The Unpopular Take
+
+Most Salesforce orgs don't need full Agentforce autonomy yet. The governance story is still maturing. I've seen pilots where an agent confidently sent the wrong email to 200 contacts because the action description was ambiguous.
+
+Start with Copilot. Instrument it. Understand where your users actually need automation versus assistance. *Then* graduate to agentic workflows for the high-volume, well-defined processes where human oversight is a bottleneck, not a safeguard.
+
+## TL;DR
+
+- **Einstein Copilot** = user-driven assistant. Great for helping reps and admins do their jobs faster.
+- **Agentforce** = autonomous agent with a planner. Great for running business processes end-to-end without a human in each step.
+- Custom actions are the real differentiator — invest time getting the action design right before worrying about which agent framework to use.

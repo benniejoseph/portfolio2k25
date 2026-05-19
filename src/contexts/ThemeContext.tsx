@@ -28,12 +28,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Check for saved theme preference or default to dark
-    const savedTheme = localStorage.getItem('theme') as Theme;
+    if (typeof window === 'undefined') return;
+    const savedTheme = window.localStorage?.getItem('theme') as Theme | null;
     if (savedTheme) {
       setTheme(savedTheme);
     } else {
-      // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setTheme(prefersDark ? 'dark' : 'light');
     }
@@ -41,10 +40,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('theme', theme);
-      document.documentElement.setAttribute('data-theme', theme);
-    }
+    if (!mounted || typeof window === 'undefined') return;
+    window.localStorage?.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme, mounted]);
 
   const toggleTheme = () => {
@@ -56,10 +54,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     toggleTheme,
     isDark: theme === 'dark'
   };
-
-  if (!mounted) {
-    return <div className="spinner" />; // Show loading spinner
-  }
 
   return (
     <ThemeContext.Provider value={value}>
