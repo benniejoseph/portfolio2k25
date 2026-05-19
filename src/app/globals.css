@@ -281,6 +281,10 @@ body::before {
 .blog-related-card { transition: border-color 0.2s ease; }
 .blog-related-card:hover { border-color: var(--neural) !important; }
 
+.blog-post-card { transition: border-color 0.2s ease; }
+.blog-post-card:hover { border-color: var(--signal) !important; }
+.blog-post-card:hover .blog-post-title { color: var(--signal); }
+
 /* ─── Responsive Nav ──────────────────────────────────────────── */
 @media (max-width: 1023px) {
   .sys-navigator-desktop { display: none !important; }

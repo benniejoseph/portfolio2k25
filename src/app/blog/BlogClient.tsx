@@ -32,12 +32,7 @@ function BlogCard({ post, index }: { post: PostFrontmatter; index: number }) {
       exit={{ opacity: 0, y: -16 }}
     >
       <Link href={`/blog/${post.slug}`} className="block group h-full">
-        <div
-          className="sys-panel h-full p-5 flex flex-col"
-          style={{ transition: 'border-color 0.2s' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = mainColor)}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '')}
-        >
+        <div className="sys-panel blog-post-card h-full p-5 flex flex-col">
           {/* Tags */}
           <div className="flex flex-wrap gap-1.5 mb-4">
             {post.tags.slice(0, 3).map((tag) => (
@@ -58,10 +53,8 @@ function BlogCard({ post, index }: { post: PostFrontmatter; index: number }) {
 
           {/* Title */}
           <h2
-            className="display-headline mb-3 flex-1 line-clamp-3 transition-colors duration-200"
-            style={{ fontSize: '1rem', lineHeight: 1.35, color: 'var(--text)' }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = mainColor)}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text)')}
+            className="display-headline blog-post-title mb-3 flex-1 line-clamp-3"
+            style={{ fontSize: '1rem', lineHeight: 1.35, color: 'var(--text)', transition: 'color 0.2s' }}
           >
             {post.title}
           </h2>
