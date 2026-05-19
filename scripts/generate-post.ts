@@ -64,6 +64,14 @@ generateAndSave(topic)
   .then((slug) => {
     console.log(`✓ Post saved: content/posts/${slug}.mdx`)
     console.log(`  Preview: http://localhost:3000/blog/${slug}`)
+
+    // Write slug for downstream workflow steps
+    // 1. GitHub Actions output variable
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(process.env.GITHUB_OUTPUT, `slug=${slug}\n`)
+    }
+    // 2. Fallback file (also used locally)
+    fs.writeFileSync(path.join(process.cwd(), '.generated-slug'), slug, 'utf-8')
   })
   .catch((err) => {
     console.error('Generation failed:', err.message)

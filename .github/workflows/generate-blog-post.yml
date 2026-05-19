@@ -32,6 +32,7 @@ jobs:
         run: npm ci
 
       - name: Generate post
+        id: generate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -42,14 +43,31 @@ jobs:
           fi
 
       - name: Commit new post and images
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add content/posts/ public/images/blog/
-          # Only commit if there's a new post
           if git diff --staged --quiet; then
             echo "No new post generated (all topics already published)"
+            echo "committed=false" >> $GITHUB_OUTPUT
           else
             git commit -m "content: auto-generate blog post with images via OpenAI"
             git push
+            echo "committed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to LinkedIn
+        if: steps.commit.outputs.committed == 'true'
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+        run: |
+          # Read slug written by generate-post.ts
+          if [ -f .generated-slug ]; then
+            SLUG=$(cat .generated-slug)
+            echo "Publishing slug: $SLUG"
+            npx tsx scripts/publish-linkedin.ts --slug "$SLUG"
+          else
+            echo "No .generated-slug file found — skipping LinkedIn publish"
           fi
