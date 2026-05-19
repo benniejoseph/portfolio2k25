@@ -40,7 +40,7 @@ export default function ModernHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-12 lg:gap-20 items-center">
 
           {/* ── Left: Text Stack ── */}
-          <div className="space-y-8">
+          <div className="space-y-8 min-w-0 lg:overflow-hidden">
 
             {/* Boot label */}
             <motion.div
@@ -64,7 +64,7 @@ export default function ModernHero() {
             >
               <h1
                 className="display-headline"
-                style={{ fontSize: 'clamp(56px, 10vw, 108px)' }}
+                style={{ fontSize: 'clamp(40px, 4.8vw, 68px)' }}
               >
                 <span
                   className="block crt-text"
