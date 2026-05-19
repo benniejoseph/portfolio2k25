@@ -52,7 +52,7 @@ Now write the full post body in MDX. Remember: code snippet + real example + TL;
 export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   const response = await client.chat.completions.create({
     model: 'gpt-5.5-2026-04-23',
-    max_completion_tokens: 4096,
+    max_completion_tokens: 16000,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: buildPrompt(opts) },
