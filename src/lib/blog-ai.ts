@@ -51,7 +51,7 @@ Now write the full post body in MDX. Remember: code snippet + real example + TL;
 
 export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   const response = await client.chat.completions.create({
-    model: 'gpt-4.5-preview',
+    model: 'gpt-4.5',
     max_tokens: 4096,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -90,6 +90,12 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     keyword: 'lwc vs react for salesforce developers',
     pillar: 'salesforce',
     tags: ['Salesforce', 'LWC', 'React'],
+  },
+  {
+    title: 'Building Your First AI Agent with Claude API and Salesforce',
+    keyword: 'claude api salesforce integration',
+    pillar: 'ai-agentic',
+    tags: ['AI', 'Salesforce', 'Agents'],
   },
   {
     title: 'Building AI Agents with OpenAI and Salesforce',
