@@ -61,7 +61,7 @@ if (!topic) {
 console.log(`\nGenerating post: "${topic.title}"`)
 console.log(`Keyword: ${topic.keyword}`)
 console.log(`Tags: ${topic.tags.join(', ')}`)
-console.log('Calling OpenAI API (gpt-4.5-preview)...\n')
+console.log('Calling OpenAI API (gpt-5.5-2026-04-23)...\n')
 
 generateAndSave(topic)
   .then((slug) => {
