@@ -9,10 +9,7 @@
  * Requires: OPENAI_API_KEY in .env.local
  */
 
-import { config } from 'dotenv'
 import path from 'path'
-config({ path: path.resolve(process.cwd(), '.env.local') })
-
 import { generateAndSave, TOPIC_BACKLOG } from '../src/lib/blog-ai'
 import fs from 'fs'
 
