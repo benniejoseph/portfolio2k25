@@ -76,20 +76,18 @@ const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
 async function generateDalleImage(
   prompt: string,
-  size: '1792x1024' | '1024x1024' = '1024x1024'
+  size: '1536x1024' | '1024x1024' = '1024x1024'
 ): Promise<Buffer> {
   const response = await client.images.generate({
-    model: 'dall-e-3',
+    model: 'gpt-image-1',
     prompt: `${prompt}. Dark cyberpunk aesthetic. Neon cyan and purple colour palette. Very dark near-black background. Abstract technical illustration. Absolutely no text, no words, no typography, no labels.`,
     n: 1,
     size,
-    quality: 'standard',
+    quality: 'medium',
   })
-  const url = response.data[0]?.url
-  if (!url) throw new Error('No image URL returned from DALL-E 3')
-  const imgResponse = await fetch(url)
-  if (!imgResponse.ok) throw new Error(`Failed to download DALL-E image: ${imgResponse.status}`)
-  return Buffer.from(await imgResponse.arrayBuffer())
+  const b64 = response.data[0]?.b64_json
+  if (!b64) throw new Error('No image data returned from gpt-image-1')
+  return Buffer.from(b64, 'base64')
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
@@ -107,7 +105,7 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Generate cover image (wide 16:9)
   console.log('Generating cover image...')
   const coverPrompt = `Hero cover illustration for a technical blog post titled "${opts.title}". Concept: ${opts.keyword}. Wide cinematic composition.`
-  const coverBuffer = await generateDalleImage(coverPrompt, '1792x1024')
+  const coverBuffer = await generateDalleImage(coverPrompt, '1536x1024')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
   console.log('✓ Cover image saved')
 
