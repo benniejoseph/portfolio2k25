@@ -60,16 +60,9 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   })
 
   const choice = response.choices[0]
-  console.log('finish_reason:', choice?.finish_reason)
-  console.log('message keys:', Object.keys(choice?.message ?? {}))
-
-  // Some newer models surface content via reasoning_content or a refusal field
-  const text =
-    choice?.message?.content ??
-    (choice?.message as Record<string, unknown>)?.['reasoning_content'] as string | null
+  const text = choice?.message?.content
 
   if (!text) {
-    console.error('Full response:', JSON.stringify(response, null, 2))
     throw new Error(`No content in OpenAI response (finish_reason: ${choice?.finish_reason})`)
   }
   return text
