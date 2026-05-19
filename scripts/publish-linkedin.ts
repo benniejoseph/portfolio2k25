@@ -1,15 +1,14 @@
 #!/usr/bin/env npx tsx
 /**
- * LinkedIn Publisher
- * Reads a generated post's frontmatter and publishes an article link post
- * to LinkedIn via the REST API.
+ * LinkedIn Draft Generator
+ *
+ * Reads a generated post's frontmatter and writes a ready-to-paste
+ * LinkedIn post to:
+ *   1. stdout (visible in Actions logs)
+ *   2. $GITHUB_STEP_SUMMARY (rendered as Markdown in the Actions UI)
  *
  * Usage:
  *   npx tsx scripts/publish-linkedin.ts --slug my-post-slug
- *
- * Required env vars:
- *   LINKEDIN_ACCESS_TOKEN  — OAuth 2.0 bearer token (w_member_social scope)
- *   LINKEDIN_PERSON_URN    — e.g. urn:li:person:XXXXXXXXXX
  */
 
 import fs from 'fs'
@@ -24,19 +23,8 @@ if (slugIdx === -1 || !args[slugIdx + 1]) {
 }
 
 const slug = args[slugIdx + 1]
-const accessToken = process.env.LINKEDIN_ACCESS_TOKEN
-const personUrn = process.env.LINKEDIN_PERSON_URN
-
-if (!accessToken) {
-  console.error('Missing LINKEDIN_ACCESS_TOKEN env var')
-  process.exit(1)
-}
-if (!personUrn) {
-  console.error('Missing LINKEDIN_PERSON_URN env var')
-  process.exit(1)
-}
-
 const postPath = path.join(process.cwd(), 'content/posts', `${slug}.mdx`)
+
 if (!fs.existsSync(postPath)) {
   console.error(`Post file not found: ${postPath}`)
   process.exit(1)
@@ -48,14 +36,14 @@ const title   = (data.title   as string) ?? slug
 const excerpt = (data.excerpt as string) ?? ''
 const tags    = (data.tags    as string[]) ?? []
 
-const postUrl = `https://benniejoseph.dev/blog/${slug}`
+const postUrl    = `https://benniejoseph.dev/blog/${slug}`
+const shareUrl   = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`
+const hashtags   = tags.map(t => `#${t.replace(/[^a-zA-Z0-9]/g, '')}`).join(' ')
 
-// Build hashtags — capitalise, strip spaces/special chars
-const hashtags = tags
-  .map(t => `#${t.replace(/[^a-zA-Z0-9]/g, '')}`)
-  .join(' ')
+// ── The actual LinkedIn post copy ──────────────────────────────────────────
+const linkedInPost = `🚀 New post on my blog:
 
-const commentary = `📝 New post: ${title}
+${title}
 
 ${excerpt}
 
@@ -64,52 +52,36 @@ ${hashtags} #SalesforceDeveloper #AIBuilder #TechBlog
 Full post 👇
 ${postUrl}`
 
-const body = {
-  author: personUrn,
-  commentary,
-  visibility: 'PUBLIC',
-  distribution: {
-    feedDistribution: 'MAIN_FEED',
-    targetEntities: [],
-    thirdPartyDistributionChannels: [],
-  },
-  content: {
-    article: {
-      source: postUrl,
-      title,
-      description: excerpt,
-    },
-  },
-  lifecycleState: 'PUBLISHED',
-  isReshareDisabledByAuthor: false,
+// ── 1. stdout ──────────────────────────────────────────────────────────────
+console.log('\n' + '─'.repeat(60))
+console.log('LINKEDIN DRAFT — copy and paste this into LinkedIn:')
+console.log('─'.repeat(60))
+console.log(linkedInPost)
+console.log('─'.repeat(60) + '\n')
+
+// ── 2. GitHub Actions step summary ────────────────────────────────────────
+const summaryFile = process.env.GITHUB_STEP_SUMMARY
+if (summaryFile) {
+  const summary = `## 📝 LinkedIn Draft Ready to Post
+
+Copy the text below into [LinkedIn → Start a post](${shareUrl}).
+
+---
+
+\`\`\`
+${linkedInPost}
+\`\`\`
+
+---
+
+### Quick actions
+| Action | Link |
+|--------|------|
+| 🔗 Open LinkedIn share dialog (URL pre-filled) | [Share on LinkedIn](${shareUrl}) |
+| 📖 Preview post on site | [benniejoseph.dev/blog/${slug}](${postUrl}) |
+
+> **Tip:** Open the share link → paste the text above → post. Takes ~30 seconds.
+`
+  fs.appendFileSync(summaryFile, summary, 'utf-8')
+  console.log('✓ Draft written to GitHub Actions job summary')
 }
-
-async function publish() {
-  console.log(`\nPublishing to LinkedIn: "${title}"`)
-  console.log(`URL: ${postUrl}\n`)
-
-  const response = await fetch('https://api.linkedin.com/rest/posts', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      'LinkedIn-Version': '202501',
-      'X-Restli-Protocol-Version': '2.0.0',
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error(`LinkedIn API error ${response.status}: ${errorBody}`)
-    process.exit(1)
-  }
-
-  const postId = response.headers.get('x-restli-id') ?? response.headers.get('location') ?? 'unknown'
-  console.log(`✓ Published to LinkedIn (post ID: ${postId})`)
-}
-
-publish().catch(err => {
-  console.error('LinkedIn publish failed:', err.message)
-  process.exit(1)
-})
