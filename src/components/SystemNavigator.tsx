@@ -47,7 +47,7 @@ export default function SystemNavigator() {
         style={{
           width: '56px',
           zIndex: 50,
-          background: 'rgba(2,4,8,0.85)',
+          background: 'var(--nav-bg)',
           backdropFilter: 'blur(12px)',
           borderRight: '1px solid var(--border)',
         }}
@@ -145,7 +145,7 @@ export default function SystemNavigator() {
         className="sys-navigator-mobile fixed bottom-0 left-0 right-0 flex items-center justify-around px-2 py-2"
         style={{
           zIndex: 50,
-          background: 'rgba(2,4,8,0.92)',
+          background: 'var(--nav-bg)',
           backdropFilter: 'blur(16px)',
           borderTop: '1px solid var(--border)',
           paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiClock, FiCalendar, FiArrowRight, FiRss, FiArrowLeft } from 'react-icons/fi'
 import type { PostFrontmatter } from '@/lib/mdx'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface BlogClientProps {
   posts: PostFrontmatter[]
@@ -36,7 +37,7 @@ function BlogCard({ post, index }: { post: PostFrontmatter; index: number }) {
         <div className="sys-panel blog-post-card h-full flex flex-col overflow-hidden">
           {/* Cover image */}
           {post.coverImage && (
-            <div className="relative w-full flex-shrink-0 overflow-hidden" style={{ height: '140px' }}>
+            <div className="relative w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: '3/2' }}>
               <Image
                 src={post.coverImage}
                 alt={post.title}
@@ -140,11 +141,12 @@ export default function BlogClient({ posts, tags }: BlogClientProps) {
     <div className="min-h-screen" style={{ background: 'var(--void)' }}>
 
       {/* Back to portfolio */}
-      <div className="fixed top-4 left-4 z-50">
+      <div className="fixed top-4 left-4 z-50 flex items-center gap-2">
         <Link href="/" className="terminal-cmd flex items-center gap-1.5" style={{ fontSize: '9px', padding: '6px 12px' }}>
           <FiArrowLeft size={10} />
           PORTFOLIO
         </Link>
+        <ThemeToggle />
       </div>
 
       {/* Header */}

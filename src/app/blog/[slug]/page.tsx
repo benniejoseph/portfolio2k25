@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/mdx'
 import { FiArrowLeft, FiClock, FiCalendar } from 'react-icons/fi'
 import ShareButton from './ShareButton'
+import ThemeToggle from '@/components/ThemeToggle'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
@@ -106,6 +107,9 @@ export default async function PostPage({ params }: Props) {
                 <span className="truncate max-w-[200px]" style={{ color: 'var(--text-2)' }}>
                   {post.slug.toUpperCase().replace(/-/g, '_')}
                 </span>
+                <span className="ml-auto">
+                  <ThemeToggle />
+                </span>
               </nav>
 
               {/* Tags */}
@@ -153,8 +157,8 @@ export default async function PostPage({ params }: Props) {
               {/* Cover image */}
               {post.coverImage && (
                 <div
-                  className="relative w-full mb-10 overflow-hidden"
-                  style={{ height: 'clamp(200px, 30vw, 360px)', borderRadius: '4px', border: '1px solid var(--border-2)' }}
+                  className="relative mb-10 overflow-hidden"
+                  style={{ width: '100%', aspectRatio: '3/2', maxHeight: '480px', borderRadius: '4px', border: '1px solid var(--border-2)', position: 'relative', overflow: 'hidden' }}
                 >
                   <Image
                     src={post.coverImage}

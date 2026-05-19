@@ -37,6 +37,7 @@
   --border-neural: rgba(124, 58, 237, 0.25);
 
   --trace:       rgba(0, 212, 255, 0.035);
+  --nav-bg:      rgba(2, 4, 8, 0.88);
 }
 
 [data-theme="light"] {
@@ -48,9 +49,28 @@
   --text:        #0F172A;
   --text-2:      #475569;
   --text-3:      #94A3B8;
+  --text-4:      #CBD5E1;
+  --signal:      #0077AA;
+  --signal-dim:  rgba(0, 119, 170, 0.08);
+  --signal-glow: rgba(0, 119, 170, 0.15);
+  --neural:      #6D28D9;
+  --neural-dim:  rgba(109, 40, 217, 0.08);
+  --live:        #059669;
+  --live-dim:    rgba(5, 150, 105, 0.08);
+  --fire:        #D97706;
+  --fire-dim:    rgba(217, 119, 6, 0.08);
+  --critical:    #DC2626;
   --border:      rgba(124, 58, 237, 0.12);
   --border-2:    rgba(124, 58, 237, 0.22);
+  --border-3:    rgba(0, 119, 170, 0.45);
+  --border-fire: rgba(217, 119, 6, 0.35);
+  --border-neural: rgba(109, 40, 217, 0.25);
   --trace:       rgba(124, 58, 237, 0.04);
+  --nav-bg:      rgba(240, 244, 248, 0.92);
+}
+
+[data-theme="light"] .crt-text {
+  text-shadow: 0 0 2px rgba(0, 119, 170, 0.35), 0 0 8px rgba(0, 119, 170, 0.08);
 }
 
 /* ─── Global Reset & Base ─────────────────────────────────────── */
