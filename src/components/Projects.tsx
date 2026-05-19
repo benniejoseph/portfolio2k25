@@ -1,413 +1,337 @@
-"use client"
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
-import Image from 'next/image';
-import { FiChevronLeft, FiChevronRight, FiExternalLink, FiGithub, FiCode } from 'react-icons/fi';
+'use client'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FiExternalLink, FiGithub } from 'react-icons/fi'
 
-const projectData = [
+const PROJECTS = [
   {
-    title: 'TradeTaper – Trading Journal Platform',
-    description: 'Production-grade full-stack trading journal with a NestJS backend, Next.js frontend & admin portal, real-time WebSocket data feeds, and PostgreSQL — deployed via Docker and CI/CD GitHub Actions (523 commits). Modular monorepo with auth, market-data ingestion, trade strategy modules, and automated seed/migration workflows.',
-    imageUrl: '/images/projects/tradetaper.jpg',
-    tags: ['TypeScript', 'NestJS', 'Next.js', 'WebSocket', 'PostgreSQL', 'Docker'],
-    liveUrl: 'https://www.tradetaper.com',
-    githubUrl: 'https://github.com/benniejoseph/tradetaper',
-    color: 'from-green-500 to-emerald-500',
-    accentColor: 'green'
+    id: 'SYS-001',
+    name: 'TradeTaper',
+    subtitle: 'Trading Journal Platform',
+    desc: 'Production-grade full-stack trading journal — NestJS backend, Next.js frontend, real-time WebSocket data feeds, PostgreSQL. 523 commits, modular monorepo with auth, market-data ingestion, strategy modules.',
+    stack: ['TypeScript', 'NestJS', 'Next.js', 'WebSocket', 'PostgreSQL', 'Docker'],
+    live: 'https://www.tradetaper.com',
+    github: '',
+    status: 'ONLINE',
+    uptime: 99,
+    color: 'var(--live)',
+    colorRaw: 'rgba(16,185,129,',
   },
   {
-    title: 'Audiolyse – AI Call Coaching Platform',
-    description: 'Bulk call transcription and AI coaching web app using Next.js 14 App Router and Google Gemini 2.5 Pro. Processes audio files in parallel generating transcriptions, meeting minutes, sentiment analysis, and agent performance scores (1–100). Supports English, Hindi & Hinglish with automatic language detection.',
-    imageUrl: '/images/projects/audiolyse.jpg',
-    tags: ['Next.js 14', 'Gemini 2.5 Pro', 'Supabase', 'Node.js', 'TypeScript'],
-    liveUrl: 'https://www.audiolyse.com',
-    githubUrl: 'https://github.com/benniejoseph/audiolyse',
-    color: 'from-purple-500 to-pink-500',
-    accentColor: 'purple'
+    id: 'SYS-002',
+    name: 'Audiolyse',
+    subtitle: 'AI Call Coaching Platform',
+    desc: 'Bulk call transcription + AI coaching using Next.js 14 and Gemini 2.5 Pro. Parallel audio processing, sentiment analysis, agent performance scoring. English, Hindi & Hinglish support.',
+    stack: ['Next.js 14', 'Gemini 2.5', 'Supabase', 'TypeScript'],
+    live: 'https://www.audiolyse.com',
+    github: '',
+    status: 'ONLINE',
+    uptime: 97,
+    color: 'var(--neural)',
+    colorRaw: 'rgba(124,58,237,',
   },
   {
-    title: 'Doreish – Autonomous AI Agent Ops Platform',
-    description: 'Multi-agent orchestration platform serving as a single control plane for SaaS operations — agents defined as autonomous "employees" execute tasks across dev, support, marketing and sales using OpenAI APIs and vector search (pgvector). Full cloud infra via Terraform, async queuing via Upstash Redis + QStash.',
-    imageUrl: '/images/projects/doreish.svg',
-    tags: ['TypeScript', 'Next.js', 'Postgres', 'Redis', 'Terraform', 'OpenAI'],
-    liveUrl: 'https://doreish.vercel.app',
-    githubUrl: 'https://github.com/benniejoseph/doreish',
-    color: 'from-blue-500 to-cyan-500',
-    accentColor: 'blue'
+    id: 'SYS-003',
+    name: 'Doreish',
+    subtitle: 'Autonomous AI Agent Ops',
+    desc: 'Multi-agent orchestration platform — single control plane for SaaS ops. Agents act as autonomous employees across dev, support, marketing. OpenAI APIs, pgvector, Upstash Redis queuing.',
+    stack: ['TypeScript', 'Next.js', 'Postgres', 'Redis', 'OpenAI'],
+    live: 'https://www.doreish.com',
+    github: '',
+    status: 'ONLINE',
+    uptime: 98,
+    color: 'var(--signal)',
+    colorRaw: 'rgba(0,212,255,',
   },
   {
-    title: 'Agent Assemble – LangGraph Agentic Platform',
-    description: 'LangGraph and RAG-based agentic platform enabling users to define workflows in natural language. Spawns AI agents to autonomously execute API-based tools, scheduling, and multi-step business processes — built at Deloitte to automate enterprise operations.',
-    imageUrl: '/images/projects/agent-assemble.svg',
-    tags: ['LangGraph', 'RAG', 'Python', 'OpenAI', 'REST APIs'],
-    liveUrl: '',
-    githubUrl: '',
-    color: 'from-orange-500 to-amber-500',
-    accentColor: 'orange'
+    id: 'SYS-004',
+    name: 'Agent Assemble',
+    subtitle: 'LangGraph Agentic Platform',
+    desc: 'LangGraph + RAG-based agentic platform enabling users to define workflows in natural language. Spawns AI agents to autonomously execute API tools, scheduling, and multi-step business processes.',
+    stack: ['LangGraph', 'RAG', 'Python', 'OpenAI', 'REST APIs'],
+    live: '',
+    github: '',
+    status: 'CLASSIFIED',
+    uptime: 94,
+    color: 'var(--fire)',
+    colorRaw: 'rgba(245,158,11,',
   },
   {
-    title: 'Mona – Real-Time AI Meeting Assistant',
-    description: 'Real-time AI voice assistant integrated into MS Teams and Zoom using Twilio, LiveKit, and OpenAI Realtime API. Automates call transcription, meeting minutes generation, and parallel task execution (emails, calendar reminders) during live meetings.',
-    imageUrl: '/images/projects/mona.svg',
-    tags: ['Twilio', 'LiveKit', 'OpenAI Realtime', 'MS Teams SDK', 'Zoom SDK'],
-    liveUrl: '',
-    githubUrl: '',
-    color: 'from-teal-500 to-green-500',
-    accentColor: 'teal'
+    id: 'SYS-005',
+    name: 'Mona',
+    subtitle: 'Real-Time AI Meeting Assistant',
+    desc: 'Real-time AI voice assistant in MS Teams + Zoom using Twilio, LiveKit, OpenAI Realtime API. Automates transcription, meeting minutes, and parallel task execution during live meetings.',
+    stack: ['Twilio', 'LiveKit', 'OpenAI Realtime', 'Teams SDK'],
+    live: '',
+    github: '',
+    status: 'CLASSIFIED',
+    uptime: 91,
+    color: 'var(--fire)',
+    colorRaw: 'rgba(245,158,11,',
   },
   {
-    title: 'Cenithos – AI-Powered Cross-Platform App',
-    description: 'Cross-platform application with mobile via Flutter, web via TypeScript, and backend via Python — AI integration with Firebase/Firestore data layer. Automated security vulnerability scanning, linting, test coverage, and performance hotspot reports built into the pipeline.',
-    imageUrl: '/images/projects/cenithos.jpg',
-    tags: ['Flutter', 'Python', 'TypeScript', 'Firebase', 'REST APIs'],
-    liveUrl: 'https://centhios-web.vercel.app',
-    githubUrl: 'https://github.com/benniejoseph/cenithos',
-    color: 'from-red-500 to-rose-500',
-    accentColor: 'red'
+    id: 'SYS-006',
+    name: 'Cenithos',
+    subtitle: 'AI-Powered Cross-Platform App',
+    desc: 'Cross-platform app — Flutter mobile, TypeScript web, Python backend. AI integration with Firebase. Automated security scanning, linting, test coverage baked into the pipeline.',
+    stack: ['Flutter', 'Python', 'TypeScript', 'Firebase'],
+    live: 'https://centhios-web.vercel.app',
+    github: 'https://github.com/benniejoseph/cenithos',
+    status: 'ONLINE',
+    uptime: 88,
+    color: 'var(--live)',
+    colorRaw: 'rgba(16,185,129,',
   },
-];
+]
 
-const Projects = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-150, 0, 150], [-15, 0, 15]);
+export default function Projects() {
+  const [active, setActive] = useState(0)
+  const [dir, setDir] = useState(1)
 
-  const handleNext = () => {
-    setDirection(1);
-    setActiveIndex((prev) => (prev + 1) % projectData.length);
-  };
+  const go = (next: number) => {
+    setDir(next > active ? 1 : -1)
+    setActive(next)
+  }
 
-  const handlePrev = () => {
-    setDirection(-1);
-    setActiveIndex((prev) => (prev - 1 + projectData.length) % projectData.length);
-  };
-
-  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const threshold = 50;
-    if (info.offset.x > threshold) {
-      handlePrev();
-    } else if (info.offset.x < -threshold) {
-      handleNext();
-    }
-  };
-
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.8,
-      rotateY: direction > 0 ? 20 : -20,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      rotateY: 0,
-    },
-    exit: (direction: number) => ({
-      x: direction < 0 ? 300 : -300,
-      opacity: 0,
-      scale: 0.8,
-      rotateY: direction < 0 ? 20 : -20,
-    })
-  };
-
-  // Auto-advance slides (optional)
   useEffect(() => {
-    const timer = setInterval(() => {
-      handleNext();
-    }, 8000); // Change slide every 8 seconds
+    const t = setInterval(() => {
+      setDir(1)
+      setActive(p => (p + 1) % PROJECTS.length)
+    }, 7000)
+    return () => clearInterval(t)
+  }, [])
 
-    return () => clearInterval(timer);
-  }, []);
+  const p = PROJECTS[active]
 
   return (
-    <section id="projects" className="section relative overflow-hidden">
-      <div className="container">
-        {/* Section Header */}
+    <section id="projects" className="relative py-24 px-6 lg:px-12">
+      <div className="max-w-6xl mx-auto">
+
+        {/* Header */}
         <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 50 }}
+          className="mb-16"
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
         >
-          <motion.div
-            className="inline-flex items-center gap-3 mb-6"
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="status-dot dot-live" />
+            <span className="sys-label">DEPLOYED_SYSTEMS // {PROJECTS.length} ACTIVE</span>
+          </div>
+          <h2
+            className="display-headline crt-text"
+            style={{ fontSize: 'clamp(36px, 6vw, 64px)', color: 'var(--text)' }}
           >
-            <div className="p-3 glass rounded-xl">
-              <FiCode 
-                size={24} 
-                style={{ color: 'var(--color-accent-primary)' }}
-              />
-            </div>
-            <span 
-              className="font-mono text-sm font-medium tracking-wider uppercase"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-               Projects
-            </span>
-          </motion.div>
-
-          <motion.h2
-            className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6"
-            style={{ color: 'var(--color-text-primary)' }}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            SYSTEM
+            <span style={{ color: 'var(--signal)' }}> REGISTRY</span>
+          </h2>
+          <p
+            className="sys-label mt-3"
+            style={{ fontSize: '11px', color: 'var(--text-3)', letterSpacing: '0.2em' }}
           >
-            Featured{' '}
-            <span className="gradient-text">Projects</span>
-          </motion.h2>
-
-          <motion.p
-            className="text-lg md:text-xl max-w-3xl mx-auto leading-relaxed"
-            style={{ color: 'var(--color-text-tertiary)' }}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            A collection of projects showcasing my expertise in Salesforce development, modern web technologies, and innovative solutions.
-          </motion.p>
+            PRODUCTION DEPLOYMENTS · AI PLATFORMS · ENTERPRISE TOOLS
+          </p>
         </motion.div>
 
-        {/* Projects Carousel */}
-        <div className="relative max-w-6xl mx-auto">
-          {/* Navigation Arrows */}
-          <motion.button
-            className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-30 p-3 md:p-4 glass rounded-full hover:scale-110 transition-all duration-300"
-            style={{ color: 'var(--color-text-primary)' }}
-            onClick={handlePrev}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <FiChevronLeft size={20} />
-          </motion.button>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
 
-          <motion.button
-            className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-30 p-3 md:p-4 glass rounded-full hover:scale-110 transition-all duration-300"
-            style={{ color: 'var(--color-text-primary)' }}
-            onClick={handleNext}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <FiChevronRight size={20} />
-          </motion.button>
-
-          {/* Main Project Card */}
-          <div className="relative h-[500px] md:h-[600px] mx-4 md:mx-16">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-              <motion.div
-                key={activeIndex}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  x: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.3 },
-                  scale: { duration: 0.3 },
-                  rotateY: { duration: 0.3 }
+          {/* Main panel */}
+          <div className="sys-panel overflow-hidden" style={{ minHeight: '420px' }}>
+            {/* Panel header */}
+            <div
+              className="sys-panel-header flex items-center justify-between px-5 py-3"
+              style={{ borderBottom: `1px solid ${p.color}22` }}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="status-dot"
+                  style={{
+                    background: p.status === 'ONLINE' ? 'var(--live)' : 'var(--fire)',
+                    boxShadow: `0 0 6px ${p.status === 'ONLINE' ? 'var(--live)' : 'var(--fire)'}`,
+                  }}
+                />
+                <span className="sys-label" style={{ fontSize: '9px', color: p.color }}>
+                  {p.id} — {p.name.toUpperCase()}
+                </span>
+              </div>
+              <span
+                className="sys-label"
+                style={{
+                  fontSize: '9px',
+                  color: p.status === 'ONLINE' ? 'var(--live)' : 'var(--fire)',
+                  letterSpacing: '0.14em',
                 }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.1}
-                onDragEnd={handleDragEnd}
-                style={{ x, rotate }}
-                className="absolute inset-0 cursor-grab active:cursor-grabbing"
               >
-                <div className="glass rounded-2xl h-full overflow-hidden relative group">
-                  {/* Background Image */}
-                  <div className="absolute inset-0">
-                    <Image
-                      src={projectData[activeIndex].imageUrl}
-                      alt={projectData[activeIndex].title}
-                      fill
-                      style={{ objectFit: 'cover' }}
-                      className="w-full h-full transition-transform duration-700 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1000px"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                  </div>
+                ● {p.status}
+              </span>
+            </div>
 
-                  {/* Content */}
-                  <div className="relative z-10 h-full flex flex-col justify-end p-6 md:p-8 lg:p-10">
+            {/* Content */}
+            <AnimatePresence mode="wait" custom={dir}>
+              <motion.div
+                key={active}
+                custom={dir}
+                initial={{ opacity: 0, x: dir * 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: dir * -40 }}
+                transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                className="p-6"
+              >
+                <div className="mb-6">
+                  <h3
+                    className="display-headline"
+                    style={{ fontSize: 'clamp(24px, 4vw, 40px)', color: p.color, marginBottom: '4px' }}
+                  >
+                    {p.name}
+                  </h3>
+                  <div
+                    className="sys-label"
+                    style={{ fontSize: '11px', color: 'var(--text-2)', letterSpacing: '0.16em' }}
+                  >
+                    {p.subtitle}
+                  </div>
+                </div>
+
+                {/* Uptime bar */}
+                <div className="mb-6">
+                  <div className="flex justify-between mb-1">
+                    <span className="sys-label-dim" style={{ fontSize: '8px' }}>UPTIME_SCORE</span>
+                    <span className="sys-label" style={{ fontSize: '8px', color: p.color }}>{p.uptime}%</span>
+                  </div>
+                  <div className="skill-bar-track">
                     <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {projectData[activeIndex].tags.map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="px-3 py-1 text-xs md:text-sm font-medium rounded-full backdrop-blur-sm"
-                            style={{
-                              backgroundColor: 'var(--color-accent-primary)',
-                              color: 'white'
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="text-2xl md:text-3xl lg:text-4xl font-heading font-bold text-white mb-4">
-                        {projectData[activeIndex].title}
-                      </h3>
-
-                      {/* Description */}
-                      <p className="text-white/90 text-sm md:text-base lg:text-lg mb-6 leading-relaxed max-w-2xl">
-                        {projectData[activeIndex].description}
-                      </p>
-
-                      {/* Action Buttons */}
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        {projectData[activeIndex].liveUrl && (
-                          <motion.a
-                            href={projectData[activeIndex].liveUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-black rounded-lg font-semibold hover:bg-white/90 transition-all duration-300 text-sm md:text-base"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FiExternalLink size={18} />
-                            Live Demo
-                          </motion.a>
-                        )}
-                        
-                        {projectData[activeIndex].githubUrl && (
-                          <motion.a
-                            href={projectData[activeIndex].githubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-white text-white rounded-lg font-semibold hover:bg-white hover:text-black transition-all duration-300 text-sm md:text-base"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FiGithub size={18} />
-                            View Code
-                          </motion.a>
-                        )}
-                      </div>
-                    </motion.div>
+                      className="h-full"
+                      style={{
+                        background: `linear-gradient(90deg, ${p.colorRaw}0.8) 0%, ${p.colorRaw}0.3) 100%)`,
+                        boxShadow: `0 0 8px ${p.colorRaw}0.4)`,
+                      }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${p.uptime}%` }}
+                      transition={{ duration: 0.9, ease: [0.4, 0, 0.2, 1] }}
+                    />
                   </div>
+                </div>
+
+                <p
+                  className="leading-relaxed mb-6"
+                  style={{
+                    fontFamily: 'var(--font-inter, sans-serif)',
+                    fontSize: '13px',
+                    color: 'var(--text-2)',
+                  }}
+                >
+                  {p.desc}
+                </p>
+
+                {/* Stack tokens */}
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {p.stack.map(tag => (
+                    <span
+                      key={tag}
+                      className="sys-label px-2 py-1 rounded-sm"
+                      style={{
+                        fontSize: '9px',
+                        color: p.color,
+                        border: `1px solid ${p.colorRaw}0.3)`,
+                        background: `${p.colorRaw}0.06)`,
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      [{tag}]
+                    </span>
+                  ))}
+                </div>
+
+                {/* Action links */}
+                <div className="flex gap-3">
+                  {p.live && (
+                    <a
+                      href={p.live}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="terminal-cmd terminal-cmd-solid flex items-center gap-1.5"
+                      style={{ fontSize: '9px' }}
+                    >
+                      <FiExternalLink size={10} />
+                      LAUNCH_SYSTEM
+                    </a>
+                  )}
+                  {p.github && (
+                    <a
+                      href={p.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="terminal-cmd flex items-center gap-1.5"
+                      style={{ fontSize: '9px' }}
+                    >
+                      <FiGithub size={10} />
+                      VIEW_SOURCE
+                    </a>
+                  )}
+                  {!p.live && !p.github && (
+                    <span
+                      className="sys-label-dim"
+                      style={{ fontSize: '9px', letterSpacing: '0.1em' }}
+                    >
+                      ▒ ACCESS_RESTRICTED
+                    </span>
+                  )}
                 </div>
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Progress Indicators */}
-          <div className="flex justify-center space-x-2 mt-8">
-            {projectData.map((_, index) => (
+          {/* System index sidebar */}
+          <div className="flex flex-col gap-2">
+            {PROJECTS.map((proj, i) => (
               <motion.button
-                key={index}
-                className="w-3 h-3 rounded-full transition-all duration-300"
+                key={proj.id}
+                onClick={() => go(i)}
+                className="sys-panel text-left px-4 py-3 flex items-center gap-3 transition-colors"
                 style={{
-                  backgroundColor: index === activeIndex 
-                    ? 'var(--color-accent-primary)' 
-                    : 'var(--color-text-tertiary)'
+                  border: i === active ? `1px solid ${proj.color}` : '1px solid var(--border)',
+                  background: i === active ? `${proj.colorRaw}0.06)` : 'var(--panel)',
                 }}
-                onClick={() => {
-                  setDirection(index > activeIndex ? 1 : -1);
-                  setActiveIndex(index);
-                }}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8 + index * 0.1 }}
-              />
+                whileTap={{ scale: 0.97 }}
+              >
+                <span
+                  className="status-dot shrink-0"
+                  style={{
+                    background: proj.status === 'ONLINE' ? 'var(--live)' : 'var(--fire)',
+                    boxShadow: i === active
+                      ? `0 0 6px ${proj.status === 'ONLINE' ? 'var(--live)' : 'var(--fire)'}`
+                      : 'none',
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="sys-label truncate"
+                    style={{
+                      fontSize: '10px',
+                      color: i === active ? proj.color : 'var(--text-2)',
+                      letterSpacing: '0.1em',
+                    }}
+                  >
+                    {proj.name}
+                  </div>
+                  <div className="sys-label-dim truncate" style={{ fontSize: '8px' }}>
+                    {proj.id} · {proj.status}
+                  </div>
+                </div>
+              </motion.button>
             ))}
+
+            {/* Counter */}
+            <div
+              className="sys-label text-center mt-2"
+              style={{ fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.2em' }}
+            >
+              {String(active + 1).padStart(2, '0')} / {String(PROJECTS.length).padStart(2, '0')}
+            </div>
           </div>
-
-          {/* Project Counter */}
-          <motion.div
-            className="text-center mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-          >
-            <span 
-              className="text-sm font-mono"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              {String(activeIndex + 1).padStart(2, '0')} / {String(projectData.length).padStart(2, '0')}
-            </span>
-          </motion.div>
-
-          {/* Swipe Instruction (Mobile) */}
-          <motion.div
-            className="block md:hidden text-center mt-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-          >
-            <span 
-              className="text-xs font-mono"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              ← Swipe to navigate →
-            </span>
-          </motion.div>
         </div>
       </div>
-
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute top-1/4 -right-32 w-64 h-64 rounded-full opacity-10"
-          style={{ 
-            background: 'var(--color-accent-gradient)',
-            filter: 'blur(40px)'
-          }}
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 -left-32 w-48 h-48 rounded-full opacity-10"
-          style={{ 
-            background: 'var(--color-accent-gradient)',
-            filter: 'blur(40px)'
-          }}
-          animate={{
-            scale: [1.2, 1, 1.2],
-            rotate: [360, 180, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-        />
-      </div>
     </section>
-  );
-};
-
-export default Projects;
+  )
+}

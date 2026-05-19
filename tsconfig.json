@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/components/CanvasWrapper.tsx", "src/components/Navbar.tsx", "src/app/page.tsx", "src/app/layout.tsx"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "scripts"]
 }

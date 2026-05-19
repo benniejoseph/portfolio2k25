@@ -1,33 +1,28 @@
-// src/app/page.jsx (or page.tsx)
-// Make this a client component because it likely orchestrates
-// other client components and potentially hooks like react-scroll
-"use client"; // <--- Add this if using react-scroll or similar client logic here
+'use client'
 
-import ParticleBackground from '@/components/ParticleBackground';
-import FloatingDock from '@/components/FloatingDock';
-import ModernHero from '@/components/ModernHero';
-import Skills from '@/components/Skills';
-import Certifications from '@/components/Certifications';
-import Projects from '@/components/Projects';
-import Work from '@/components/Work';
-import Contact from '@/components/Contact';
+import SignalCanvas from '@/components/SignalCanvas'
+import SystemNavigator from '@/components/SystemNavigator'
+import ModernHero from '@/components/ModernHero'
+import Skills from '@/components/Skills'
+import Certifications from '@/components/Certifications'
+import Projects from '@/components/Projects'
+import Work from '@/components/Work'
+import Contact from '@/components/Contact'
 
 export default function Home() {
-    return (
-        <main className="relative">
-            {/* Interactive Particle Background */}
-            <ParticleBackground />
-            
-            {/* Floating Navigation Dock */}
-            <FloatingDock />
-            
-            {/* Main Content */}
-            <ModernHero />
-            <Skills />
-            <Certifications />
-            <Projects />
-            <Work />
-            <Contact />
-        </main>
-    );
+  return (
+    <>
+      {/* Fixed: PCB grid via body::before in globals.css */}
+      <SignalCanvas />
+      <SystemNavigator />
+      <main className="relative z-10 lg:pl-14">
+        <ModernHero />
+        <Skills />
+        <Certifications />
+        <Projects />
+        <Work />
+        <Contact />
+      </main>
+    </>
+  )
 }

@@ -1,12 +1,11 @@
-// src/app/layout.tsx
-import './globals.css' // <--- IMPORT GLOBALS CSS HERE
+import './globals.css'
 import type { Metadata } from 'next'
-// Remove Inter import here if using @import in globals.css
-// import { Inter } from 'next/font/google'
+import { Syne, Inter, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
-
-// const inter = Inter({ subsets: ['latin'] }) // Remove if using @import
+const syne = Syne({ subsets: ['latin'], variable: '--font-syne', weight: ['400','500','600','700','800'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['300','400','500','600','700'] })
 
 export const metadata: Metadata = {
   title: {
@@ -42,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="antialiased">
+    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${inter.variable} ${mono.variable}`}>
+      <body className="antialiased" style={{ fontFamily: 'var(--font-inter, Inter, system-ui, sans-serif)' }}>
         <ThemeProvider>
           {children}
         </ThemeProvider>
