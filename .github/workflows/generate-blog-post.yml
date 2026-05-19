@@ -36,9 +36,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [ -n "${{ github.event.inputs.topic_index }}" ]; then
-            npx ts-node --project tsconfig.json scripts/generate-post.ts --index ${{ github.event.inputs.topic_index }}
+            npx tsx scripts/generate-post.ts --index ${{ github.event.inputs.topic_index }}
           else
-            npx ts-node --project tsconfig.json scripts/generate-post.ts
+            npx tsx scripts/generate-post.ts
           fi
 
       - name: Commit new post

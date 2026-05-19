@@ -10,8 +10,8 @@
     "build": "next build && next-sitemap",
     "start": "next start",
     "lint": "next lint",
-    "generate-post": "npx ts-node --project tsconfig.json scripts/generate-post.ts",
-    "generate-post:list": "npx ts-node --project tsconfig.json scripts/generate-post.ts --list"
+    "generate-post": "npx tsx scripts/generate-post.ts",
+    "generate-post:list": "npx tsx scripts/generate-post.ts --list"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.7",
@@ -50,6 +50,7 @@
     "eslint-config-next": "15.3.1",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }
