@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiClock, FiCalendar, FiArrowRight, FiRss, FiArrowLeft } from 'react-icons/fi'
 import type { PostFrontmatter } from '@/lib/mdx'
@@ -32,7 +33,25 @@ function BlogCard({ post, index }: { post: PostFrontmatter; index: number }) {
       exit={{ opacity: 0, y: -16 }}
     >
       <Link href={`/blog/${post.slug}`} className="block group h-full">
-        <div className="sys-panel blog-post-card h-full p-5 flex flex-col">
+        <div className="sys-panel blog-post-card h-full flex flex-col overflow-hidden">
+          {/* Cover image */}
+          {post.coverImage && (
+            <div className="relative w-full flex-shrink-0 overflow-hidden" style={{ height: '140px' }}>
+              <Image
+                src={post.coverImage}
+                alt={post.title}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(to bottom, transparent 40%, var(--void) 100%)' }}
+              />
+            </div>
+          )}
+
+          <div className="p-5 flex flex-col flex-1">
           {/* Tags */}
           <div className="flex flex-wrap gap-1.5 mb-4">
             {post.tags.slice(0, 3).map((tag) => (
@@ -99,6 +118,7 @@ function BlogCard({ post, index }: { post: PostFrontmatter; index: number }) {
               className="group-hover:opacity-100 group-hover:translate-x-0.5"
             />
           </div>
+          </div>{/* end p-5 inner wrapper */}
         </div>
       </Link>
     </motion.article>

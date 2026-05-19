@@ -24,6 +24,9 @@ Rules:
 - Use ## for H2, ### for H3
 - Code blocks must specify language: \`\`\`apex, \`\`\`typescript, etc.
 - Tone: direct, practitioner, occasionally opinionated ("Here's the unpopular take...")
+- At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this exact format:
+  {IMAGE_PROMPT: "detailed DALL-E 3 prompt for a dark cyberpunk tech illustration specific to the surrounding content — neon cyan/purple accents, dark background, no text or typography"}
+  Place these where a diagram or visual would genuinely add comprehension value.
 
 Output ONLY the raw MDX file content starting with --- frontmatter. No preamble.`
 
@@ -46,7 +49,7 @@ keyword: "${opts.keyword}"
 featured: false
 ---
 
-Now write the full post body in MDX. Remember: code snippet + real example + TL;DR at the end.`
+Now write the full post body in MDX. Remember: code snippet + real example + 2 image placeholders + TL;DR at the end.`
 }
 
 export async function generatePost(opts: GeneratePostOptions): Promise<string> {
@@ -68,13 +71,65 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   return text
 }
 
+// Regex to find image placeholder lines written by the LLM
+const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
+
+async function generateDalleImage(
+  prompt: string,
+  size: '1792x1024' | '1024x1024' = '1024x1024'
+): Promise<Buffer> {
+  const response = await client.images.generate({
+    model: 'dall-e-3',
+    prompt: `${prompt}. Dark cyberpunk aesthetic. Neon cyan and purple colour palette. Very dark near-black background. Abstract technical illustration. Absolutely no text, no words, no typography, no labels.`,
+    n: 1,
+    size,
+    quality: 'standard',
+    response_format: 'b64_json',
+  })
+  const b64 = response.data[0]?.b64_json
+  if (!b64) throw new Error('No image data returned from DALL-E 3')
+  return Buffer.from(b64, 'base64')
+}
+
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
-  const mdx = await generatePost(opts)
+  const rawMdx = await generatePost(opts)
   const slug = opts.title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .slice(0, 60)
+
+  // Create image directory for this post
+  const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
+  fs.mkdirSync(imgDir, { recursive: true })
+
+  // Generate cover image (wide 16:9)
+  console.log('Generating cover image...')
+  const coverPrompt = `Hero cover illustration for a technical blog post titled "${opts.title}". Concept: ${opts.keyword}. Wide cinematic composition.`
+  const coverBuffer = await generateDalleImage(coverPrompt, '1792x1024')
+  fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
+  console.log('✓ Cover image saved')
+
+  // Replace inline image placeholders with generated images
+  let mdx = rawMdx
+  const matches = [...rawMdx.matchAll(IMAGE_PLACEHOLDER_RE)]
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i]
+    const imgPrompt = match[1]
+    console.log(`Generating inline image ${i + 1}/${matches.length}...`)
+    const imgBuffer = await generateDalleImage(imgPrompt, '1024x1024')
+    const imgFilename = `image-${i + 1}.png`
+    fs.writeFileSync(path.join(imgDir, imgFilename), imgBuffer)
+    console.log(`✓ Inline image ${i + 1} saved`)
+    mdx = mdx.replace(match[0], `\n![](/images/blog/${slug}/${imgFilename})\n`)
+  }
+
+  // Inject coverImage field into frontmatter (before the closing ---)
+  const fmCloseIdx = mdx.indexOf('\n---', 4)
+  if (fmCloseIdx !== -1) {
+    mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.png${mdx.slice(fmCloseIdx)}`
+  }
 
   const filePath = path.join(process.cwd(), 'content/posts', `${slug}.mdx`)
   fs.writeFileSync(filePath, mdx, 'utf-8')

@@ -373,3 +373,11 @@ body::before {
 .prose-blog table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.9rem; }
 .prose-blog th { padding: 0.6rem 1rem; text-align: left; font-weight: 700; background: var(--signal-dim); border-bottom: 1px solid var(--border-2); }
 .prose-blog td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); color: var(--text-2); }
+.prose-blog img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 1px solid var(--border-2);
+  margin: 2rem 0;
+  display: block;
+}

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/mdx'
 import { FiArrowLeft, FiClock, FiCalendar } from 'react-icons/fi'
 import ShareButton from './ShareButton'
@@ -148,6 +149,27 @@ export default async function PostPage({ params }: Props) {
                 </span>
                 <ShareButton title={post.title} />
               </div>
+
+              {/* Cover image */}
+              {post.coverImage && (
+                <div
+                  className="relative w-full mb-10 overflow-hidden"
+                  style={{ height: 'clamp(200px, 30vw, 360px)', borderRadius: '4px', border: '1px solid var(--border-2)' }}
+                >
+                  <Image
+                    src={post.coverImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1200px) 100vw, 900px"
+                    priority
+                  />
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: 'linear-gradient(to bottom, transparent 55%, var(--void) 100%)' }}
+                  />
+                </div>
+              )}
 
               {/* MDX body */}
               <div className="prose-blog">
