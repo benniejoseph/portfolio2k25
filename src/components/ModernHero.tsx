@@ -37,7 +37,7 @@ export default function ModernHero() {
       style={{ background: 'transparent' }}
     >
       <div className="relative z-10 w-full max-w-6xl mx-auto px-6 lg:px-12 py-24">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-12 lg:gap-20 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-12 lg:gap-20 items-center">
 
           {/* ── Left: Text Stack ── */}
           <div className="space-y-8 order-2 lg:order-1">
