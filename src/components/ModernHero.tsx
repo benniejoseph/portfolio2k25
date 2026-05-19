@@ -40,7 +40,7 @@ export default function ModernHero() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-12 lg:gap-20 items-center">
 
           {/* ── Left: Text Stack ── */}
-          <div className="space-y-8 order-2 lg:order-1">
+          <div className="space-y-8">
 
             {/* Boot label */}
             <motion.div
@@ -161,7 +161,7 @@ export default function ModernHero() {
 
           {/* ── Right: Hexagonal Photo ── */}
           <motion.div
-            className="relative flex justify-center order-1 lg:order-2"
+            className="relative flex justify-center"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.5, type: 'spring', bounce: 0.15 }}
