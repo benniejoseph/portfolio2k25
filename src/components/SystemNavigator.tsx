@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiSun, FiMoon } from 'react-icons/fi'
+import Link from 'next/link'
 import { useTheme } from '@/contexts/ThemeContext'
 
 const SECTIONS = [
@@ -11,6 +12,7 @@ const SECTIONS = [
   { id: 'projects',      code: '03', label: 'SYSTEMS' },
   { id: 'work',          code: '04', label: 'MISSIONS' },
   { id: 'contact',       code: '05', label: 'UPLINK' },
+  { id: 'blog',          code: '06', label: 'SIGNAL LOG', href: '/blog' },
 ]
 
 export default function SystemNavigator() {
@@ -59,26 +61,42 @@ export default function SystemNavigator() {
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-2">
-          {SECTIONS.map(({ id, code, label }) => {
+          {SECTIONS.map(({ id, code, label, href }) => {
             const isActive = active === id
+            const inner = (
+              <span
+                className="font-mono text-[11px] font-semibold tracking-wider transition-colors"
+                style={{ color: isActive ? 'var(--signal)' : 'var(--text-3)', fontFamily: 'var(--font-mono, monospace)' }}
+              >
+                {code}
+              </span>
+            )
             return (
               <div key={id} className="relative flex items-center" onMouseEnter={() => setHovered(id)} onMouseLeave={() => setHovered(null)}>
-                <motion.button
-                  onClick={() => scrollTo(id)}
-                  className="relative flex flex-col items-center justify-center w-10 h-10 rounded-sm transition-colors"
-                  style={{
-                    background: isActive ? 'var(--signal-dim)' : 'transparent',
-                    borderLeft: isActive ? '2px solid var(--signal)' : '2px solid transparent',
-                  }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <span
-                    className="font-mono text-[11px] font-semibold tracking-wider transition-colors"
-                    style={{ color: isActive ? 'var(--signal)' : 'var(--text-3)', fontFamily: 'var(--font-mono, monospace)' }}
+                {href ? (
+                  <Link
+                    href={href}
+                    className="relative flex flex-col items-center justify-center w-10 h-10 rounded-sm transition-colors"
+                    style={{
+                      background: isActive ? 'var(--signal-dim)' : 'transparent',
+                      borderLeft: isActive ? '2px solid var(--signal)' : '2px solid transparent',
+                    }}
                   >
-                    {code}
-                  </span>
-                </motion.button>
+                    {inner}
+                  </Link>
+                ) : (
+                  <motion.button
+                    onClick={() => scrollTo(id)}
+                    className="relative flex flex-col items-center justify-center w-10 h-10 rounded-sm transition-colors"
+                    style={{
+                      background: isActive ? 'var(--signal-dim)' : 'transparent',
+                      borderLeft: isActive ? '2px solid var(--signal)' : '2px solid transparent',
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    {inner}
+                  </motion.button>
+                )}
 
                 {/* Hover tooltip */}
                 <AnimatePresence>
@@ -133,22 +151,32 @@ export default function SystemNavigator() {
           paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
         }}
       >
-        {SECTIONS.map(({ id, code }) => {
+        {SECTIONS.map(({ id, code, href }) => {
           const isActive = active === id
-          return (
+          const btnStyle = {
+            background: isActive ? 'var(--signal-dim)' : 'transparent',
+            borderBottom: isActive ? '2px solid var(--signal)' : '2px solid transparent',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '11px',
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            color: isActive ? 'var(--signal)' : 'var(--text-3)',
+          }
+          return href ? (
+            <Link
+              key={id}
+              href={href}
+              className="flex items-center justify-center w-10 h-8 rounded-sm transition-all"
+              style={btnStyle}
+            >
+              {code}
+            </Link>
+          ) : (
             <button
               key={id}
               onClick={() => scrollTo(id)}
               className="flex items-center justify-center w-10 h-8 rounded-sm transition-all"
-              style={{
-                background: isActive ? 'var(--signal-dim)' : 'transparent',
-                borderBottom: isActive ? '2px solid var(--signal)' : '2px solid transparent',
-                fontFamily: 'var(--font-mono, monospace)',
-                fontSize: '11px',
-                fontWeight: 600,
-                letterSpacing: '0.1em',
-                color: isActive ? 'var(--signal)' : 'var(--text-3)',
-              }}
+              style={btnStyle}
             >
               {code}
             </button>

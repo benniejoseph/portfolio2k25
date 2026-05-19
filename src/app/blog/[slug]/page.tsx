@@ -53,23 +53,20 @@ const mdxOptions = {
       rehypeSlug,
       [
         rehypePrettyCode,
-        {
-          theme: 'one-dark-pro',
-          keepBackground: true,
-        },
+        { theme: 'one-dark-pro', keepBackground: true },
       ],
     ],
   },
 }
 
-const TAG_COLORS: Record<string, string> = {
-  Salesforce: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
-  AI: 'text-purple-400 border-purple-400/30 bg-purple-400/10',
-  Agents: 'text-purple-400 border-purple-400/30 bg-purple-400/10',
-  Agentforce: 'text-cyan-400 border-cyan-400/30 bg-cyan-400/10',
-  Apex: 'text-green-400 border-green-400/30 bg-green-400/10',
-  LWC: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10',
-  Career: 'text-pink-400 border-pink-400/30 bg-pink-400/10',
+const TAG_COLOR: Record<string, string> = {
+  Salesforce: 'var(--signal)',
+  AI:         'var(--neural)',
+  Agents:     'var(--neural)',
+  Agentforce: 'var(--signal)',
+  Apex:       'var(--live)',
+  LWC:        'var(--fire)',
+  Career:     'var(--neural)',
 }
 
 export default async function PostPage({ params }: Props) {
@@ -93,45 +90,60 @@ export default async function PostPage({ params }: Props) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-      <div className="min-h-screen" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="max-w-6xl mx-auto px-4 pt-28 pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12">
+      <div className="min-h-screen" style={{ background: 'var(--void)' }}>
+        <div className="max-w-6xl mx-auto px-6 lg:px-12 pt-20 pb-24">
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-12">
             {/* ── Main article ── */}
             <article>
               {/* Breadcrumb */}
-              <nav className="flex items-center gap-2 text-xs font-mono mb-8" style={{ color: 'var(--color-text-tertiary)' }}>
-                <Link href="/" className="hover:text-blue-400 transition-colors">Home</Link>
+              <nav className="flex items-center gap-2 mb-8" style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-3)' }}>
+                <Link href="/" className="transition-colors hover:text-[var(--signal)]">HOME</Link>
                 <span>/</span>
-                <Link href="/blog" className="hover:text-blue-400 transition-colors">Blog</Link>
+                <Link href="/blog" className="transition-colors hover:text-[var(--signal)]">SIGNAL_LOG</Link>
                 <span>/</span>
-                <span className="truncate max-w-[200px]">{post.title}</span>
+                <span className="truncate max-w-[200px]" style={{ color: 'var(--text-2)' }}>
+                  {post.slug.toUpperCase().replace(/-/g, '_')}
+                </span>
               </nav>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-5">
+              <div className="flex flex-wrap gap-1.5 mb-5">
                 {post.tags.map((tag) => (
                   <span
                     key={tag}
-                    className={`text-xs font-mono font-medium px-2.5 py-1 rounded-full border ${TAG_COLORS[tag] ?? 'text-gray-400 border-gray-400/30 bg-gray-400/10'}`}
+                    className="sys-label px-2 py-0.5 rounded-sm"
+                    style={{
+                      fontSize: '8px',
+                      color: TAG_COLOR[tag] ?? 'var(--signal)',
+                      border: `1px solid ${TAG_COLOR[tag] ?? 'var(--signal)'}33`,
+                      background: `${TAG_COLOR[tag] ?? 'var(--signal)'}0A`,
+                    }}
                   >
-                    {tag}
+                    [{tag}]
                   </span>
                 ))}
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight mb-6">
+              <h1
+                className="display-headline crt-text mb-6"
+                style={{ fontSize: 'clamp(24px, 4vw, 48px)', lineHeight: 1.1, color: 'var(--text)' }}
+              >
                 {post.title}
               </h1>
 
               {/* Meta row */}
-              <div className="flex flex-wrap items-center gap-4 pb-8 mb-8 border-b border-white/10 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                <span className="flex items-center gap-1.5">
-                  <FiCalendar size={13} />
+              <div
+                className="flex flex-wrap items-center gap-4 pb-8 mb-8"
+                style={{ borderBottom: '1px solid var(--border)' }}
+              >
+                <span className="sys-label-dim flex items-center gap-1.5" style={{ fontSize: '9px' }}>
+                  <FiCalendar size={11} />
                   {new Date(post.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <FiClock size={13} />
+                <span className="sys-label-dim flex items-center gap-1.5" style={{ fontSize: '9px' }}>
+                  <FiClock size={11} />
                   {post.readingTime}
                 </span>
                 <ShareButton title={post.title} />
@@ -144,18 +156,40 @@ export default async function PostPage({ params }: Props) {
               </div>
 
               {/* Author card */}
-              <div className="mt-16 p-6 glass rounded-2xl border border-white/10 flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
-                  B
+              <div
+                className="sys-panel mt-16 p-6 flex items-start gap-4"
+              >
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    background: 'var(--signal-dim)',
+                    border: '1px solid var(--border-2)',
+                    fontFamily: 'var(--font-syne, sans-serif)',
+                    fontSize: '1.25rem',
+                    fontWeight: 800,
+                    color: 'var(--signal)',
+                  }}
+                >
+                  BJ
                 </div>
                 <div>
-                  <p className="font-bold mb-1">Bennie Joseph</p>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
-                    Salesforce Certified Application Architect · 9+ years · Building AI agents & SaaS products on the side.
+                  <div className="sys-label mb-1" style={{ fontSize: '10px', color: 'var(--signal)' }}>
+                    BENNIE_JOSEPH
+                  </div>
+                  <p className="sys-label-dim mb-3" style={{ fontSize: '9px', letterSpacing: '0.06em', textTransform: 'none' }}>
+                    Salesforce Certified Application Architect · 9+ years · Building AI agents & SaaS products.
                   </p>
-                  <div className="flex gap-3 mt-3">
-                    <a href="https://linkedin.com/in/benniejosephrichard" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-blue-400 hover:underline">LinkedIn</a>
-                    <a href="https://github.com/benniejoseph" target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-blue-400 hover:underline">GitHub</a>
+                  <div className="flex gap-3">
+                    <a href="https://linkedin.com/in/benniejosephrichard" target="_blank" rel="noopener noreferrer"
+                      className="sys-label" style={{ fontSize: '8px', color: 'var(--neural)' }}>
+                      [LINKEDIN]
+                    </a>
+                    <a href="https://github.com/benniejoseph" target="_blank" rel="noopener noreferrer"
+                      className="sys-label" style={{ fontSize: '8px', color: 'var(--text-3)' }}>
+                      [GITHUB]
+                    </a>
                   </div>
                 </div>
               </div>
@@ -163,36 +197,54 @@ export default async function PostPage({ params }: Props) {
               {/* Back link */}
               <Link
                 href="/blog"
-                className="inline-flex items-center gap-2 mt-10 text-sm font-mono text-blue-400 hover:gap-3 transition-all"
+                className="terminal-cmd inline-flex items-center gap-1.5 mt-10"
+                style={{ fontSize: '9px' }}
               >
-                <FiArrowLeft size={14} /> Back to all posts
+                <FiArrowLeft size={10} />
+                BACK_TO_SIGNAL_LOG
               </Link>
             </article>
 
             {/* ── Sticky sidebar ── */}
             <aside className="hidden lg:block">
-              <div className="sticky top-28 space-y-6">
-                {/* Related posts */}
+              <div className="sticky top-20 space-y-4">
                 {related.length > 0 && (
                   <div>
-                    <p className="text-xs font-mono uppercase tracking-widest mb-4" style={{ color: 'var(--color-accent-primary)' }}>
-                      Related Posts
-                    </p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="status-dot dot-neural" />
+                      <span className="sys-label" style={{ fontSize: '8px', color: 'var(--neural)' }}>
+                        RELATED_SIGNALS
+                      </span>
+                    </div>
                     <div className="space-y-3">
                       {related.map((r) => (
                         <Link key={r.slug} href={`/blog/${r.slug}`} className="block group">
-                          <div className="glass p-4 rounded-xl border border-white/5 hover:border-blue-500/20 transition-all">
+                          <div className="sys-panel p-4 blog-related-card">
                             <div className="flex flex-wrap gap-1 mb-2">
                               {r.tags.slice(0, 2).map((t) => (
-                                <span key={t} className="text-[10px] font-mono text-blue-400">{t}</span>
+                                <span
+                                  key={t}
+                                  className="sys-label"
+                                  style={{ fontSize: '7px', color: TAG_COLOR[t] ?? 'var(--signal)' }}
+                                >
+                                  [{t}]
+                                </span>
                               ))}
                             </div>
-                            <p className="text-xs font-medium leading-snug group-hover:text-blue-400 transition-colors line-clamp-2">
+                            <p
+                              className="line-clamp-2 transition-colors duration-200 group-hover:text-[var(--signal)]"
+                              style={{
+                                fontFamily: 'var(--font-inter, sans-serif)',
+                                fontSize: '11px',
+                                color: 'var(--text-2)',
+                                lineHeight: 1.4,
+                              }}
+                            >
                               {r.title}
                             </p>
-                            <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                              <FiClock size={10} />{r.readingTime}
-                            </p>
+                            <span className="sys-label-dim flex items-center gap-1 mt-1.5" style={{ fontSize: '8px' }}>
+                              <FiClock size={9} />{r.readingTime}
+                            </span>
                           </div>
                         </Link>
                       ))}

@@ -277,6 +277,10 @@ body::before {
   to   { transform: scaleX(1); }
 }
 
+/* ─── Blog utilities ─────────────────────────────────────────── */
+.blog-related-card { transition: border-color 0.2s ease; }
+.blog-related-card:hover { border-color: var(--neural) !important; }
+
 /* ─── Responsive Nav ──────────────────────────────────────────── */
 @media (max-width: 1023px) {
   .sys-navigator-desktop { display: none !important; }

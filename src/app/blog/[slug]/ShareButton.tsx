@@ -20,10 +20,11 @@ export default function ShareButton({ title }: { title: string }) {
   return (
     <button
       onClick={handleShare}
-      className="ml-auto flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full glass border border-white/10 hover:border-blue-400/30 transition-colors"
+      className="terminal-cmd ml-auto"
+      style={{ fontSize: '9px', padding: '5px 12px' }}
     >
-      <FiShare2 size={12} />
-      {copied ? 'Copied!' : 'Share'}
+      <FiShare2 size={10} />
+      {copied ? 'URL_COPIED' : 'SHARE_POST'}
     </button>
   )
 }
