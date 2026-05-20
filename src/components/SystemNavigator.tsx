@@ -5,14 +5,14 @@ import { FiSun, FiMoon } from 'react-icons/fi'
 import Link from 'next/link'
 import { useTheme } from '@/contexts/ThemeContext'
 
-const SECTIONS = [
+const SECTIONS: { id: string; code: string; label: string; href?: string }[] = [
   { id: 'home',          code: '00', label: 'BOOT SEQUENCE' },
   { id: 'skills',        code: '01', label: 'CAPABILITIES' },
   { id: 'certifications',code: '02', label: 'CLEARANCE' },
   { id: 'projects',      code: '03', label: 'SYSTEMS' },
   { id: 'work',          code: '04', label: 'MISSIONS' },
   { id: 'contact',       code: '05', label: 'UPLINK' },
-  { id: 'blog',          code: '06', label: 'SIGNAL LOG', href: '/blog' },
+  { id: 'blog',          code: '06', label: 'SIGNAL LOG' },
 ]
 
 export default function SystemNavigator() {

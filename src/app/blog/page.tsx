@@ -2,13 +2,22 @@ import { getAllPosts, getAllTags } from '@/lib/mdx'
 import BlogClient from './BlogClient'
 
 export const metadata = {
-  title: 'Blog | Bennie Joseph — Salesforce & AI',
+  title: 'Signal Log — Salesforce & AI Blog | Bennie Joseph',
   description:
-    'Practical takes on Salesforce architecture, AI agents, and building products. By Bennie Joseph, Salesforce Certified Application Architect.',
+    'In-depth articles on Salesforce architecture, Agentforce, Apex, LWC, and AI agent development. Practical takes from a Salesforce Certified Application Architect with 9+ years of enterprise experience.',
+  keywords: [
+    'Salesforce blog', 'Agentforce tutorial', 'Apex best practices',
+    'LWC examples', 'Salesforce AI', 'AI agents Salesforce',
+    'Salesforce architect blog', 'Salesforce developer tips',
+  ],
   openGraph: {
-    title: 'Blog | Bennie Joseph — Salesforce & AI',
-    description: 'Practical takes on Salesforce architecture, AI agents, and building products.',
+    title: 'Signal Log — Salesforce & AI Blog | Bennie Joseph',
+    description: 'In-depth articles on Salesforce architecture, Agentforce, AI agents, Apex and LWC from a Certified Application Architect.',
     type: 'website',
+    url: 'https://benniejoseph.dev/blog',
+  },
+  alternates: {
+    canonical: 'https://benniejoseph.dev/blog',
   },
 }
 

@@ -24,18 +24,13 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark'); // Default to dark
+  const [theme, setTheme] = useState<Theme>('light'); // Default to light
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const savedTheme = window.localStorage?.getItem('theme') as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(prefersDark ? 'dark' : 'light');
-    }
+    setTheme(savedTheme === 'dark' ? 'dark' : 'light'); // honour saved pref; default light
     setMounted(true);
   }, []);
 

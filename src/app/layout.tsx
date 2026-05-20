@@ -9,18 +9,33 @@ const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', weigh
 
 export const metadata: Metadata = {
   title: {
-    default: 'Bennie Joseph — Salesforce Architect & AI Builder',
+    default: 'Bennie Joseph — Salesforce Certified Application Architect',
     template: '%s | Bennie Joseph',
   },
   description:
-    'Salesforce Certified Application Architect with 9+ years building enterprise solutions. Also building AI agents, SaaS products, and writing about the intersection of Salesforce and AI.',
-  keywords: 'Salesforce, AI, Agentforce, Apex, LWC, Next.js, React, Application Architect',
+    'Salesforce Certified Application Architect with 9+ years building enterprise solutions. Expert in Agentforce, AI agents, Apex, LWC, and SaaS. Available for consulting and freelance projects.',
+  keywords: [
+    'Salesforce Application Architect',
+    'Salesforce Certified Architect',
+    'Agentforce developer',
+    'Salesforce AI consultant',
+    'Apex developer',
+    'Lightning Web Components developer',
+    'Salesforce integration architect',
+    'Salesforce freelance consultant',
+    'AI agent development',
+    'Salesforce nCino',
+    'Salesforce agentic systems',
+    'enterprise Salesforce developer India',
+    'Salesforce AI builder',
+    'hire Salesforce architect',
+  ],
   authors: [{ name: 'Bennie Joseph', url: 'https://benniejoseph.dev' }],
   metadataBase: new URL('https://benniejoseph.dev'),
   openGraph: {
-    title: 'Bennie Joseph — Salesforce Architect & AI Builder',
+    title: 'Bennie Joseph — Salesforce Certified Application Architect',
     description:
-      'Salesforce Certified Application Architect building enterprise solutions and AI-powered products.',
+      'Salesforce Certified Application Architect with 9+ years. Expert in Agentforce, AI agents, Apex, and LWC. Building enterprise solutions and AI-powered SaaS products.',
     type: 'website',
     url: 'https://benniejoseph.dev',
     siteName: 'Bennie Joseph',
@@ -28,11 +43,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bennie Joseph — Salesforce Architect & AI Builder',
-    description: 'Salesforce Certified Application Architect building enterprise solutions and AI-powered products.',
+    title: 'Bennie Joseph — Salesforce Certified Application Architect',
+    description: 'Salesforce Certified Application Architect with 9+ years. Expert in Agentforce, AI agents, Apex, and LWC.',
     images: ['/api/og?title=Bennie+Joseph&tags=Salesforce,AI'],
   },
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: 'https://benniejoseph.dev',
+  },
 }
 
 export default function RootLayout({
@@ -43,19 +61,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${syne.variable} ${inter.variable} ${mono.variable}`}>
       <body className="antialiased" style={{ fontFamily: 'var(--font-inter, Inter, system-ui, sans-serif)' }}>
+        {/* FOUC prevention — runs before React hydrates. Default: light. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function() {
-  try {
-    var t = localStorage.getItem('theme');
-    if (t) { document.documentElement.setAttribute('data-theme', t); return; }
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-    }
-  } catch(e) {}
-})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t||'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`,
           }}
         />
         <ThemeProvider>
