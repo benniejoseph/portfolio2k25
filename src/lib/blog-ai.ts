@@ -2,11 +2,17 @@ import OpenAI from 'openai'
 import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
 import path from 'path'
+import {
+  styleWhiteboard,
+  styleComparison,
+  styleBlueprint,
+  styleArchitecture,
+} from './image-styles'
 
 // OpenAI for text/blog content generation
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-// Gemini for image generation (Imagen 3)
+// Gemini for image generation (Imagen 4)
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 export interface GeneratePostOptions {
@@ -32,17 +38,60 @@ Rules:
 - At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this exact format:
   {IMAGE_PROMPT: "your prompt here"}
 
-  How to write a POWERFUL IMAGE_PROMPT for Gemini Imagen 3 (premium infographic quality):
-  • These are PREMIUM INFOGRAPHICS — think "viral Salesforce LinkedIn post" level quality. Dark navy background, neon accent colors, real readable text labels, clean sections.
-  • STYLE DIRECTIVE (include in every prompt): "Dark navy background (#0a1628). Neon electric blue (#00d4ff) and vibrant green (#00ff88) accents. Glowing bordered boxes. Bold white sans-serif text labels. Orange (#ff6b35) for data-flow arrows. Red (#ff4757) for danger/bad patterns, green (#2ed573) for success/good patterns. Professional technical infographic — NOT abstract art. Ultra-high contrast. Looks like a premium Salesforce developer guide."
-  • CONTENT — Be extremely specific. Name EVERY component, every metric, every label that should appear. Include actual numbers, class names, field names.
-  • STRUCTURE — Describe exact layout: "3 vertical swim-lane columns", "split left/right comparison with red left / green right", "numbered steps 1-5 flowing top to bottom", "2x3 grid of metric cards with icons"
-  • FIRST placeholder: Show the ARCHITECTURE or "how it works" — components, data flows, sequence of steps. Include real Salesforce/AI component names.
-  • SECOND placeholder: Show a COMPARISON, BEFORE/AFTER, DECISION MATRIX, or BEST-PRACTICE CHECKLIST — whatever is most valuable for the section being explained. Include real metrics or criteria.
-  • EXAMPLE OF A GREAT PROMPT: "Premium dark-themed infographic titled 'SOQL IN LOOP vs BULKIFIED' in bold white. LEFT SIDE (dark red section labeled 'BAD'): code block showing for-loop with SOQL inside, stats showing '152 SOQL queries fired', '9,847ms CPU time', status badge 'LIMIT EXCEEDED ✗' in red. RIGHT SIDE (dark green section labeled 'GOOD'): code block showing Set<Id> collection then one query outside loop, stats '2 SOQL queries total', '312ms CPU time', status badge 'SUCCESS ✓' in green. Center divider with neon orange arrow labeled 'BULKIFY'. Bottom row showing Governor Limits: SOQL 100, DML 150, CPU 10000ms each in neon blue cards. Dark navy background, bold white typography."
-  • BAD PROMPT: "diagram of salesforce bulkification" ← useless, produces generic art
+  ═══════════════════════════════════════════════════
+  HOW TO WRITE IMAGE_PROMPTs — PICK ONE OF 4 STYLES
+  ═══════════════════════════════════════════════════
 
-  Place placeholders where a visual would genuinely help the reader understand the concept.
+  STYLE 1 — WHITEBOARD (for career, intro, overview posts)
+  Use for: "The Salesforce Career Roadmap", "Getting Started with AI Agents"
+  Prompt format: "Whiteboard-style infographic on '[TOPIC]'. Off-white paper background.
+  Hand-drawn black marker header: '[TITLE]'. Pastel sticky notes in corners. Sections with
+  hand-drawn boxes: Section 1 '[NAME]' with points '[A]', '[B]', '[C]'. Hand-drawn doodle
+  icons connecting sections. Footer quote in blue marker: '[QUOTE]'. Flat design, authentic
+  whiteboard marker texture, perfectly legible hand-written typography."
+
+  STYLE 2 — SPLIT-SCREEN COMPARISON (for before/after, migration, vs posts)
+  Use for: "LWC vs React", "Flow vs Apex", "Before/After code patterns"
+  Prompt format: "Split-screen comparison infographic: '[TITLE]'. Deep navy blue bold header.
+  LEFT COLUMN '[OLD WAY]' (soft red/grey, bold blue-grey header box): blocks for '[problem 1]',
+  '[problem 2]', '[problem 3]' each with small icon. Central flow diagram showing tangled lines
+  between Component A, B, C. RIGHT COLUMN '[NEW WAY]' (soft green/blue, bright blue header box):
+  blocks for '[solution 1]', '[solution 2]', '[solution 3]'. Central glowing node 'Single Source
+  of Truth' with clean straight lines to Component 1, 2, 3. Speedometer labeled FAST pointing
+  green. Clean vector SaaS aesthetic, deep navy/teal/blue palette on light blue-grey background."
+
+  STYLE 3 — DARK BLUEPRINT (for code deep dives, governor limits, performance, security)
+  Use for: "Apex Bulkification", "SOQL Optimisation", "Governor Limit errors"
+  Prompt format: "Dark blueprint developer infographic: '[TITLE]'. Deep dark navy background,
+  glowing neon blue header '[TITLE]'. Subtitle '[SUBTITLE]'. TOP ROW: 3 horizontal cards —
+  '[WHY CARD 1] with [icon]', '[WHY CARD 2] with [icon]', '[WHY CARD 3] with [icon]'.
+  MIDDLE: side-by-side — LEFT red-themed box '[BAD LABEL]' with red DANGER pill, RIGHT
+  green-themed box '[GOOD LABEL]' with green SUCCESS pill. CENTER: left column red border
+  '// BAD' code: [bad pattern], right column green border '// GOOD' code: [good pattern].
+  BOTTOM: circular avatar 'Bennie Joseph | Architect' + checklist '[item1]', '[item2]', '[item3]'.
+  Footer bar: '[footer text]'. Monospace font for code, razor-sharp neon text, grid lines."
+
+  STYLE 4 — ARCHITECTURE MAP (for pipelines, multi-agent systems, integration diagrams)
+  Use for: "RAG Pipeline", "Multi-Agent Workflow", "Salesforce + AI Architecture"
+  Prompt format: "System architecture diagram: '[TITLE]'. Light grey background with faint grid.
+  Dark bold header block '[TITLE]'. Subtitle '[SUBTITLE]'. Top-right: profile badge 'Bennie Joseph | Architect'.
+  LAYER 1 '[NAME]' (pastel [color]): modules '[A]', '[B]', '[C]'. LAYER 2 '[NAME]' (pastel [color]):
+  modules '[D]', '[E]', '[F]'. LAYER 3 '[NAME]' (pastel [color]): modules '[G]', '[H]'.
+  Central node '[CENTRAL NODE]' with rotating arrow, dotted directional connectors to all layers.
+  INTEGRATION LAYER (upper right): '[module1]' and '[module2]'. BOTTOM PANEL '[label]':
+  sub-modules '[M1]', '[M2]', '[M3]' with flow arrows. Rounded rectangle containers, dotted
+  arrowheads, micro vector icons, modern sans-serif fonts, publication-ready engineering diagram."
+
+  ═══════════════════════
+  ASSIGNMENT RULES:
+  ═══════════════════════
+  - Post about code quality / best practices / limits → Style 3 (Blueprint)
+  - Post about comparison / migration / vs → Style 2 (Comparison)
+  - Post about pipelines / architecture / systems → Style 4 (Architecture)
+  - Post about career / learning / overview → Style 1 (Whiteboard)
+  - FIRST image: usually the architecture/how-it-works (Style 3 or 4)
+  - SECOND image: usually the comparison/checklist (Style 2 or 3)
+  - NEVER use generic prompts like "diagram of X" — name EVERY component, code line, and metric
 
 Output ONLY the raw MDX file content starting with --- frontmatter. No preamble.`
 
@@ -90,23 +139,18 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
 // Regex to find image placeholder lines written by the LLM
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
-// Gemini Imagen 4 style directive — injected into every image prompt
-const IMAGEN_STYLE =
-  'Dark navy background. Neon electric blue and vibrant green accent colors. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange directional arrows showing data flow. Red color for bad/danger patterns, green color for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art, NOT decorative. Every component, step, and label must be clearly readable.'
-
 /**
- * Generate an image using Gemini Imagen 3.
+ * Generate an image using Gemini Imagen 4.
  * aspectRatio: '16:9' for wide cover images, '1:1' for square inline images
+ * Style is fully embedded in each prompt via the style functions from image-styles.ts
  */
 async function generateImage(
   prompt: string,
   aspectRatio: '16:9' | '1:1' = '1:1'
 ): Promise<Buffer> {
-  const fullPrompt = `${prompt}\n\nStyle requirements: ${IMAGEN_STYLE}`
-
   const response = await gemini.models.generateImages({
     model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
-    prompt: fullPrompt,
+    prompt,
     config: {
       numberOfImages: 1,
       aspectRatio,
@@ -115,7 +159,7 @@ async function generateImage(
   })
 
   const imageBytes = response.generatedImages?.[0]?.image?.imageBytes
-  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 3')
+  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 4')
 
   // imageBytes can be a string (base64) or Uint8Array depending on SDK version
   if (typeof imageBytes === 'string') {
@@ -124,37 +168,86 @@ async function generateImage(
   return Buffer.from(imageBytes)
 }
 
-// Cover image prompts per content pillar — rich, specific, Imagen 3 optimised
+// Cover image prompts per content pillar — using structured style functions
 const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> = {
   salesforce: (title, keyword) =>
-    `Premium dark-themed technical infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
-    `Subtitle: "${keyword}" in neon electric blue. ` +
-    `Main visual: wide horizontal architecture diagram showing Salesforce platform layers — ` +
-    `left section "Salesforce Org" (neon blue border) with labeled boxes: Apex, LWC, Triggers, SOQL, Platform Events, Named Credentials. ` +
-    `Center section "Integration Layer" (orange border) with API Gateway, OAuth, Named Credentials boxes. ` +
-    `Right section "External Systems" (green border) with AI/ML, ERP, REST API boxes. ` +
-    `Glowing orange arrows connecting sections. Bottom strip: 3 key insight cards in neon-bordered dark boxes. ` +
-    `Overall feel: premium Salesforce developer reference card.`,
+    styleArchitecture({
+      title: title.toUpperCase(),
+      subtitle: keyword,
+      layers: [
+        {
+          name: 'Salesforce Org',
+          color: 'neon blue',
+          components: ['Apex Triggers', 'LWC Components', 'SOQL Queries', 'Platform Events', 'Named Credentials'],
+        },
+        {
+          name: 'Integration Layer',
+          color: 'orange',
+          components: ['API Gateway', 'OAuth 2.0', 'Named Credentials', 'Connected App'],
+        },
+        {
+          name: 'External Systems',
+          color: 'neon green',
+          components: ['AI / LLM APIs', 'ERP Systems', 'REST / GraphQL', 'Webhooks'],
+        },
+      ],
+      centralNode: 'Salesforce Platform',
+      integrationModules: ['REST API v62.0', 'Streaming API'],
+      bottomPanel: {
+        label: 'KEY INSIGHTS',
+        modules: ['Governor Limits Managed', 'FLS + Sharing Enforced', 'Bulkified Patterns'],
+      },
+    }),
 
   'ai-agentic': (title, keyword) =>
-    `Premium dark-themed technical infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
-    `Subtitle: "${keyword}" in neon electric blue. ` +
-    `Main visual: AI agent reasoning loop diagram — ` +
-    `center: "LLM / Reasoning Engine" node (bright green glowing circle). ` +
-    `Surrounding nodes connected by neon arrows: "Tool Registry" (blue box), "Memory Store" (blue box), ` +
-    `"Salesforce CRM" (blue box), "Prompt Builder" (grey box), "Output Handler" (green box), "Audit Logger" (grey box). ` +
-    `Arrows labeled: "tool_call", "query context", "structured JSON", "validate + write". ` +
-    `Bottom: 3 stat cards showing agent performance metrics. ` +
-    `Overall feel: premium AI architecture reference card on dark navy.`,
+    styleArchitecture({
+      title: title.toUpperCase(),
+      subtitle: keyword,
+      layers: [
+        {
+          name: 'Input & Context',
+          color: 'neon blue',
+          components: ['Tool Registry', 'Memory Store', 'Salesforce CRM', 'Prompt Builder'],
+        },
+        {
+          name: 'LLM / Reasoning Engine',
+          color: 'neon green',
+          components: ['Model: claude-sonnet / gpt-4.1', 'tool_use blocks', 'Structured JSON output', '200K context'],
+        },
+        {
+          name: 'Execution & Audit',
+          color: 'grey',
+          components: ['Output Handler', 'Validation Layer', 'Audit Logger', 'Kill Switch'],
+        },
+      ],
+      centralNode: 'Agent Loop — runAgent()',
+      integrationModules: ['Anthropic API / OpenAI API', 'Salesforce REST API v62.0'],
+      bottomPanel: {
+        label: 'AGENT METRICS',
+        modules: ['Tool Call Accuracy', 'Cost per Run', 'Hallucination Rate'],
+      },
+    }),
 
   career: (title, keyword) =>
-    `Premium dark-themed infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
-    `Subtitle: "${keyword}" in neon electric blue. ` +
-    `Main visual: career progression roadmap — horizontal timeline with 5 milestone nodes: ` +
-    `"Junior Dev" → "Developer" → "Senior Dev" → "Architect" → "Principal/CTO". ` +
-    `Each node: dark box with neon border, salary range, key skills listed, certification badges. ` +
-    `Color gradient: blue for technical skills, green for career milestones, orange for community. ` +
-    `Bottom: 3 action-item cards. Overall feel: premium career guide visual.`,
+    styleWhiteboard({
+      title: title.toUpperCase(),
+      subtitle: keyword,
+      sections: [
+        {
+          title: 'THE ROADMAP',
+          points: ['Junior Dev → Developer → Senior Dev → Architect → Principal'],
+        },
+        {
+          title: 'SKILLS TO MASTER',
+          points: ['Apex & LWC', 'Data Cloud & AI', 'Integration Patterns'],
+        },
+        {
+          title: 'CERTIFICATIONS',
+          points: ['Platform Dev I & II', 'Application Architect', 'System Architect'],
+        },
+      ],
+      footerQuote: 'Build the future with code and cloud. Ship > Perfect.',
+    }),
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {

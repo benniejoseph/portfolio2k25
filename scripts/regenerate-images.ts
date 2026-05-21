@@ -1,19 +1,23 @@
 #!/usr/bin/env npx tsx
 /**
  * Regenerate infographic-style images for existing blog posts.
- * Uses the updated STYLE_SUFFIX from blog-ai.ts (clean professional infographic).
+ * 4 visual archetypes: Whiteboard, Comparison, Blueprint (dark), Architecture Map
  *
  * Usage:
  *   npx tsx scripts/regenerate-images.ts              ← regenerate ALL posts
  *   npx tsx scripts/regenerate-images.ts --slug lwc-to-react-what-salesforce-devs-need-to-know
- *
- * Requires: OPENAI_API_KEY in .env.local
  */
 
 import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
+import {
+  styleWhiteboard,
+  styleComparison,
+  styleBlueprint,
+  styleArchitecture,
+} from '../src/lib/image-styles'
 
 // Load .env.local
 const envPath = path.join(process.cwd(), '.env.local')
@@ -26,7 +30,6 @@ if (fs.existsSync(envPath)) {
     if (eqIdx === -1) continue
     const key = trimmed.slice(0, eqIdx).trim()
     const raw = trimmed.slice(eqIdx + 1).trim()
-    // Strip surrounding quotes
     const value = raw.replace(/^(['"])(.*)\1$/, '$2')
     if (key && !process.env[key]) process.env[key] = value
   }
@@ -34,72 +37,572 @@ if (fs.existsSync(envPath)) {
 
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-// Gemini Imagen 4 style directive — dark, rich, premium developer infographic
-const IMAGEN_STYLE =
-  'Dark navy background. Neon electric blue and vibrant green accent colors. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange directional arrows showing data flow. Red color for bad/danger patterns, green color for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art. Every component, step, and label must be clearly readable.'
-
-// Per-post image definitions — premium Gemini Imagen 3 prompts
+// Per-post image definitions — using style-specific prompt generators
 const POST_IMAGE_CONFIGS: Record<string, { cover: string; images: string[] }> = {
   'agentforce-vs-einstein-copilot-what-is-actually-different': {
-    cover:
-      'Premium dark-themed technical infographic titled "AGENTFORCE vs EINSTEIN COPILOT" in large bold white text. Subtitle "What Is Actually Different" in neon electric blue. Main visual: two tall columns side by side. LEFT COLUMN (neon blue border, header "EINSTEIN COPILOT — Assistant Mode"): boxes labeled "User Asks Question", "CRM Context Loaded", "Copilot Suggests Action", "User Reviews + Approves". Annotation at bottom: "Human in the Loop" with person icon. RIGHT COLUMN (neon green border, header "AGENTFORCE — Agent Mode"): boxes labeled "Business Defines Goal", "Atlas Reasoning Engine", "Multi-Step Tool Calls", "Action Executed", "Escalate on Exception". Annotation at bottom: "Human on Exception" with shield icon. Center glowing orange divider arrow labeled "SHIFT: Assistant → Actor". Bottom strip: 3 key stat cards — "User-Initiated" vs "Goal-Assigned", "Suggest" vs "Execute", "Single-Turn" vs "Multi-Step".',
+    cover: styleComparison({
+      title: 'AGENTFORCE vs EINSTEIN COPILOT',
+      subtitle: 'What Is Actually Different',
+      col1Title: 'EINSTEIN COPILOT — Assistant Mode',
+      col1Points: [
+        'User asks a question → Copilot suggests action',
+        'Human reviews and approves every step',
+        'Single-turn conversational assistant',
+        'Works great for: summarise, draft, search',
+      ],
+      col2Title: 'AGENTFORCE — Autonomous Agent Mode',
+      col2Points: [
+        'Business defines a goal → Atlas executes',
+        'Multi-step tool calls without human approval',
+        'Escalates only on exceptions or low confidence',
+        'Works great for: triage, routing, outreach',
+      ],
+    }),
     images: [
-      'Premium dark infographic: "AGENTFORCE ACTION TYPES" — 3 vertical columns with distinct colors. LEFT COLUMN (neon blue, header "READ ACTIONS 🔍"): labeled boxes "GetAccountHealth", "FindOpenCases", "CheckEntitlement", "LoadCaseHistory". Risk badge: "LOW RISK". CENTER COLUMN (grey, header "DECISION ACTIONS ⚡"): labeled boxes "CalculateDiscount", "ClassifyLeadTier", "AssessRenewalRisk", "EvaluatePriority". Risk badge: "MEDIUM RISK". RIGHT COLUMN (orange, header "WRITE ACTIONS ✍️"): labeled boxes "CreateFollowUpTask", "UpdateCasePriority", "SubmitApprovalRequest". Risk badge: "HIGH RISK — needs confirmation". Orange arrows flow left to right. Bottom principle: "Earn autonomy left to right. Start with READ."',
-      'Premium dark infographic: "COPILOT vs AGENTFORCE — Decision Matrix" — structured table on dark navy. Header row: "USE CASE" | "EINSTEIN COPILOT ✓" | "AGENTFORCE ✓". 8 data rows with alternating dark shading: "Lead Qualification" (—, ✓ green), "Email Drafting" (✓ green, —), "Case Triage" (—, ✓ green), "Account Summary" (✓ green, —), "Renewal Outreach" (—, ✓ green), "Call Prep" (✓ green, —), "Order Status Handling" (—, ✓ green), "Pipeline Inspection" (✓ green, —). Bottom callout box in neon orange: "Rule: Repeatable + High Volume = Agentforce. Exploratory + Judgment = Copilot".',
+      styleBlueprint({
+        title: 'AGENTFORCE ACTION TYPES',
+        subtitle: 'Earn Autonomy Left to Right',
+        badLabel: 'WRITE ACTIONS — HIGH RISK',
+        goodLabel: 'READ ACTIONS — LOW RISK',
+        badCode: `// ❌ Never let agent write without guard
+UpdateCasePriority(caseId, priority)  // no confirmation
+CreateFollowUpTask(accountId)         // no idempotency check`,
+        goodCode: `// ✓ Guard every write action
+if (!agentConfig.allowWrites) return 'read-only mode';
+Result r = CreateFollowUpTask(accountId, dedupKey);
+AgentRunLogger.log(r);`,
+        whyCards: [
+          { label: 'READ ACTIONS — GetAccountHealth, FindOpenCases, CheckEntitlement', icon: 'magnifying glass' },
+          { label: 'DECISION ACTIONS — CalculateDiscount, ClassifyLeadTier, AssessRenewalRisk', icon: 'lightning bolt' },
+          { label: 'WRITE ACTIONS — CreateFollowUpTask, UpdateCasePriority (guard required)', icon: 'warning shield' },
+        ],
+        checklist: [
+          'Start with READ actions only',
+          'Add DECISION actions after 2 weeks of monitoring',
+          'WRITE actions need dedicated approval gate',
+          'Log every agent action to Agent_Run__c',
+          'Build kill switch via Custom Metadata flag',
+        ],
+      }),
+      styleComparison({
+        title: 'COPILOT vs AGENTFORCE',
+        subtitle: 'Decision Matrix: Which Tool for Which Use Case',
+        col1Title: 'EINSTEIN COPILOT ✓',
+        col1Points: [
+          'Email drafting & summarisation',
+          'Account summary before a call',
+          'Call prep with relationship context',
+          'Pipeline inspection (exploratory)',
+          'Ad-hoc Q&A over CRM data',
+        ],
+        col2Title: 'AGENTFORCE ✓',
+        col2Points: [
+          'Lead qualification at volume',
+          'Case triage & auto-routing',
+          'Renewal outreach campaign',
+          'Order status handling (high frequency)',
+          'SLA breach escalation',
+        ],
+      }),
     ],
   },
 
   'building-ai-agent-claude-api-salesforce': {
-    cover:
-      'Premium dark technical infographic titled "CLAUDE API + SALESFORCE" in huge bold white text. Subtitle "Tool-Use Agent Without Abstraction Layers" in neon blue. Main architecture: 4 boxes connected by glowing orange arrows in horizontal sequence. Box 1 "SALESFORCE ORG" (neon blue border): sub-labels "Connected App", "OAuth 2.0", "Client Credentials". Box 2 "NODE.JS AGENT" (grey border): sub-labels "Tool Definitions", "Agent Loop", "executeTool()". Box 3 "CLAUDE API" (neon green border): sub-labels "claude-sonnet-4-5", "tool_use blocks", "200K context". Box 4 "CRM DATA" (neon blue border): sub-labels "SOQL Results", "Created Records". Arrow labels: "Auth Token", "Tool Call Request", "SOQL Query", "JSON Response". Bottom stats row: "200K Context Window" | "Multi-Step Reasoning" | "No Hallucination on Tools".',
+    cover: styleArchitecture({
+      title: 'CLAUDE API + SALESFORCE AGENT',
+      subtitle: 'Tool-Use Agent Without Abstraction Layers',
+      layers: [
+        {
+          name: 'Salesforce Org',
+          color: 'neon blue',
+          components: ['Connected App', 'OAuth 2.0 Client Credentials', 'Named Credential', 'API v62.0'],
+        },
+        {
+          name: 'Node.js Agent Loop',
+          color: 'grey',
+          components: ['Tool Definitions', 'executeTool()', 'Turn Limiter (MAX_TURNS=10)', 'Error Handler'],
+        },
+        {
+          name: 'Claude API (Anthropic)',
+          color: 'neon green',
+          components: ['claude-sonnet-4-5', 'tool_use blocks', '200K context window', 'Structured JSON output'],
+        },
+      ],
+      centralNode: 'Agent Loop — runAgent()',
+      integrationModules: ['Anthropic SDK', 'Salesforce REST API v62.0'],
+      bottomPanel: {
+        label: 'CRM DATA FLOW',
+        modules: ['SOQL Query Results', 'Created/Updated Records', 'Agent_Run__c Audit Log'],
+      },
+    }),
     images: [
-      'Premium dark comparison infographic: "CLAUDE vs GPT-4.1 FOR SALESFORCE AGENTS" — two columns. Header: "CLAUDE (Anthropic)" in neon green | "GPT-4.1 (OpenAI)" in orange. 7 comparison rows with alternating background: "Context Window: 200K tokens" vs "128K tokens", "SOQL Hallucination: LOW ✓" vs "Medium ⚠", "Tool Use: Excellent ✓" vs "Very Good ✓", "JSON Fidelity: Highly Reliable ✓" vs "Reliable ✓", "Cost/1M tokens: ~$3" vs "~$2.50", "Best For: Complex chains, large case history" vs "OpenAI ecosystem tools". Bottom recommendation box in neon blue: "Choose Claude when loading 50+ email threads or nested tool call chains".',
-      'Premium dark infographic: "PRODUCTION AGENT CHECKLIST" — vertical list with 3 color-coded sections. SECURITY section (neon blue header): ✓ Named Credential (not env var), ✓ WITH USER_MODE in all queries, ✓ httpOnly cookies for tokens, ✓ No API keys in browser. RELIABILITY section (orange header): ✓ MAX_TURNS = 10 guard, ✓ Exponential backoff on 429s, ✓ Error wrapped as tool_result (not thrown), ✓ max_tokens guard for truncation. OBSERVABILITY section (green header): ✓ Agent_Run__c logging, ✓ Tool call audit trail, ✓ Cost monitoring, ✓ Kill switch via Custom Metadata flag.',
+      styleComparison({
+        title: 'CLAUDE vs GPT-4.1',
+        subtitle: 'For Salesforce Agent Workloads',
+        col1Title: 'GPT-4.1 (OpenAI)',
+        col1Points: [
+          '128K context window',
+          'Medium SOQL hallucination risk',
+          'Rich OpenAI ecosystem tooling',
+          '~$2.50 per 1M tokens',
+          'Best for: short context, OpenAI stack',
+        ],
+        col2Title: 'Claude Sonnet 4.5 (Anthropic)',
+        col2Points: [
+          '200K context window',
+          'Low SOQL hallucination risk',
+          'Excellent multi-step tool use',
+          '~$3.00 per 1M tokens',
+          'Best for: 50+ email threads, nested tool chains',
+        ],
+      }),
+      styleBlueprint({
+        title: 'PRODUCTION AGENT CHECKLIST',
+        subtitle: 'Security, Reliability, Observability',
+        badLabel: 'COMMON MISTAKES',
+        goodLabel: 'PRODUCTION STANDARDS',
+        badCode: `// ❌ Never do this
+const apiKey = process.env.SF_PASSWORD   // env var
+const res = await query(\`SELECT * FROM \${obj}\`) // injection
+throw new Error(sfError.message)          // leaks internals`,
+        goodCode: `// ✓ Production-safe
+// Named Credential — no key in code
+const res = await withUserMode(query)    // FLS enforced
+return { type: 'tool_result', error: 'validation_failed' } // safe`,
+        whyCards: [
+          { label: 'SECURITY — Named Credential, WITH USER_MODE, httpOnly tokens', icon: 'lock' },
+          { label: 'RELIABILITY — MAX_TURNS guard, exponential backoff on 429, error as tool_result', icon: 'shield' },
+          { label: 'OBSERVABILITY — Agent_Run__c log, cost monitor, kill switch via Custom Metadata', icon: 'chart' },
+        ],
+        checklist: [
+          'Named Credential (not env var) for Salesforce auth',
+          'WITH USER_MODE on all SOQL queries',
+          'MAX_TURNS = 10 infinite loop guard',
+          'Errors returned as tool_result (not thrown)',
+          'Agent_Run__c audit log for every run',
+          'Custom Metadata kill switch flag',
+        ],
+      }),
     ],
   },
 
   'building-ai-agents-with-openai-and-salesforce': {
-    cover:
-      'Premium dark technical infographic titled "OPENAI + SALESFORCE AGENT" in bold white. Subtitle "The Architecture That Survives Production" in neon blue. Three swim-lane columns separated by glowing dividers. LANE 1 "SALESFORCE ORG" (neon blue border): vertical stack — LWC Component → Apex Service → Named Credential → Sharing Rules → FLS Enforcement. LANE 2 "APEX CONTROL LAYER" (grey border): PromptBuilder → ToolRegistry → AgentRunLogger → ValidationService → AgentRecommendation__c. LANE 3 "OPENAI API" (green border): gpt-4.1 → tool_calls response → natural language output. Glowing orange arrows crossing lanes labeled: "Serialize CRM context", "Send approved tools", "Execute in Salesforce", "Log result". Bottom warning strip in red: "OpenAI never sees Salesforce credentials or session IDs".',
+    cover: styleArchitecture({
+      title: 'OPENAI + SALESFORCE AGENT',
+      subtitle: 'The Architecture That Survives Production',
+      layers: [
+        {
+          name: 'Salesforce Org',
+          color: 'neon blue',
+          components: ['LWC Component', 'Apex Service', 'Named Credential', 'Sharing Rules', 'FLS Enforcement'],
+        },
+        {
+          name: 'Apex Control Layer',
+          color: 'grey',
+          components: ['PromptBuilder', 'ToolRegistry', 'AgentRunLogger', 'ValidationService', 'AgentRecommendation__c'],
+        },
+        {
+          name: 'OpenAI API',
+          color: 'neon green',
+          components: ['gpt-4.1 model', 'tool_calls response', 'Natural language output', 'JSON schema enforcement'],
+        },
+      ],
+      centralNode: 'Apex Orchestration Layer',
+      integrationModules: ['OpenAI REST API', 'Named Credential (no key in org)'],
+      bottomPanel: {
+        label: 'SECURITY BOUNDARY',
+        modules: ['OpenAI never sees credentials', 'FLS enforced server-side', 'Audit trail in Agent_Run__c'],
+      },
+    }),
     images: [
-      'Premium dark split infographic: "TOOL DESIGN — BAD vs GOOD". LEFT HALF (dark red background, header "❌ BAD — Too Broad"): one large box labeled "update_salesforce" with inputs listed: soql_query, object_name, field_map, where_clause, operation_type. Warning badges: "No permission check", "Unpredictable", "Blast radius: ENTIRE ORG". RIGHT HALF (dark green background, header "✓ GOOD — Business Actions"): 5 small specific boxes: "summarize_case", "check_entitlement", "draft_case_response", "recommend_priority", "create_escalation_request". Each with green badge: "Permission-checked", "Auditable", "Bounded". Center arrow in orange: "Design Principle: Expose BUSINESS ACTIONS, not database operations".',
-      'Premium dark infographic: "ENTERPRISE GUARDRAILS FRAMEWORK" — 5 numbered sections in vertical layout. Section 1 (neon blue): "PERMISSION ENFORCEMENT — WITH USER_MODE, stripInaccessible(), FLS checks, Sharing rules". Section 2 (grey): "FIELD MINIMIZATION — Send only required fields, no full SObject dump, max 5 records to LLM". Section 3 (orange): "DETERMINISTIC EXECUTION — Apex validates EVERY tool request, business rules in code not prompts". Section 4 (green): "AUDITABILITY — Agent_Run__c, Agent_Tool_Call__c, Agent_Recommendation__c, correlation IDs". Section 5 (red): "FAILURE RESILIENCE — Timeout handling, retry queue, kill switch Custom Metadata flag, graceful degradation".',
+      styleComparison({
+        title: 'TOOL DESIGN',
+        subtitle: 'Bad God-Action vs Good Business Actions',
+        col1Title: '❌ BAD — God Action (Never Build This)',
+        col1Points: [
+          'update_salesforce(soql_query, object_name, field_map, where_clause, operation_type)',
+          'No permission check — agent can delete anything',
+          'Unpredictable blast radius across entire org',
+          'Zero audit trail — invisible to compliance',
+        ],
+        col2Title: '✓ GOOD — Single-Purpose Business Actions',
+        col2Points: [
+          'summarize_case(caseId) — read only, bounded',
+          'check_entitlement(accountId) — permission-checked',
+          'draft_case_response(caseId, tone) — no DML',
+          'create_escalation_request(caseId, reason) — auditable',
+        ],
+      }),
+      styleBlueprint({
+        title: 'ENTERPRISE GUARDRAILS FRAMEWORK',
+        subtitle: '5 Layers of Defence for Production Agents',
+        badLabel: 'UNGUARDED AGENT',
+        goodLabel: 'ENTERPRISE-SAFE AGENT',
+        badCode: `// ❌ Unguarded — DO NOT DEPLOY
+String soql = 'SELECT ' + fields + ' FROM ' + obj;
+Database.query(soql);  // injection + FLS bypass
+// No audit, no limits, no kill switch`,
+        goodCode: `// ✓ Enterprise-safe pattern
+List<SObject> results = Security.stripInaccessible(
+  AccessType.READABLE,
+  Database.queryWithBinds(safeQuery, binds, AccessLevel.USER_MODE)
+).getRecords();
+AgentRunLogger.log(agentRunId, toolName, results.size());`,
+        whyCards: [
+          { label: 'PERMISSION ENFORCEMENT — WITH USER_MODE, stripInaccessible(), FLS + Sharing', icon: 'lock' },
+          { label: 'FIELD MINIMIZATION — Only required fields, max 5 records to LLM, no full SObject dump', icon: 'filter' },
+          { label: 'AUDITABILITY — Agent_Run__c + Agent_Tool_Call__c + correlation IDs + cost tracking', icon: 'document' },
+        ],
+        checklist: [
+          'WITH USER_MODE on every query',
+          'stripInaccessible() before sending to LLM',
+          'Deterministic Apex validates every tool request',
+          'Agent_Run__c + Agent_Tool_Call__c audit trail',
+          'Timeout handling + retry queue + graceful degradation',
+          'Kill switch via Custom Metadata flag',
+        ],
+      }),
     ],
   },
 
   'building-your-first-ai-agent-with-claude-api-and-salesforce': {
-    cover:
-      'Premium dark technical infographic titled "CLAUDE API SALESFORCE AGENT" in bold white. Subtitle "Case Triage — Step by Step" in neon electric blue. Five-step horizontal flow with numbered circles. Step 1 (blue circle): "CASE CREATED" — Salesforce Case object icon, trigger fires. Step 2 (grey circle): "APEX LOADS CONTEXT" — boxes: Case Details, Account Tier, Entitlement, Last 5 Emails, Open Escalations. Step 3 (grey circle): "QUEUEABLE CALLOUT" — Named Credential, API Request, 30s timeout. Step 4 (green circle): "CLAUDE REASONS" — claude-sonnet-4-5, returns JSON: {priority, queue, summary, escalate}. Step 5 (blue circle): "APEX VALIDATES + WRITES" — permission check → Case update → Agent_Run__c log. Glowing orange arrows connecting steps with data labels.',
+    cover: styleArchitecture({
+      title: 'CASE TRIAGE AGENT — STEP BY STEP',
+      subtitle: 'Claude API + Salesforce Apex End-to-End',
+      layers: [
+        {
+          name: 'Trigger: Case Created',
+          color: 'neon blue',
+          components: ['Case object trigger fires', 'Queueable enqueued async', 'Context serialised'],
+        },
+        {
+          name: 'Apex Context Builder',
+          color: 'grey',
+          components: ['Case Details', 'Account Tier', 'Entitlement', 'Last 5 Emails', 'Open Escalations'],
+        },
+        {
+          name: 'Claude API Callout',
+          color: 'neon green',
+          components: ['claude-sonnet-4-5', 'Named Credential (no key)', '30s timeout', 'JSON: priority + queue + summary'],
+        },
+      ],
+      centralNode: 'CaseTriageQueueable',
+      integrationModules: ['Anthropic Messages API', 'Salesforce Named Credential'],
+      bottomPanel: {
+        label: 'RESULT: APEX VALIDATES + WRITES',
+        modules: ['Permission check', 'Case.Priority updated', 'Case.OwnerId routed', 'Agent_Run__c logged'],
+      },
+    }),
     images: [
-      'Premium dark infographic: "APEX + CLAUDE INTEGRATION CLASS DIAGRAM" — split layout. LEFT SIDE (blue section): Apex class boxes with glowing borders — "CaseTriageQueueable implements Queueable", "CaseContextBuilder", "ClaudeCalloutService", "AgentResponseValidator", "AgentRunLogger". RIGHT SIDE (green section): Claude API boxes — "Messages API /v1/messages", "System Prompt (triage policy)", "Tool definitions JSON", "Structured response: priority + queue + summary". CENTER (grey section): "Named Credential" box with lock icon, arrow labeled "POST request (no API key in code)". All class names in monospace white font. Orange arrows connecting left-to-right with labels.',
-      'Premium dark dashboard infographic: "AGENT QUALITY METRICS" — 6 metric cards in 2x3 grid. Each card: dark box with neon border, metric name, description, target. Card 1 (green border): "PRIORITY ACCURACY — Correct classifications / Total cases — Target: >85%". Card 2 (green border): "QUEUE ACCURACY — Correct routing decisions — Target: >90%". Card 3 (orange border): "ESCALATION MISS RATE — P1 cases routed to Tier 1 — Target: <5%". Card 4 (orange border): "HUMAN OVERRIDE RATE — Agent decisions changed by rep — Target: <20%". Card 5 (blue border): "HANDLE TIME REDUCTION — vs baseline avg — Target: -30%". Card 6 (blue border): "COST PER CASE — API token cost — Target: <$0.05". Color-coded status indicators.',
+      styleBlueprint({
+        title: 'APEX AGENT CLASS DIAGRAM',
+        subtitle: 'CaseTriageQueueable Full Structure',
+        badLabel: 'SYNCHRONOUS — HITS CALLOUT LIMIT',
+        goodLabel: 'QUEUEABLE ASYNC — SAFE PATTERN',
+        badCode: `// ❌ Synchronous trigger callout — ILLEGAL
+trigger CaseTrigger on Case (after insert) {
+  Http h = new Http();
+  h.send(req);  // Error: Callout not allowed in trigger
+}`,
+        goodCode: `// ✓ Queueable pattern — correct approach
+trigger CaseTrigger on Case (after insert) {
+  System.enqueueJob(new CaseTriageQueueable(Trigger.new));
+}
+public class CaseTriageQueueable implements Queueable, Database.AllowsCallouts {
+  public void execute(QueueableContext ctx) { ... }
+}`,
+        whyCards: [
+          { label: 'CaseTriageQueueable implements Queueable, Database.AllowsCallouts', icon: 'code' },
+          { label: 'CaseContextBuilder — serialises Case + Account + Entitlement + Emails', icon: 'database' },
+          { label: 'AgentResponseValidator — validates JSON, checks permissions, writes safely', icon: 'shield' },
+        ],
+        checklist: [
+          'Implement Queueable + Database.AllowsCallouts',
+          'Named Credential — never hardcode API key',
+          'MAX_TURNS = 10 guard on agent loop',
+          'Validate LLM JSON before any DML',
+          'Log to Agent_Run__c with correlation ID',
+          'Unit test with @HttpCalloutMock',
+        ],
+      }),
+      styleBlueprint({
+        title: 'AGENT QUALITY METRICS',
+        subtitle: 'How to Measure Your Triage Agent',
+        badLabel: 'UNMONITORED AGENT',
+        goodLabel: 'PRODUCTION-MONITORED',
+        badCode: `// ❌ No monitoring — blind in production
+System.enqueueJob(new CaseTriageQueueable(cases));
+// Did it work? Who knows.`,
+        goodCode: `// ✓ Instrumented — visibility at every step
+AgentRun__c run = AgentRunLogger.start(caseId);
+AgentRunLogger.logToolCall(run.Id, 'claude', tokens, cost);
+AgentRunLogger.complete(run.Id, priority, queue, overrideFlag);`,
+        whyCards: [
+          { label: 'PRIORITY ACCURACY > 85% — correct classifications / total cases', icon: 'target' },
+          { label: 'QUEUE ACCURACY > 90% — correct routing decisions tracked in Agent_Run__c', icon: 'route' },
+          { label: 'COST PER CASE < $0.05 — token cost logged and aggregated per agent run', icon: 'dollar' },
+        ],
+        checklist: [
+          'Priority Accuracy target: > 85%',
+          'Queue Accuracy target: > 90%',
+          'Escalation Miss Rate target: < 5%',
+          'Human Override Rate target: < 20%',
+          'Handle Time Reduction target: -30%',
+          'Cost per Case target: < $0.05',
+        ],
+      }),
     ],
   },
 
   'lwc-to-react-what-salesforce-devs-need-to-know': {
-    cover:
-      'Premium dark technical infographic titled "LWC vs REACT" in large bold white. Subtitle "For Salesforce Developers" in neon blue. Two tall columns. LEFT COLUMN (neon blue border, header "⚡ LWC — Salesforce Native"): bullet items in blue boxes — "@wire for data", "Lightning Data Service", "SLDS by default", "FLS/Sharing by platform", "Metadata deployment", "@InvocableMethod integration", "jest.mock apex". RIGHT COLUMN (cyan border, header "⚛ REACT — Application Layer"): bullet items in dark cyan boxes — "useQuery + fetch", "Build your own API layer", "Choose your design system", "Auth = your responsibility", "Vercel/Cloud deploy", "REST API contracts", "msw for mocks". CENTER golden rule strip: "USE LWC: User is inside Salesforce | USE REACT: You\'re building a product experience".',
+    cover: styleComparison({
+      title: 'LWC vs REACT',
+      subtitle: 'What Every Salesforce Developer Must Know',
+      col1Title: '⚡ LWC — Salesforce Native',
+      col1Points: [
+        '@wire for reactive data binding',
+        'Lightning Data Service (LDS) cache',
+        'SLDS design system by default',
+        'FLS + Sharing enforced by platform',
+        'Metadata deployment via SFDX',
+        '@InvocableMethod for Flow integration',
+      ],
+      col2Title: '⚛ React — Application Layer',
+      col2Points: [
+        'useQuery + TanStack for data',
+        'Build your own API + auth layer',
+        'Choose your own design system',
+        'Auth + FLS = your responsibility',
+        'Vercel/Cloud Run deployment',
+        'REST API contracts for integration',
+      ],
+    }),
     images: [
-      'Premium dark comparison table infographic: "LWC → REACT CONCEPT MAPPING" — two columns, 12 rows. Column headers: "LWC CONCEPT" (neon blue) | "REACT EQUIVALENT" (cyan). Rows in alternating dark shading: "@api property → props (read-only)", "@track state → useState()", "@wire adapter → useQuery/TanStack", "connectedCallback → useEffect([], [])", "disconnectedCallback → cleanup in useEffect", "dispatchEvent → callback prop", "NavigationMixin → useNavigate()", "lightning-record-form → React Hook Form + Zod", "LightningDataService → custom fetch + cache", "SOQL @AuraEnabled → REST API endpoint", "jest.mock apex → msw handler". Footer: "Hardest unlearn: platform enforces auth+permissions in LWC, you must build that in React".',
-      'Premium dark checklist infographic: "SALESFORCE → REACT MIGRATION CHECKLIST" — 4 color-coded sections. ARCHITECTURE (neon blue header): ☐ Auth strategy chosen (PKCE/JWT/BFF), ☐ Backend for Salesforce callouts built, ☐ API rate limits protected, ☐ FLS enforced server-side. COMPONENTS (cyan header): ☐ @wire → useQuery done, ☐ @api → props refactored, ☐ Events → callback props, ☐ NavigationMixin → React Router. SECURITY (orange header): ☐ No API keys in browser, ☐ Tokens in httpOnly cookies, ☐ CORS locked down, ☐ Error msgs sanitized. DEPLOYMENT (green header): ☐ Env vars injected at runtime, ☐ Feature flags added, ☐ Error boundaries in place, ☐ Monitoring configured.',
+      styleComparison({
+        title: 'LWC → REACT CONCEPT MAPPING',
+        subtitle: '14 Core Concepts Side by Side',
+        col1Title: 'LWC CONCEPT',
+        col1Points: [
+          '@api property (parent → child)',
+          '@track state (reactive)',
+          '@wire adapter (data fetch)',
+          'connectedCallback (mount)',
+          'disconnectedCallback (unmount)',
+          'dispatchEvent (child → parent)',
+          'NavigationMixin.Navigate()',
+          'lightning-record-form',
+          'jest.mock apex modules',
+        ],
+        col2Title: 'REACT EQUIVALENT',
+        col2Points: [
+          'props (read-only, one-way)',
+          'useState() hook',
+          'useQuery() / TanStack Query',
+          'useEffect(fn, []) — empty deps',
+          'return () => cleanup in useEffect',
+          'callback prop (onEvent)',
+          'useNavigate() — React Router',
+          'React Hook Form + Zod schema',
+          'msw (Mock Service Worker)',
+        ],
+      }),
+      styleBlueprint({
+        title: 'LWC → REACT MIGRATION CHECKLIST',
+        subtitle: '4 Phases: Architecture, Components, Security, Deploy',
+        badLabel: 'SKIPPED SECURITY PHASE',
+        goodLabel: 'FULL MIGRATION DONE RIGHT',
+        badCode: `// ❌ React dev assumes platform protects them
+const res = await fetch(\`/api/cases/\${id}\`)
+// No auth check — LWC always had platform FLS
+// This React endpoint returns data to anyone`,
+        goodCode: `// ✓ Explicitly enforce in your API layer
+export async function GET(req, { params }) {
+  const session = await getServerSession(authOptions)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const data = await sfQuery(session.accessToken, params.id)
+  return Response.json(stripInaccessibleFields(data))
+}`,
+        whyCards: [
+          { label: 'ARCHITECTURE — Auth strategy (PKCE/JWT/BFF), Salesforce callout backend, CORS', icon: 'blueprint' },
+          { label: 'COMPONENTS — @wire → useQuery, @api → props, Events → callback props, NavigationMixin → Router', icon: 'component' },
+          { label: 'SECURITY — No API keys in browser, httpOnly tokens, FLS enforced server-side', icon: 'lock' },
+        ],
+        checklist: [
+          'Auth strategy chosen (PKCE/JWT/BFF pattern)',
+          'Backend for Salesforce callouts built',
+          '@wire adapters replaced with useQuery',
+          '@api props replaced with React props',
+          'FLS enforced server-side (not assumed)',
+          'Feature flags + error boundaries in place',
+        ],
+      }),
     ],
   },
 
   'rag-for-salesforce-orgs-index-your-knowledge-base': {
-    cover:
-      'Premium dark technical infographic titled "RAG FOR SALESFORCE KNOWLEDGE BASE" in bold white. Subtitle "Index → Retrieve → Answer" in neon electric blue. Five horizontal pipeline stages with glowing arrows. Stage 1 (blue border): "SALESFORCE KNOWLEDGE — Knowledge__kav records, Published + IsLatestVersion=true, Language/Region/Category metadata, Visibility flags". Stage 2 (grey border): "INDEXER SERVICE — Scheduled delta sync on LastModifiedDate, HTML → clean text normalizer, Metadata extractor, Article chunker (1200 chars, 150 overlap)". Stage 3 (green border): "EMBEDDINGS + VECTOR DB — text-embedding-3-large model, pgvector/Pinecone, Rich metadata stored with chunk". Stage 4 (orange border): "PERMISSION-AWARE RETRIEVAL — Filter: audience + region + language + product, Semantic search, Re-rank top-k". Stage 5 (purple border): "ANSWER GENERATION — LLM + retrieved chunks, Mandatory citation, Customer-safe output check". Orange pipeline arrows between stages.',
+    cover: styleArchitecture({
+      title: 'RAG FOR SALESFORCE KNOWLEDGE BASE',
+      subtitle: 'Index → Retrieve → Answer',
+      layers: [
+        {
+          name: 'Salesforce Knowledge (Source)',
+          color: 'neon blue',
+          components: ['Knowledge__kav records', 'PublishStatus = Online filter', 'IsLatestVersion = true', 'Visibility + Region + Language metadata'],
+        },
+        {
+          name: 'Indexer Service',
+          color: 'grey',
+          components: ['Delta sync on LastModifiedDate', 'HTML → clean text normalizer', 'Chunker: 1200 chars, 150 overlap', 'Metadata extractor'],
+        },
+        {
+          name: 'Vector Database',
+          color: 'neon green',
+          components: ['text-embedding-3-large', 'pgvector / Pinecone', 'Rich metadata stored with chunk', 'Incremental upsert on sync'],
+        },
+      ],
+      centralNode: 'Permission-Aware Retrieval Engine',
+      integrationModules: ['OpenAI Embeddings API', 'Salesforce REST API v62.0'],
+      bottomPanel: {
+        label: 'ANSWER GENERATION',
+        modules: ['LLM + retrieved chunks', 'Mandatory citation enforced', 'Customer-safe output check', 'Answer confidence score'],
+      },
+    }),
     images: [
-      'Premium dark mapping infographic: "SALESFORCE KNOWLEDGE → VECTOR DB FIELD MAPPING" — two columns connected by center processor. LEFT (blue border, header "Knowledge__kav FIELDS"): Id, KnowledgeArticleId, Title, Summary, UrlName, Language, PublishStatus, IsLatestVersion, LastModifiedDate, Answer__c (body), Product__c, Region__c, Audience__c, DataCategories. CENTER (orange): "NORMALIZER — strip HTML, remove scripts, unescape entities, collapse whitespace → CHUNKER — 1200 chars, 150 overlap, keep headings intact". RIGHT (green border, header "VECTOR CHUNK DOCUMENT"): id, text (clean chunk), metadata: {title, language, product, region, audience, categories, articleId, version, lastModified, url}. RED WARNING box below: "NEVER index: Draft articles, Archived, Internal-only in customer channels".',
-      'Premium dark infographic: "5 RAG FAILURE MODES IN SALESFORCE" — vertical numbered list. Each item: icon, failure name, cause, fix. Item 1 (red): "❌ WRONG VERSION RETRIEVED — Old policy answers → Fix: filter PublishStatus=\'Online\' AND IsLatestVersion=true". Item 2 (red): "❌ VISIBILITY LEAK — Internal content shown to customers → Fix: ALWAYS filter IsVisibleInCsp / IsVisibleInPfe before retrieval". Item 3 (orange): "⚠ REGION MISMATCH — EMEA policy answers NA question → Fix: index + filter Region__c at query time". Item 4 (orange): "⚠ HTML NOISE IN EMBEDDINGS — Raw HTML fragments hurt semantic quality → Fix: BeautifulSoup strip before chunking". Item 5 (yellow): "⚠ STALE INDEX — Article updated but not re-indexed → Fix: incremental sync on SystemModstamp every 15 min".',
+      styleBlueprint({
+        title: 'KNOWLEDGE → VECTOR DB FIELD MAPPING',
+        subtitle: 'Exactly Which Fields to Index and Why',
+        badLabel: 'NAIVE INDEX — INDEXES EVERYTHING',
+        goodLabel: 'PRODUCTION INDEX — FILTERED + ENRICHED',
+        badCode: `# ❌ Naive — indexes drafts, internal, archived
+records = sf.query("SELECT Id, Answer__c FROM Knowledge__kav")
+for r in records:
+    embed_and_store(r['Answer__c'])  # no metadata, no filters`,
+        goodCode: `# ✓ Production — filtered, enriched, versioned
+records = sf.query("""
+  SELECT Id, Title, Answer__c, Language, Product__c,
+         Region__c, Audience__c, IsVisibleInCsp, LastModifiedDate
+  FROM Knowledge__kav
+  WHERE PublishStatus = 'Online'
+  AND IsLatestVersion = true
+  AND IsVisibleInCsp = true
+""")`,
+        whyCards: [
+          { label: 'SOURCE FIELDS — Id, Title, Answer__c, Language, Product__c, Region__c, Audience__c', icon: 'database' },
+          { label: 'NORMALIZER — strip HTML, remove scripts, unescape entities, collapse whitespace', icon: 'filter' },
+          { label: 'CHUNK DOCUMENT — text, title, language, product, region, audience, articleId, version, url', icon: 'document' },
+        ],
+        checklist: [
+          'Filter PublishStatus = Online AND IsLatestVersion = true',
+          'Filter IsVisibleInCsp / IsVisibleInPfe for customer channels',
+          'Strip HTML with BeautifulSoup before embedding',
+          'Chunk at 1200 chars with 150 char overlap',
+          'Store rich metadata with every chunk',
+          'Delta sync on SystemModstamp every 15 min',
+        ],
+      }),
+      styleBlueprint({
+        title: '5 RAG FAILURE MODES IN SALESFORCE',
+        subtitle: 'What Goes Wrong and Exactly How to Fix It',
+        badLabel: 'COMMON RAG FAILURES',
+        goodLabel: 'PRODUCTION FIXES',
+        badCode: `# ❌ Failure modes in the wild
+results = vectordb.search(query, top_k=10)
+# Returns: draft articles, archived, internal-only,
+# wrong region, stale versions — all look "relevant"`,
+        goodCode: `# ✓ Filtered retrieval — safe for customers
+results = vectordb.search(
+  query=query, top_k=10,
+  filter={
+    "publish_status": "Online",
+    "is_latest_version": True,
+    "audience": user_context.audience,
+    "region": user_context.region,
+    "language": user_context.language,
+  }
+)`,
+        whyCards: [
+          { label: 'WRONG VERSION — Old policy answers → fix: IsLatestVersion=true filter', icon: 'clock' },
+          { label: 'VISIBILITY LEAK — Internal content shown to customers → fix: IsVisibleInCsp filter', icon: 'eye' },
+          { label: 'STALE INDEX — Article updated but not re-indexed → fix: SystemModstamp delta sync every 15 min', icon: 'refresh' },
+        ],
+        checklist: [
+          'WRONG VERSION: filter IsLatestVersion = true at query time',
+          'VISIBILITY LEAK: always filter IsVisibleInCsp/IsVisibleInPfe',
+          'REGION MISMATCH: index + filter Region__c',
+          'HTML NOISE: BeautifulSoup strip before chunking',
+          'STALE INDEX: incremental sync on SystemModstamp',
+        ],
+      }),
     ],
   },
 
   'agentforce-custom-actions-a-builder-playbook': {
-    cover:
-      'Premium dark technical infographic titled "AGENTFORCE CUSTOM ACTIONS" in bold white. Subtitle "A Builder Playbook" in neon electric blue. Main visual: swimlane architecture. TOP ROW "AGENTFORCE AGENT (Atlas Reasoning)" (neon blue): receives user message → identifies intent → selects action → passes typed inputs. MIDDLE ROW "APEX ACTIONS LAYER" (grey): three action boxes — "EvaluateAccountHealth (READ)" → "GenerateEscalationDraft (DECISION)" → "CreateCSMFollowUpTask (WRITE)". Each with permission lock icon. BOTTOM ROW "SALESFORCE PLATFORM" (dark blue): Account records, Case records, Task records, Audit logs, Agent_Run__c. Vertical orange arrows connecting rows labeled: "Tool call request", "Validated execution", "DML write + audit". Bottom principle strip: "Agent converses. Apex enforces. Salesforce owns."',
+    cover: styleArchitecture({
+      title: 'AGENTFORCE CUSTOM ACTIONS',
+      subtitle: 'A Builder Playbook — Agent Converses. Apex Enforces.',
+      layers: [
+        {
+          name: 'Agentforce Agent (Atlas Reasoning)',
+          color: 'neon blue',
+          components: ['Receives user message', 'Identifies intent', 'Selects action', 'Passes typed inputs'],
+        },
+        {
+          name: 'Apex Actions Layer',
+          color: 'grey',
+          components: ['EvaluateAccountHealth (READ)', 'GenerateEscalationDraft (DECISION)', 'CreateCSMFollowUpTask (WRITE)'],
+        },
+        {
+          name: 'Salesforce Platform',
+          color: 'dark blue',
+          components: ['Account records', 'Case records', 'Task records', 'Agent_Run__c audit log'],
+        },
+      ],
+      centralNode: '@InvocableMethod — Permission-Checked Execution',
+      integrationModules: ['Agentforce Studio', 'Named Credentials for external APIs'],
+      bottomPanel: {
+        label: 'PRINCIPLE',
+        modules: ['Agent converses', 'Apex enforces', 'Salesforce owns the data'],
+      },
+    }),
     images: [
-      'Premium dark split infographic: "ACTION SCHEMA — BAD vs GOOD DESIGN". LEFT HALF (dark red, header "❌ BAD — God Action"): large box "update_salesforce" with inputs: soql_query (string), object_name (string), field_map (object), where_clause (string), operation_type (UPSERT/DELETE/INSERT). Danger badges: "Non-deterministic", "No audit trail", "Agent can delete anything", "NEVER BUILD THIS". RIGHT HALF (dark green, header "✓ GOOD — Single-Purpose Action"): specific box "CreateRenewalFollowUpTask" with typed inputs: account_id (Id, required), due_date_offset_days (Integer, default 2), assignee_queue (String), risk_reason (String, max 1000). Safety badges: "Idempotent ✓", "Permission-checked ✓", "One clear job ✓", "Testable ✓". Bottom: "One action = one business operation".',
-      'Premium dark infographic: "FLOW vs APEX FOR CUSTOM ACTIONS" — comparison table. 8 comparison rows. Header: "FACTOR" | "USE FLOW" | "USE APEX". Rows: "Builder" (Admin/Consultant vs Developer), "Logic Complexity" (Simple conditional vs Complex validation), "External Callout" (Limited vs Full HTTP support), "Error Handling" (Fault paths only vs try/catch + custom exceptions), "Bulk Safety" (Risky vs Bulkified patterns), "Test Coverage" (Limited vs Full Apex test classes), "Production Risk" (Prototype/low-risk vs Any data-mutating action), "My Rule" ("Start here to prove logic" vs "Move here for production"). Bottom neon callout: "Always migrate Flow → Apex before touching revenue or customer data".',
+      styleComparison({
+        title: 'ACTION SCHEMA DESIGN',
+        subtitle: 'God Action vs Single-Purpose Action',
+        col1Title: '❌ BAD — God Action (Never Build This)',
+        col1Points: [
+          'update_salesforce(soql_query, object_name, field_map, where_clause, operation_type)',
+          'Non-deterministic — agent decides what to update',
+          'No audit trail — invisible to compliance teams',
+          'Blast radius: ENTIRE ORG — agent can delete anything',
+        ],
+        col2Title: '✓ GOOD — CreateRenewalFollowUpTask',
+        col2Points: [
+          'account_id: Id (required) — typed, no injection',
+          'due_date_offset_days: Integer (default 2)',
+          'assignee_queue: String (validated against allowed list)',
+          'risk_reason: String (max 1000 chars, sanitised)',
+        ],
+      }),
+      styleComparison({
+        title: 'FLOW vs APEX FOR CUSTOM ACTIONS',
+        subtitle: '8 Factors — When to Use Which',
+        col1Title: 'USE FLOW',
+        col1Points: [
+          'Builder is Admin or Consultant (no Apex skills)',
+          'Simple conditional logic only',
+          'Prototype / prove-the-logic phase',
+          'Low-risk, non-revenue-touching action',
+          'Quick iteration needed (no deploy cycle)',
+        ],
+        col2Title: 'USE APEX',
+        col2Points: [
+          'Complex validation with multiple conditions',
+          'External REST callout with timeout + retry',
+          'Full try/catch + custom exception handling',
+          'Bulkified patterns required for volume',
+          'Any action that touches revenue or customer data',
+        ],
+      }),
     ],
   },
 }
@@ -108,12 +611,11 @@ async function generateImage(
   prompt: string,
   aspectRatio: '16:9' | '1:1' = '1:1'
 ): Promise<Buffer> {
-  const fullPrompt = `${prompt}\n\nStyle requirements: ${IMAGEN_STYLE}`
   console.log(`  Prompt preview: ${prompt.slice(0, 120)}...`)
 
   const response = await gemini.models.generateImages({
     model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
-    prompt: fullPrompt,
+    prompt,
     config: {
       numberOfImages: 1,
       aspectRatio,
@@ -122,7 +624,7 @@ async function generateImage(
   })
 
   const imageBytes = response.generatedImages?.[0]?.image?.imageBytes
-  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 3')
+  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 4')
 
   if (typeof imageBytes === 'string') return Buffer.from(imageBytes, 'base64')
   return Buffer.from(imageBytes)
@@ -134,9 +636,8 @@ async function ensureCoverImageInFrontmatter(slug: string): Promise<void> {
 
   for (const file of files) {
     const content = fs.readFileSync(path.join(postPath, file), 'utf-8')
-    const { data: fm, content: body } = matter(content)
+    const { data: fm } = matter(content)
 
-    // Check if this file belongs to this slug
     const fileSlug = file.replace('.mdx', '')
     if (fileSlug !== slug && !file.includes(slug.slice(0, 30))) continue
 
@@ -164,13 +665,11 @@ async function regeneratePost(slug: string): Promise<void> {
 
   console.log(`\n📸 Regenerating images for: ${slug}`)
 
-  // Cover image (16:9 wide)
   console.log('  → Generating cover (16:9)...')
   const coverBuf = await generateImage(config.cover, '16:9')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
   console.log('  ✓ cover.png saved')
 
-  // Inline images (1:1 square)
   for (let i = 0; i < config.images.length; i++) {
     console.log(`  → Generating image-${i + 1} (1:1)...`)
     const buf = await generateImage(config.images[i], '1:1')
@@ -178,7 +677,6 @@ async function regeneratePost(slug: string): Promise<void> {
     console.log(`  ✓ image-${i + 1}.png saved`)
   }
 
-  // Ensure frontmatter has coverImage
   await ensureCoverImageInFrontmatter(slug)
 }
 
@@ -191,7 +689,7 @@ async function main() {
       ? [args[slugArg + 1]]
       : Object.keys(POST_IMAGE_CONFIGS)
 
-  console.log(`\n🔄 Regenerating images for ${slugs.length} post(s) with infographic style\n`)
+  console.log(`\n🔄 Regenerating images for ${slugs.length} post(s)\n`)
 
   for (const slug of slugs) {
     await regeneratePost(slug)
