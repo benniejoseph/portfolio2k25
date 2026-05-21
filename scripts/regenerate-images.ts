@@ -20,16 +20,23 @@ const envPath = path.join(process.cwd(), '.env.local')
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf-8')
   for (const line of envContent.split('\n')) {
-    const [key, ...rest] = line.split('=')
-    if (key && rest.length) process.env[key.trim()] = rest.join('=').trim()
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    const raw = trimmed.slice(eqIdx + 1).trim()
+    // Strip surrounding quotes
+    const value = raw.replace(/^(['"])(.*)\1$/, '$2')
+    if (key && !process.env[key]) process.env[key] = value
   }
 }
 
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-// Gemini Imagen 3 style directive — dark, rich, premium developer infographic
+// Gemini Imagen 4 style directive — dark, rich, premium developer infographic
 const IMAGEN_STYLE =
-  'Dark navy background (#0a1628). Neon electric blue (#00d4ff) and vibrant green (#00ff88) accents. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange (#ff6b35) directional arrows showing data flow. Red (#ff4757) for bad/danger patterns, green (#2ed573) for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art. Every component, step, and label must be clearly readable.'
+  'Dark navy background. Neon electric blue and vibrant green accent colors. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange directional arrows showing data flow. Red color for bad/danger patterns, green color for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art. Every component, step, and label must be clearly readable.'
 
 // Per-post image definitions — premium Gemini Imagen 3 prompts
 const POST_IMAGE_CONFIGS: Record<string, { cover: string; images: string[] }> = {
@@ -105,7 +112,7 @@ async function generateImage(
   console.log(`  Prompt preview: ${prompt.slice(0, 120)}...`)
 
   const response = await gemini.models.generateImages({
-    model: 'imagen-3.0-generate-002',
+    model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
     prompt: fullPrompt,
     config: {
       numberOfImages: 1,

@@ -90,9 +90,9 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
 // Regex to find image placeholder lines written by the LLM
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
-// Gemini Imagen 3 style directive — injected into every image prompt
+// Gemini Imagen 4 style directive — injected into every image prompt
 const IMAGEN_STYLE =
-  'Dark navy background (#0a1628). Neon electric blue (#00d4ff) and vibrant green (#00ff88) accents. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange (#ff6b35) directional arrows showing data flow. Red (#ff4757) for bad/danger patterns, green (#2ed573) for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art, NOT decorative. Every component, step, and label must be clearly readable.'
+  'Dark navy background. Neon electric blue and vibrant green accent colors. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange directional arrows showing data flow. Red color for bad/danger patterns, green color for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art, NOT decorative. Every component, step, and label must be clearly readable.'
 
 /**
  * Generate an image using Gemini Imagen 3.
@@ -105,7 +105,7 @@ async function generateImage(
   const fullPrompt = `${prompt}\n\nStyle requirements: ${IMAGEN_STYLE}`
 
   const response = await gemini.models.generateImages({
-    model: 'imagen-3.0-generate-002',
+    model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
     prompt: fullPrompt,
     config: {
       numberOfImages: 1,
