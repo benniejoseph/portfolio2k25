@@ -605,6 +605,89 @@ results = vectordb.search(
       }),
     ],
   },
+
+  'multi-agent-workflows-lessons-from-building-in-production': {
+    cover: styleComparison({
+      title: 'MULTI-AGENT WORKFLOWS IN PRODUCTION',
+      subtitle: 'What Actually Works vs What Looks Good in Demos',
+      col1Title: '❌ AGENT SWARM — Demo Pattern',
+      col1Points: [
+        'Agents talk to each other freely',
+        'State is hidden and hard to inspect',
+        'Responsibility is impossible to assign',
+        'Failures cannot be replayed or rolled back',
+        'No audit trail for compliance',
+        'Looks impressive, ships badly',
+      ],
+      col2Title: '✓ ORCHESTRATED WORKFLOW — Production',
+      col2Points: [
+        'One orchestrator owns all workflow state',
+        'Each agent: typed input, typed output, confidence score',
+        'Confidence gates trigger human review automatically',
+        'Agents propose actions — deterministic service commits',
+        'Full audit log before any DML write',
+        'Boring by design. Trusted in production.',
+      ],
+    }),
+    images: [
+      styleComparison({
+        title: 'ORCHESTRATOR vs GROUP CHAT',
+        subtitle: 'The Architecture Decision That Defines Production Readiness',
+        col1Title: '❌ GROUP CHAT — Agents Decide Freely',
+        col1Points: [
+          'Agents message each other without central control',
+          'Workflow state is hidden inside individual agents',
+          'Responsibility for failures is impossible to assign',
+          'Infinite loops: no MAX_TURNS protection',
+          'No confidence gates — agent decides when done',
+          'Impressive in demos. Catastrophic in production.',
+        ],
+        col2Title: '✓ ORCHESTRATOR — Centralized Control',
+        col2Points: [
+          'Single orchestrator owns all workflow state',
+          'Agents: typed input → typed output + confidence score',
+          'Intake < 0.75 confidence → immediate human review',
+          'MAX_TURNS = 10 guard — cannot loop forever',
+          'Full AgentResult audit log before any commit',
+          'Human review as a product feature, not failure state.',
+        ],
+      }),
+      styleBlueprint({
+        title: 'SEPARATE THINKING FROM ACTING',
+        subtitle: 'Agents Propose. Deterministic Services Commit.',
+        badLabel: 'AGENT ACTS DIRECTLY — DANGEROUS',
+        goodLabel: 'AGENT PROPOSES — APEX COMMITS',
+        badCode: `// ❌ Agent acts directly — no safety net
+const agent = new SalesforceAgent()
+agent.updateCase(caseId, { Status: 'Closed', Priority: 'Low' })
+// No idempotency. No permission check. No audit.`,
+        goodCode: `// ✓ Proposal + deterministic commit layer
+type SalesforceUpdateProposal = {
+  caseId: string
+  fields: { Status?: string; Priority?: string }
+  idempotencyKey: string   // prevents duplicate writes
+  requiresApproval: boolean
+}
+// Apex validates: confidence >= 0.85, FLS, idempotency key
+AiCaseUpdateService.applyRecommendation(proposal)`,
+        whyCards: [
+          { label: 'IDEMPOTENCY — AI_Action_Log__c checked before every DML write', icon: 'key' },
+          { label: 'CONFIDENCE THRESHOLD — Apex rejects commit if confidence < 0.85', icon: 'filter' },
+          { label: 'FIELD CONTROL — Apex owns field list, agent cannot write arbitrary fields', icon: 'lock' },
+        ],
+        checklist: [
+          'Agent returns SalesforceUpdateProposal (no DML)',
+          'Apex validates confidence >= 0.85 before commit',
+          'AI_Action_Log__c checked for idempotency key',
+          'FOR UPDATE lock on Case before write',
+          'Action logged with correlation ID',
+          'One retry for timeouts, zero retries for policy conflicts',
+        ],
+        authorLabel: 'Bennie Joseph | Salesforce Architect',
+        footerItems: ['Proposals Only', 'Apex Commits', 'Idempotency Keys', 'Audit Trail'],
+      }),
+    ],
+  },
 }
 
 async function generateImage(
