@@ -14,6 +14,7 @@
     "generate-post:list": "npx tsx scripts/generate-post.ts --list"
   },
   "dependencies": {
+    "@google/genai": "^2.5.0",
     "@react-three/drei": "^10.0.7",
     "@react-three/fiber": "^9.1.2",
     "@vercel/og": "^0.11.1",

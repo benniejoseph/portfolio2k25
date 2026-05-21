@@ -1,8 +1,13 @@
 import OpenAI from 'openai'
+import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
 import path from 'path'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// OpenAI for text/blog content generation
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+// Gemini for image generation (Imagen 3)
+const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 export interface GeneratePostOptions {
   title: string
@@ -27,19 +32,17 @@ Rules:
 - At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this exact format:
   {IMAGE_PROMPT: "your prompt here"}
 
-  How to write a strong IMAGE_PROMPT (INFOGRAPHIC STYLE):
-  • These images are INFOGRAPHICS — they must contain labeled boxes, readable text annotations, arrows with labels, color-coded sections, and clear visual hierarchy. Think: professional architecture diagrams, comparison charts, decision flowcharts with text.
-  • Be SPECIFIC — name the exact technologies, steps, and decisions shown. Every box/node should have a clear text label describing what it represents.
-  • Describe the LAYOUT and CONTENT — "3-column comparison table", "top-down flowchart with 5 steps", "layered stack with labels for each layer", "left vs right before/after with callout annotations"
-  • Include the actual LABELS and TEXT that should appear in the infographic. For example: label boxes as "Apex Service Layer", "Named Credential", "OpenAI API", "Salesforce Data" etc.
-  • COLOR CODING — describe which color each section/component uses (e.g., blue for Salesforce components, green for AI/LLM components, orange for data flow, red for danger zones)
-  • First placeholder: a structured architecture or "how it works" diagram with labeled steps/components
-  • Second placeholder: a comparison chart, decision matrix, or checklist-style infographic illustrating the specific technical decision being explained
-  • Style: "Clean white background, professional infographic style, bold readable sans-serif labels inside colored boxes, color-coded arrows showing data flow direction, high contrast, grid-aligned layout — like a technical whitepaper diagram"
-  • GOOD example: "Infographic architecture diagram titled 'OpenAI + Salesforce Agent Architecture'. Three vertical columns labeled 'Salesforce Org' (blue), 'Apex Control Layer' (grey), 'OpenAI API' (green). In the Salesforce column: boxes for LWC UI, Apex Service, Named Credential, Sharing Rules. Center column: boxes for PromptBuilder, ToolRegistry, AgentRunLogger with arrows connecting them. Right column: GPT-4 model box with tool_calls response arrow pointing back left. Bold black labels inside each box, orange arrows showing data flow direction. Clean white background, professional technical diagram style."
-  • BAD example: "dark cyberpunk illustration of salesforce" ← too vague, produces generic art with no readable labels
+  How to write a POWERFUL IMAGE_PROMPT for Gemini Imagen 3 (premium infographic quality):
+  • These are PREMIUM INFOGRAPHICS — think "viral Salesforce LinkedIn post" level quality. Dark navy background, neon accent colors, real readable text labels, clean sections.
+  • STYLE DIRECTIVE (include in every prompt): "Dark navy background (#0a1628). Neon electric blue (#00d4ff) and vibrant green (#00ff88) accents. Glowing bordered boxes. Bold white sans-serif text labels. Orange (#ff6b35) for data-flow arrows. Red (#ff4757) for danger/bad patterns, green (#2ed573) for success/good patterns. Professional technical infographic — NOT abstract art. Ultra-high contrast. Looks like a premium Salesforce developer guide."
+  • CONTENT — Be extremely specific. Name EVERY component, every metric, every label that should appear. Include actual numbers, class names, field names.
+  • STRUCTURE — Describe exact layout: "3 vertical swim-lane columns", "split left/right comparison with red left / green right", "numbered steps 1-5 flowing top to bottom", "2x3 grid of metric cards with icons"
+  • FIRST placeholder: Show the ARCHITECTURE or "how it works" — components, data flows, sequence of steps. Include real Salesforce/AI component names.
+  • SECOND placeholder: Show a COMPARISON, BEFORE/AFTER, DECISION MATRIX, or BEST-PRACTICE CHECKLIST — whatever is most valuable for the section being explained. Include real metrics or criteria.
+  • EXAMPLE OF A GREAT PROMPT: "Premium dark-themed infographic titled 'SOQL IN LOOP vs BULKIFIED' in bold white. LEFT SIDE (dark red section labeled 'BAD'): code block showing for-loop with SOQL inside, stats showing '152 SOQL queries fired', '9,847ms CPU time', status badge 'LIMIT EXCEEDED ✗' in red. RIGHT SIDE (dark green section labeled 'GOOD'): code block showing Set<Id> collection then one query outside loop, stats '2 SOQL queries total', '312ms CPU time', status badge 'SUCCESS ✓' in green. Center divider with neon orange arrow labeled 'BULKIFY'. Bottom row showing Governor Limits: SOQL 100, DML 150, CPU 10000ms each in neon blue cards. Dark navy background, bold white typography."
+  • BAD PROMPT: "diagram of salesforce bulkification" ← useless, produces generic art
 
-  Place placeholders where a diagram would genuinely help the reader understand what you are explaining.
+  Place placeholders where a visual would genuinely help the reader understand the concept.
 
 Output ONLY the raw MDX file content starting with --- frontmatter. No preamble.`
 
@@ -66,7 +69,7 @@ Now write the full post body in MDX. Remember: code snippet + real example + 2 i
 }
 
 export async function generatePost(opts: GeneratePostOptions): Promise<string> {
-  const response = await client.chat.completions.create({
+  const response = await openai.chat.completions.create({
     model: 'gpt-5.5-2026-04-23',
     max_completion_tokens: 16000,
     messages: [
@@ -87,22 +90,71 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
 // Regex to find image placeholder lines written by the LLM
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
-const STYLE_SUFFIX = 'Clean white or very light grey background. Professional technical infographic style — like a whitepaper or architecture diagram. Bold readable sans-serif text labels inside colored boxes. Color-coded sections: blue for Salesforce/platform components, green for AI/LLM components, orange for data-flow arrows, grey for middleware/control layers. High contrast, grid-aligned layout. Crisp typography. Looks like it was made in Lucidchart or Figma by a professional solutions architect. No decorative elements — purely functional diagram.'
+// Gemini Imagen 3 style directive — injected into every image prompt
+const IMAGEN_STYLE =
+  'Dark navy background (#0a1628). Neon electric blue (#00d4ff) and vibrant green (#00ff88) accents. Glowing bordered section boxes. Bold crisp white sans-serif text labels inside each box. Orange (#ff6b35) directional arrows showing data flow. Red (#ff4757) for bad/danger patterns, green (#2ed573) for success/good patterns. Ultra-high contrast professional technical infographic. Looks like a premium developer reference card — NOT abstract art, NOT decorative. Every component, step, and label must be clearly readable.'
 
-async function generateDalleImage(
+/**
+ * Generate an image using Gemini Imagen 3.
+ * aspectRatio: '16:9' for wide cover images, '1:1' for square inline images
+ */
+async function generateImage(
   prompt: string,
-  size: '1536x1024' | '1024x1024' = '1024x1024'
+  aspectRatio: '16:9' | '1:1' = '1:1'
 ): Promise<Buffer> {
-  const response = await client.images.generate({
-    model: 'gpt-image-1',
-    prompt: `${prompt} ${STYLE_SUFFIX}`,
-    n: 1,
-    size,
-    quality: 'high',
+  const fullPrompt = `${prompt}\n\nStyle requirements: ${IMAGEN_STYLE}`
+
+  const response = await gemini.models.generateImages({
+    model: 'imagen-3.0-generate-002',
+    prompt: fullPrompt,
+    config: {
+      numberOfImages: 1,
+      aspectRatio,
+      outputMimeType: 'image/png',
+    },
   })
-  const b64 = response.data?.[0]?.b64_json
-  if (!b64) throw new Error('No image data returned from gpt-image-1')
-  return Buffer.from(b64, 'base64')
+
+  const imageBytes = response.generatedImages?.[0]?.image?.imageBytes
+  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 3')
+
+  // imageBytes can be a string (base64) or Uint8Array depending on SDK version
+  if (typeof imageBytes === 'string') {
+    return Buffer.from(imageBytes, 'base64')
+  }
+  return Buffer.from(imageBytes)
+}
+
+// Cover image prompts per content pillar — rich, specific, Imagen 3 optimised
+const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> = {
+  salesforce: (title, keyword) =>
+    `Premium dark-themed technical infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
+    `Subtitle: "${keyword}" in neon electric blue. ` +
+    `Main visual: wide horizontal architecture diagram showing Salesforce platform layers — ` +
+    `left section "Salesforce Org" (neon blue border) with labeled boxes: Apex, LWC, Triggers, SOQL, Platform Events, Named Credentials. ` +
+    `Center section "Integration Layer" (orange border) with API Gateway, OAuth, Named Credentials boxes. ` +
+    `Right section "External Systems" (green border) with AI/ML, ERP, REST API boxes. ` +
+    `Glowing orange arrows connecting sections. Bottom strip: 3 key insight cards in neon-bordered dark boxes. ` +
+    `Overall feel: premium Salesforce developer reference card.`,
+
+  'ai-agentic': (title, keyword) =>
+    `Premium dark-themed technical infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
+    `Subtitle: "${keyword}" in neon electric blue. ` +
+    `Main visual: AI agent reasoning loop diagram — ` +
+    `center: "LLM / Reasoning Engine" node (bright green glowing circle). ` +
+    `Surrounding nodes connected by neon arrows: "Tool Registry" (blue box), "Memory Store" (blue box), ` +
+    `"Salesforce CRM" (blue box), "Prompt Builder" (grey box), "Output Handler" (green box), "Audit Logger" (grey box). ` +
+    `Arrows labeled: "tool_call", "query context", "structured JSON", "validate + write". ` +
+    `Bottom: 3 stat cards showing agent performance metrics. ` +
+    `Overall feel: premium AI architecture reference card on dark navy.`,
+
+  career: (title, keyword) =>
+    `Premium dark-themed infographic COVER IMAGE titled "${title}" in large bold white text at top. ` +
+    `Subtitle: "${keyword}" in neon electric blue. ` +
+    `Main visual: career progression roadmap — horizontal timeline with 5 milestone nodes: ` +
+    `"Junior Dev" → "Developer" → "Senior Dev" → "Architect" → "Principal/CTO". ` +
+    `Each node: dark box with neon border, salary range, key skills listed, certification badges. ` +
+    `Color gradient: blue for technical skills, green for career milestones, orange for community. ` +
+    `Bottom: 3 action-item cards. Overall feel: premium career guide visual.`,
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
@@ -117,16 +169,11 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
   fs.mkdirSync(imgDir, { recursive: true })
 
-  // Generate cover image (wide 16:9)
-  console.log('Generating cover image...')
-  const pillarVisuals: Record<string, string> = {
-    'salesforce': 'Salesforce platform components — labeled boxes for Apex, Lightning Web Components, Org layers, Sharing Model, Platform Events, Named Credentials, and the Salesforce cloud logo. Color: blue for Salesforce core, grey for middleware, orange for integration arrows.',
-    'ai-agentic': 'AI agent system components — labeled boxes for LLM/Model, Tool Registry, Memory Store, Orchestrator, Prompt Builder, and Output Handler. Color: green for AI/LLM components, blue for external APIs, orange for data-flow arrows, grey for control layer.',
-    'career': 'Developer career roadmap — labeled milestone boxes for skill levels, certification badges, specialization tracks, salary ranges, and community contributions. Color: blue for technical skills, green for career milestones, orange for community/network nodes.',
-  }
-  const visualVocab = pillarVisuals[opts.pillar] ?? opts.tags.join(', ')
-  const coverPrompt = `Wide landscape infographic for a technical blog post titled "${opts.title}". This should look like a professional architecture overview diagram — NOT abstract art. Central concept: ${opts.keyword}. Show the key components, layers, or contrasts of this topic as labeled boxes/sections with connecting arrows. ${visualVocab} Layout: wide horizontal composition with 3-4 main labeled sections showing how the pieces relate. Include short descriptive labels inside each component box. Add a clear visual hierarchy with a title area at top. Looks like a polished solutions architect overview diagram.`
-  const coverBuffer = await generateDalleImage(coverPrompt, '1536x1024')
+  // Generate cover image (16:9 wide landscape)
+  console.log('Generating cover image with Gemini Imagen 3...')
+  const coverPromptFn = COVER_PROMPTS[opts.pillar] ?? COVER_PROMPTS.salesforce
+  const coverPrompt = coverPromptFn(opts.title, opts.keyword)
+  const coverBuffer = await generateImage(coverPrompt, '16:9')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
   console.log('✓ Cover image saved')
 
@@ -137,8 +184,8 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i]
     const imgPrompt = match[1]
-    console.log(`Generating inline image ${i + 1}/${matches.length}...`)
-    const imgBuffer = await generateDalleImage(imgPrompt, '1024x1024')
+    console.log(`Generating inline image ${i + 1}/${matches.length} with Gemini Imagen 3...`)
+    const imgBuffer = await generateImage(imgPrompt, '1:1')
     const imgFilename = `image-${i + 1}.png`
     fs.writeFileSync(path.join(imgDir, imgFilename), imgBuffer)
     console.log(`✓ Inline image ${i + 1} saved`)
@@ -207,8 +254,8 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     tags: ['Salesforce', 'Apex', 'Performance'],
   },
   {
-    title: 'Flow vs Apex in 2025: When to Use Which',
-    keyword: 'salesforce flow vs apex 2025',
+    title: 'Flow vs Apex in 2026: When to Use Which',
+    keyword: 'salesforce flow vs apex 2026',
     pillar: 'salesforce',
     tags: ['Salesforce', 'Flow', 'Apex'],
   },

@@ -30,7 +30,7 @@ jobs:
 
       - name: Regenerate images
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -n "${{ github.event.inputs.slug }}" ]; then
             echo "Regenerating images for slug: ${{ github.event.inputs.slug }}"
