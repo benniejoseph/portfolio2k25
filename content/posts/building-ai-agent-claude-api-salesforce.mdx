@@ -1,10 +1,11 @@
 ---
-title: "Building Your First AI Agent with Claude API and Salesforce"
-excerpt: "A step-by-step walkthrough of wiring Claude's tool-use API to Salesforce data — from authentication to a working agent that can query, create, and update records."
-date: "2025-05-14"
+title: "Claude Tool-Use API for Salesforce: No Abstraction Layers"
+excerpt: "Wire Claude's tool-use API directly to Salesforce data without LangChain or SDKs — auth, SOQL tools, the agent loop, retry logic, and a production checklist."
+date: "2026-05-21"
 tags: ["AI", "Claude", "Salesforce", "Agents"]
 keyword: "claude api salesforce integration"
 featured: false
+coverImage: /images/blog/building-ai-agent-claude-api-salesforce/cover.png
 ---
 
 I've built Salesforce integrations with OpenAI, Azure OpenAI, and now Anthropic's Claude API. Of these, Claude's tool-use API is the one I'd reach for first for agentic workflows — mostly because the reasoning is more reliable when action sequences get complex.
@@ -75,7 +76,7 @@ export async function getSalesforceToken(): Promise<SalesforceAuth> {
 
 export async function querySalesforce(soql: string, auth: SalesforceAuth) {
   const res = await axios.get(
-    `${auth.instanceUrl}/services/data/v59.0/query`,
+    `${auth.instanceUrl}/services/data/v62.0/query`,
     {
       params: { q: soql },
       headers: { Authorization: `Bearer ${auth.accessToken}` },
@@ -90,7 +91,7 @@ export async function createRecord(
   auth: SalesforceAuth
 ) {
   const res = await axios.post(
-    `${auth.instanceUrl}/services/data/v59.0/sobjects/${objectType}`,
+    `${auth.instanceUrl}/services/data/v62.0/sobjects/${objectType}`,
     fields,
     { headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' } }
   )
@@ -193,7 +194,7 @@ async function executeTool(
 
   if (toolName === 'describe_object') {
     const res = await axios.get(
-      `${auth.instanceUrl}/services/data/v59.0/sobjects/${toolInput.object_name}/describe`,
+      `${auth.instanceUrl}/services/data/v62.0/sobjects/${toolInput.object_name}/describe`,
       { headers: { Authorization: `Bearer ${auth.accessToken}` } }
     )
     // Return just field names + types to keep context lean
@@ -221,7 +222,7 @@ Be concise. Format numbers and dates in a human-readable way.`
 
   while (true) {
     const response = await client.messages.create({
-      model: 'claude-opus-4-7',
+      model: 'claude-sonnet-4-5',
       max_tokens: 4096,
       system: systemPrompt,
       tools: salesforceTools,

@@ -78,7 +78,7 @@ In production, I would split this into more classes: `PromptBuilder`, `OpenAiCli
 
 ```apex
 public with sharing class OpenAiCaseAgent {
-    private static final String MODEL = 'gpt-4.1-mini';
+    private static final String MODEL = 'gpt-4.1';
 
     @AuraEnabled
     public static AgentResponse analyzeCase(Id caseId) {

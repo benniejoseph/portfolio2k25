@@ -536,6 +536,111 @@ For enterprise teams, observability is not optional. I want to know:
 
 Sometimes platform logs are enough. Often I create a custom `Agent_Action_Log__c` object for business auditability.
 
+## Flow vs Apex for custom actions: which to use
+
+This comes up on every Agentforce project. Here's how I decide:
+
+| Factor | Use Flow | Use Apex |
+|---|---|---|
+| **Who builds it** | Admin or consultant | Developer |
+| **Business logic complexity** | Simple conditional, field update, create record | Complex validation, bulkification, calculations |
+| **External callout needed** | No (Flow HTTP callout is limited) | Yes — HTTP callouts are well-tested in Apex |
+| **Error handling control** | Limited (Fault paths only) | Full — try/catch, custom exceptions, graceful error structs |
+| **Bulk agent interactions** | Avoid — Flow bulk limits are easy to hit | Safe with bulkification patterns |
+| **Test coverage** | Challenging for complex logic | Proper Apex test classes, assertion-rich |
+| **Auditability** | Flow debug logs | Custom Agent_Action_Log__c records |
+| **Performance** | Slower governor limit consumption for complex logic | Faster, inline processing |
+| **When to start with Flow** | Prototyping, simple lookups, basic record creates | Any action that risks production data |
+
+My actual rule: **start with Flow to prove the business logic works, then migrate to Apex when the action needs error handling, external callouts, or bulk safety.** Never put complex business rules in a Flow you expect to survive 2 years of schema changes.
+
+## External REST actions: when Agentforce needs to leave Salesforce
+
+Not every action lives inside Salesforce. Some of the most valuable patterns call external APIs:
+
+- Pricing engine callout
+- Credit check from a financial system
+- ERP inventory lookup
+- External knowledge base or vector search
+- Third-party identity verification
+
+Here's the Apex pattern I use for a safe external action:
+
+```apex
+public with sharing class ExternalPricingAction {
+    private static final String NAMED_CREDENTIAL = 'callout:PricingEngine';
+    private static final Integer TIMEOUT_MS = 10000;
+
+    public class Request {
+        @InvocableVariable(required=true) public String productCode;
+        @InvocableVariable(required=true) public Integer quantity;
+        @InvocableVariable(required=false) public String accountTier;
+    }
+
+    public class Response {
+        @InvocableVariable public Boolean success;
+        @InvocableVariable public Decimal listPrice;
+        @InvocableVariable public Decimal discountedPrice;
+        @InvocableVariable public String currency_x; // 'currency' is reserved
+        @InvocableVariable public String errorMessage;
+    }
+
+    @InvocableMethod(
+        label='Get Product Pricing'
+        description='Returns list and discounted price for a product. Use when user asks about pricing, quotes, or cost.'
+    )
+    public static List<Response> getPrice(List<Request> requests) {
+        List<Response> results = new List<Response>();
+
+        for (Request req : requests) {
+            Response res = new Response();
+            try {
+                HttpRequest httpReq = new HttpRequest();
+                httpReq.setEndpoint(NAMED_CREDENTIAL + '/v1/price');
+                httpReq.setMethod('POST');
+                httpReq.setHeader('Content-Type', 'application/json');
+                httpReq.setTimeout(TIMEOUT_MS);
+                httpReq.setBody(JSON.serialize(new Map<String, Object>{
+                    'product_code' => req.productCode,
+                    'quantity' => req.quantity,
+                    'account_tier' => req.accountTier ?? 'Standard'
+                }));
+
+                Http http = new Http();
+                HttpResponse httpRes = http.send(httpReq);
+
+                if (httpRes.getStatusCode() != 200) {
+                    res.success = false;
+                    res.errorMessage = 'Pricing service unavailable. Please try again or contact sales.';
+                    results.add(res);
+                    continue;
+                }
+
+                Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(httpRes.getBody());
+                res.success = true;
+                res.listPrice = (Decimal) body.get('list_price');
+                res.discountedPrice = (Decimal) body.get('discounted_price');
+                res.currency_x = (String) body.get('currency');
+
+            } catch (CalloutException ex) {
+                res.success = false;
+                res.errorMessage = 'Pricing service timeout. Please try again shortly.';
+            }
+
+            results.add(res);
+        }
+
+        return results;
+    }
+}
+```
+
+Key things to notice:
+- Named Credential hides the endpoint and auth — the agent never sees a URL or API key
+- Timeout is explicit — no action should wait indefinitely
+- Error messages are user-friendly, not stack traces
+- The response has a `success` flag so the agent knows whether to use the data or apologize
+
 ## Design the action descriptions like APIs
 
 The agent reads action metadata. Treat descriptions like API documentation.

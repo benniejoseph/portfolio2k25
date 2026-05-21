@@ -1,0 +1,54 @@
+name: Regenerate Blog Images (Infographic Style)
+
+on:
+  # Manual trigger only — run once to upgrade all existing post images
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Specific post slug to regenerate (leave blank to regenerate ALL posts)'
+        required: false
+        default: ''
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate images
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.slug }}" ]; then
+            echo "Regenerating images for slug: ${{ github.event.inputs.slug }}"
+            npx tsx scripts/regenerate-images.ts --slug "${{ github.event.inputs.slug }}"
+          else
+            echo "Regenerating images for ALL posts"
+            npx tsx scripts/regenerate-images.ts
+          fi
+
+      - name: Commit updated images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/images/blog/ content/posts/
+          if git diff --staged --quiet; then
+            echo "No image changes to commit"
+          else
+            git commit -m "images: regenerate blog images as professional infographics"
+            git push
+            echo "✅ Images committed and pushed — Vercel will auto-deploy"
+          fi
