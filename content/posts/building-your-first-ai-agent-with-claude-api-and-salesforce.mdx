@@ -101,7 +101,7 @@ x-api-key: YOUR_API_KEY
 In Apex, I still set:
 
 ```text
-anthropic-version: 2023-06-01
+anthropic-version: 2026-01-01
 content-type: application/json
 ```
 
@@ -233,11 +233,11 @@ public with sharing class ClaudeCaseTriageAgent implements Queueable, Database.A
         req.setEndpoint('callout:Claude_API/v1/messages');
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
-        req.setHeader('anthropic-version', '2023-06-01');
+        req.setHeader('anthropic-version', '2026-01-01');
         req.setTimeout(120000);
 
         Map<String, Object> body = new Map<String, Object>{
-            'model' => 'claude-3-5-sonnet-20241022',
+            'model' => 'claude-sonnet-4-7',
             'max_tokens' => 800,
             'temperature' => 0,
             'messages' => new List<Object>{
@@ -498,7 +498,7 @@ private class ClaudeCaseTriageAgentTest {
                         'text' => decision
                     }
                 },
-                'model' => 'claude-3-5-sonnet-20241022',
+                'model' => 'claude-sonnet-4-7',
                 'stop_reason' => 'end_turn'
             }));
 

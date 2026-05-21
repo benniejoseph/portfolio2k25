@@ -76,7 +76,7 @@ export async function getSalesforceToken(): Promise<SalesforceAuth> {
 
 export async function querySalesforce(soql: string, auth: SalesforceAuth) {
   const res = await axios.get(
-    `${auth.instanceUrl}/services/data/v62.0/query`,
+    `${auth.instanceUrl}/services/data/v64.0/query`,
     {
       params: { q: soql },
       headers: { Authorization: `Bearer ${auth.accessToken}` },
@@ -91,7 +91,7 @@ export async function createRecord(
   auth: SalesforceAuth
 ) {
   const res = await axios.post(
-    `${auth.instanceUrl}/services/data/v62.0/sobjects/${objectType}`,
+    `${auth.instanceUrl}/services/data/v64.0/sobjects/${objectType}`,
     fields,
     { headers: { Authorization: `Bearer ${auth.accessToken}`, 'Content-Type': 'application/json' } }
   )
@@ -194,7 +194,7 @@ async function executeTool(
 
   if (toolName === 'describe_object') {
     const res = await axios.get(
-      `${auth.instanceUrl}/services/data/v62.0/sobjects/${toolInput.object_name}/describe`,
+      `${auth.instanceUrl}/services/data/v64.0/sobjects/${toolInput.object_name}/describe`,
       { headers: { Authorization: `Bearer ${auth.accessToken}` } }
     )
     // Return just field names + types to keep context lean
@@ -222,7 +222,7 @@ Be concise. Format numbers and dates in a human-readable way.`
 
   while (true) {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-7',
       max_tokens: 4096,
       system: systemPrompt,
       tools: salesforceTools,
@@ -327,7 +327,7 @@ export async function runAgentSafe(userMessage: string): Promise<string> {
 
     const response = await withRetry(() =>
       client.messages.create({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-7',
         max_tokens: 4096,
         system: systemPrompt,
         tools: salesforceTools,

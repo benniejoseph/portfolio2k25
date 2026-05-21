@@ -22,10 +22,40 @@ export interface GeneratePostOptions {
   tags: string[]
 }
 
+// ─── Current AI Landscape (update this block when models change) ──────────────
+const AI_LANDSCAPE = `
+CURRENT DATE: ${new Date().toISOString().split('T')[0]}
+
+CURRENT AI MODEL VERSIONS (as of May 2026 — use these in ALL code examples and comparisons):
+- Anthropic Claude: claude-sonnet-4-7 (latest), claude-opus-4-7 (most capable), claude-haiku-4-7 (fast/cheap)
+  API version header: anthropic-version: 2026-01-01
+- OpenAI GPT: gpt-5.5 (latest flagship), gpt-5.5-mini (fast/cheap), o3 (reasoning)
+  Use model ID: "gpt-5.5" in all code
+- Google Gemini: gemini-3.1-flash (fast), gemini-3.1-pro (capable), gemini-3.1-ultra (most capable)
+  Image generation: gemini-3.1-flash-image-preview (Nano Banana 2)
+- Meta: Llama 4 Scout (open source, runs locally)
+- Salesforce Einstein: Einstein Copilot powered by Agentforce, Einstein 1 Platform
+- Agentforce: Agentforce 2.0 (released Winter '26), Atlas Reasoning Engine v2
+
+CURRENT SALESFORCE VERSIONS:
+- Salesforce API: v64.0 (Summer '26)
+- LWC: supports native state management (Summer '26)
+- Agentforce: 2.0 with multi-agent orchestration, custom reasoning steps
+- Data Cloud: Real-time unification, vector search native
+
+DO NOT reference or use: claude-3-5-sonnet, gpt-4, gpt-4.1, claude-opus-4-5, claude-sonnet-4-5,
+anthropic-version 2023-06-01, Salesforce API v59/v61/v62. These are outdated.
+`
+// ──────────────────────────────────────────────────────────────────────────────
+
 const SYSTEM_PROMPT = `You are a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
 with 9+ years of enterprise experience who also builds AI agents and SaaS products.
 
 Write in first-person, opinionated, practitioner tone. No fluff. No filler paragraphs.
+
+IMPORTANT CONTEXT — ALWAYS APPLY:
+${AI_LANDSCAPE}
+
 Rules:
 - Every post MUST include at least one real code snippet (Apex, LWC, TypeScript, or Python)
 - Every post MUST include a real-world example from enterprise projects
@@ -96,19 +126,26 @@ Rules:
 Output ONLY the raw MDX file content starting with --- frontmatter. No preamble.`
 
 function buildPrompt(opts: GeneratePostOptions): string {
+  const today = new Date().toISOString().split('T')[0]
   return `Write a technical blog post with the following spec:
 
 Title: "${opts.title}"
 Primary SEO keyword: "${opts.keyword}"
 Content pillar: ${opts.pillar}
 Tags: ${opts.tags.join(', ')}
-Date: ${new Date().toISOString().split('T')[0]}
+Date: ${today}
+
+RELEVANCE REQUIREMENT: This post is published on ${today}.
+- All model names, API versions, and Salesforce releases must match the AI_LANDSCAPE context above
+- Any "in 2025" or "as of last year" language is WRONG — write for a May 2026 reader
+- If comparing models, use current versions: claude-sonnet-4-7 vs gpt-5.5, etc.
+- Reference Agentforce 2.0, Salesforce API v64.0, LWC native state where relevant
 
 The frontmatter MUST be:
 ---
 title: "${opts.title}"
 excerpt: "[Write a compelling 150-char excerpt targeting the keyword]"
-date: "${new Date().toISOString().split('T')[0]}"
+date: "${today}"
 tags: [${opts.tags.map((t) => `"${t}"`).join(', ')}]
 keyword: "${opts.keyword}"
 featured: false
@@ -299,7 +336,9 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
 }
 
 // Topic backlog — rotate through these for automated generation
+// Updated May 2026 — all topics reference current models and platform versions
 export const TOPIC_BACKLOG: GeneratePostOptions[] = [
+  // ── Already published (skip these) ──────────────────────────────────────────
   {
     title: 'Agentforce vs Einstein Copilot: What Is Actually Different',
     keyword: 'agentforce vs einstein copilot',
@@ -365,5 +404,73 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     keyword: 'soql query optimization tips',
     pillar: 'salesforce',
     tags: ['Salesforce', 'SOQL', 'Performance'],
+  },
+
+  // ── New topics — May 2026 and beyond ────────────────────────────────────────
+  {
+    title: 'Agentforce 2.0: What Actually Changed from 1.0',
+    keyword: 'agentforce 2.0 new features winter 26',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Agentforce', 'Winter26'],
+  },
+  {
+    title: 'Claude Sonnet 4.7 vs GPT-5.5 for Salesforce Agents',
+    keyword: 'claude sonnet 4.7 vs gpt 5.5 salesforce',
+    pillar: 'ai-agentic',
+    tags: ['AI', 'Claude', 'OpenAI', 'Salesforce'],
+  },
+  {
+    title: 'Salesforce Data Cloud Vector Search: Build a Semantic Case Router',
+    keyword: 'salesforce data cloud vector search 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Data Cloud', 'RAG', 'AI'],
+  },
+  {
+    title: 'LWC Native State Management in Summer 26: Kill Your Wire Adapters',
+    keyword: 'lwc native state management summer 26',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'LWC', 'Summer26'],
+  },
+  {
+    title: 'Building a Reasoning Agent with o3 and Salesforce',
+    keyword: 'openai o3 reasoning agent salesforce',
+    pillar: 'ai-agentic',
+    tags: ['AI', 'OpenAI', 'o3', 'Salesforce', 'Agents'],
+  },
+  {
+    title: 'Agentforce Multi-Agent Orchestration: Real Patterns from Production',
+    keyword: 'agentforce multi agent orchestration patterns',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Agentforce', 'Multi-Agent'],
+  },
+  {
+    title: 'Salesforce API v64.0: What Developers Need to Know',
+    keyword: 'salesforce api v64 summer 26 changes',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'API', 'Summer26'],
+  },
+  {
+    title: 'From Salesforce Dev to AI Architect: The 2026 Roadmap',
+    keyword: 'salesforce developer ai architect career 2026',
+    pillar: 'career',
+    tags: ['Career', 'Salesforce', 'AI', 'Architect'],
+  },
+  {
+    title: 'Apex Test Coverage in the Age of AI: Stop Writing Boilerplate',
+    keyword: 'apex test coverage ai generated 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Apex', 'Testing', 'AI'],
+  },
+  {
+    title: 'Llama 4 Scout on-Premise + Salesforce: When to Go Open Source',
+    keyword: 'llama 4 scout salesforce on premise ai',
+    pillar: 'ai-agentic',
+    tags: ['AI', 'Llama', 'Open Source', 'Salesforce'],
+  },
+  {
+    title: 'Einstein 1 Platform vs Custom AI Stack: The Honest Comparison',
+    keyword: 'einstein 1 platform vs custom llm stack',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Einstein', 'AI', 'Architecture'],
   },
 ]

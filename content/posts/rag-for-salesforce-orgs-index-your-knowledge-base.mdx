@@ -151,7 +151,7 @@ ARTICLE_FIELDS = [
 ]
 
 def salesforce_query(soql: str) -> list[dict]:
-    url = f"{SF_INSTANCE_URL}/services/data/v62.0/query"
+    url = f"{SF_INSTANCE_URL}/services/data/v64.0/query"
     headers = {"Authorization": f"Bearer {SF_ACCESS_TOKEN}"}
     records = []
 
