@@ -149,7 +149,7 @@ Section 3: "CODE PATTERNS" (Main Center)
     ${goodCode}
 
 Section 4: "DEVELOPER PROFILE & CHECKLIST" (Bottom Row)
-- Left Side: A circular avatar portrait of a professional architect, labeled "${authorLabel}". Next to it is a quote bubble: "Architecting intuitive systems, engineering scalable solutions."
+- Left Side: A 3D Pixar-style cartoon avatar portrait of a dark-skinned South Asian male with a full thick black beard, shoulder-length wavy dark hair pulled up into a messy top bun, warm friendly smile showing teeth, wearing a grey crew-neck sweatshirt with the word "MAGNETIC" on it, set against a warm orange bokeh background. The avatar is labeled "${authorLabel}". Next to it is a quote bubble: "Architecting intuitive systems, engineering scalable solutions."
 - Right Side: A checklist with points: ${checklistItems || '"Follow best practices", "Test thoroughly", "Document everything"'}.
 - Footer: A thin bar with icons for "${footerItems}" and the text "CODE SMART. AUTOMATE FASTER. DELIVER EXCELLENCE."
 
