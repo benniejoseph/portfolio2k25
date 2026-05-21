@@ -696,21 +696,26 @@ async function generateImage(
 ): Promise<Buffer> {
   console.log(`  Prompt preview: ${prompt.slice(0, 120)}...`)
 
-  const response = await gemini.models.generateImages({
-    model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
-    prompt,
+  // Nano Banana 2 — gemini-3.1-flash-image-preview (uses generateContent, not generateImages)
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3.1-flash-image-preview',
+    contents: prompt,
     config: {
-      numberOfImages: 1,
-      aspectRatio,
-      outputMimeType: 'image/png',
+      responseModalities: ['TEXT', 'IMAGE'],
+      imageConfig: {
+        aspectRatio,
+        imageSize: aspectRatio === '16:9' ? '2K' : '1K',
+      },
     },
   })
 
-  const imageBytes = response.generatedImages?.[0]?.image?.imageBytes
-  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 4')
+  const parts = response.candidates?.[0]?.content?.parts ?? []
+  const imagePart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data)
+  if (!imagePart?.inlineData?.data) {
+    throw new Error('No image data returned from Nano Banana 2 (gemini-3.1-flash-image-preview)')
+  }
 
-  if (typeof imageBytes === 'string') return Buffer.from(imageBytes, 'base64')
-  return Buffer.from(imageBytes)
+  return Buffer.from(imagePart.inlineData.data, 'base64')
 }
 
 async function ensureCoverImageInFrontmatter(slug: string): Promise<void> {

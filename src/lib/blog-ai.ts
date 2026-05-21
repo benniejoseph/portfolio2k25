@@ -140,32 +140,34 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
 /**
- * Generate an image using Gemini Imagen 4.
+ * Generate an image using Nano Banana 2 (gemini-3.1-flash-image-preview).
+ * Uses generateContent API (not generateImages).
  * aspectRatio: '16:9' for wide cover images, '1:1' for square inline images
- * Style is fully embedded in each prompt via the style functions from image-styles.ts
  */
 async function generateImage(
   prompt: string,
   aspectRatio: '16:9' | '1:1' = '1:1'
 ): Promise<Buffer> {
-  const response = await gemini.models.generateImages({
-    model: aspectRatio === '16:9' ? 'imagen-4.0-ultra-generate-001' : 'imagen-4.0-generate-001',
-    prompt,
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3.1-flash-image-preview',
+    contents: prompt,
     config: {
-      numberOfImages: 1,
-      aspectRatio,
-      outputMimeType: 'image/png',
+      responseModalities: ['TEXT', 'IMAGE'],
+      imageConfig: {
+        aspectRatio,
+        imageSize: aspectRatio === '16:9' ? '2K' : '1K',
+      },
     },
   })
 
-  const imageBytes = response.generatedImages?.[0]?.image?.imageBytes
-  if (!imageBytes) throw new Error('No image data returned from Gemini Imagen 4')
-
-  // imageBytes can be a string (base64) or Uint8Array depending on SDK version
-  if (typeof imageBytes === 'string') {
-    return Buffer.from(imageBytes, 'base64')
+  // Find the image part in the response
+  const parts = response.candidates?.[0]?.content?.parts ?? []
+  const imagePart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data)
+  if (!imagePart?.inlineData?.data) {
+    throw new Error('No image data returned from Nano Banana 2 (gemini-3.1-flash-image-preview)')
   }
-  return Buffer.from(imageBytes)
+
+  return Buffer.from(imagePart.inlineData.data, 'base64')
 }
 
 // Cover image prompts per content pillar — using structured style functions
