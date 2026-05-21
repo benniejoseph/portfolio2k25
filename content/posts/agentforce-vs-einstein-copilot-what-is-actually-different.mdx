@@ -121,6 +121,23 @@ You are no longer just grounding a prompt in a record page. You are designing a 
 
 That requires more discipline.
 
+## Quick comparison: Einstein Copilot vs Agentforce
+
+| Dimension | Einstein Copilot (CRM) | Agentforce Agent |
+|---|---|---|
+| **Primary model** | User asks → AI helps | Business assigns → AI acts |
+| **Human involvement** | Human in the loop | Human on exception |
+| **Trigger** | User-initiated prompt | Event, channel, or schedule |
+| **Execution** | Single-turn or guided action | Multi-step reasoning + tool calls |
+| **Actions** | Pre-defined invocables | Configured action set (Apex, Flow, API) |
+| **Best for** | Drafting, summarizing, lookup | Triage, routing, qualification, automation |
+| **Risk profile** | Response quality | Action quality + blast radius |
+| **Who builds it** | Admins + prompt engineers | Architects + developers + security |
+| **Governance** | Prompt templates, grounding | Topics, guardrails, escalation policies |
+| **Data Cloud benefit** | Better grounding for answers | Better context for decisions |
+
+Use this as a starting point for stakeholder conversations. The nuance comes in the next section.
+
 ## The actual differences that matter
 
 ### 1. User assistance vs delegated work
@@ -456,6 +473,25 @@ Good examples:
 The key phrase is **delegated safely**.
 
 If you cannot define the agent’s job in plain English, you are not ready to build it. If you cannot define what the agent is forbidden to do, you are definitely not ready.
+
+## Decision matrix: which one fits your use case
+
+Use this to cut through the sales pitch:
+
+| Use Case | Recommendation | Why |
+|---|---|---|
+| Sales rep drafting renewal email | Copilot pattern | User-driven, judgment-heavy |
+| Summarize account before a call | Copilot pattern | Exploratory, assistant role |
+| Qualify and score 500 inbound leads daily | Agentforce | Repeatable, high-volume, delegatable |
+| Route service cases before agents see them | Agentforce | Structured criteria, measurable outcomes |
+| Help agent write case resolution note | Copilot pattern | Human stays in loop |
+| Proactively notify CSMs of churn signals | Agentforce | Event-driven, no user in loop |
+| Answer order status in Slack or portal | Agentforce | Channel-based, deterministic queries |
+| Manager reviewing pipeline health | Copilot pattern | Analytical, exploratory, user-led |
+| Onboarding partner through a structured flow | Agentforce | Task-based, automated steps |
+| Compliance review with audit requirements | Neither alone — pair with Approval Process | Risk too high for autonomous decisions |
+
+The pattern: if a human would routinely do the same steps in the same order, it is an Agentforce candidate. If the task is exploratory or judgment-heavy, Copilot patterns are safer.
 
 ## How I explain it to executives
 

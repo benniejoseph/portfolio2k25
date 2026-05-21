@@ -27,15 +27,17 @@ Rules:
 - At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this exact format:
   {IMAGE_PROMPT: "your prompt here"}
 
-  How to write a strong IMAGE_PROMPT:
-  • Be SPECIFIC — name the exact technologies, components and systems (e.g. "Salesforce lightning cloud icon", "Apex trigger class box", "React component tree", "vector database cylinder", "LLM reasoning node", "API gateway hexagon")
-  • Describe the COMPOSITION — what is on the left, center, right; what connects to what; how data flows
-  • Use DIAGRAM framing: "isometric architecture diagram", "split comparison left vs right", "layered stack diagram", "flowchart with nodes and arrows", "before/after side-by-side"
-  • First placeholder: illustrate the "how it works" architecture or core concept of that section
-  • Second placeholder: illustrate the specific pattern, comparison, or technical decision being explained in that section
-  • Style suffix to always include: "dark near-black background (#080810), neon cyan data-flow arrows, purple glowing node borders, technical illustration style, dramatic rim lighting, no text, no labels, no typography"
-  • GOOD example: "Isometric architecture diagram: left side shows a Salesforce Org box (blue cloud outline) with an Apex Trigger block above it, center shows a processing node (glowing circuit board) with CPU gauge hitting red, right side shows a clean optimised query node with green glow; neon cyan arrows flowing left to right showing data path, dark near-black background, purple accent highlights, no text"
-  • BAD example: "dark cyberpunk illustration of salesforce" ← too vague, produces generic art
+  How to write a strong IMAGE_PROMPT (INFOGRAPHIC STYLE):
+  • These images are INFOGRAPHICS — they must contain labeled boxes, readable text annotations, arrows with labels, color-coded sections, and clear visual hierarchy. Think: professional architecture diagrams, comparison charts, decision flowcharts with text.
+  • Be SPECIFIC — name the exact technologies, steps, and decisions shown. Every box/node should have a clear text label describing what it represents.
+  • Describe the LAYOUT and CONTENT — "3-column comparison table", "top-down flowchart with 5 steps", "layered stack with labels for each layer", "left vs right before/after with callout annotations"
+  • Include the actual LABELS and TEXT that should appear in the infographic. For example: label boxes as "Apex Service Layer", "Named Credential", "OpenAI API", "Salesforce Data" etc.
+  • COLOR CODING — describe which color each section/component uses (e.g., blue for Salesforce components, green for AI/LLM components, orange for data flow, red for danger zones)
+  • First placeholder: a structured architecture or "how it works" diagram with labeled steps/components
+  • Second placeholder: a comparison chart, decision matrix, or checklist-style infographic illustrating the specific technical decision being explained
+  • Style: "Clean white background, professional infographic style, bold readable sans-serif labels inside colored boxes, color-coded arrows showing data flow direction, high contrast, grid-aligned layout — like a technical whitepaper diagram"
+  • GOOD example: "Infographic architecture diagram titled 'OpenAI + Salesforce Agent Architecture'. Three vertical columns labeled 'Salesforce Org' (blue), 'Apex Control Layer' (grey), 'OpenAI API' (green). In the Salesforce column: boxes for LWC UI, Apex Service, Named Credential, Sharing Rules. Center column: boxes for PromptBuilder, ToolRegistry, AgentRunLogger with arrows connecting them. Right column: GPT-4 model box with tool_calls response arrow pointing back left. Bold black labels inside each box, orange arrows showing data flow direction. Clean white background, professional technical diagram style."
+  • BAD example: "dark cyberpunk illustration of salesforce" ← too vague, produces generic art with no readable labels
 
   Place placeholders where a diagram would genuinely help the reader understand what you are explaining.
 
@@ -85,7 +87,7 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
 // Regex to find image placeholder lines written by the LLM
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
 
-const STYLE_SUFFIX = 'Dark near-black background (#080810). Neon cyan data-flow lines and arrows. Purple glowing node/border highlights. Technical illustration style — part diagram, part concept art. Dramatic rim lighting on components. High detail. No text, no labels, no typography anywhere in the image.'
+const STYLE_SUFFIX = 'Clean white or very light grey background. Professional technical infographic style — like a whitepaper or architecture diagram. Bold readable sans-serif text labels inside colored boxes. Color-coded sections: blue for Salesforce/platform components, green for AI/LLM components, orange for data-flow arrows, grey for middleware/control layers. High contrast, grid-aligned layout. Crisp typography. Looks like it was made in Lucidchart or Figma by a professional solutions architect. No decorative elements — purely functional diagram.'
 
 async function generateDalleImage(
   prompt: string,
@@ -118,12 +120,12 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Generate cover image (wide 16:9)
   console.log('Generating cover image...')
   const pillarVisuals: Record<string, string> = {
-    'salesforce': 'Salesforce Lightning cloud platform — Apex code blocks, Lightning Web Components, org architecture layers, shield/certification badge, data model relationships',
-    'ai-agentic': 'AI agent reasoning loop — LLM brain node, tool-calling arrows, memory store, orchestration engine, multi-step thought chain, vector embeddings flowing as particles',
-    'career': 'Developer career progression — certification milestone nodes, skill tree branches, enterprise org chart, learning path roadmap',
+    'salesforce': 'Salesforce platform components — labeled boxes for Apex, Lightning Web Components, Org layers, Sharing Model, Platform Events, Named Credentials, and the Salesforce cloud logo. Color: blue for Salesforce core, grey for middleware, orange for integration arrows.',
+    'ai-agentic': 'AI agent system components — labeled boxes for LLM/Model, Tool Registry, Memory Store, Orchestrator, Prompt Builder, and Output Handler. Color: green for AI/LLM components, blue for external APIs, orange for data-flow arrows, grey for control layer.',
+    'career': 'Developer career roadmap — labeled milestone boxes for skill levels, certification badges, specialization tracks, salary ranges, and community contributions. Color: blue for technical skills, green for career milestones, orange for community/network nodes.',
   }
   const visualVocab = pillarVisuals[opts.pillar] ?? opts.tags.join(', ')
-  const coverPrompt = `Wide cinematic hero illustration for a technical blog post titled "${opts.title}". Central concept: ${opts.keyword}. Visual elements to include: ${visualVocab}. Composition: panoramic layout showing the main architecture, workflow, or contrast that is the core argument of this post — with clear visual separation between the competing or connected components. Make it feel like an expert drew the definitive diagram for this topic.`
+  const coverPrompt = `Wide landscape infographic for a technical blog post titled "${opts.title}". This should look like a professional architecture overview diagram — NOT abstract art. Central concept: ${opts.keyword}. Show the key components, layers, or contrasts of this topic as labeled boxes/sections with connecting arrows. ${visualVocab} Layout: wide horizontal composition with 3-4 main labeled sections showing how the pieces relate. Include short descriptive labels inside each component box. Add a clear visual hierarchy with a title area at top. Looks like a polished solutions architect overview diagram.`
   const coverBuffer = await generateDalleImage(coverPrompt, '1536x1024')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
   console.log('✓ Cover image saved')

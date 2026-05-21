@@ -11,6 +11,23 @@ I've built Salesforce integrations with OpenAI, Azure OpenAI, and now Anthropic'
 
 This post walks through a real pattern: a Node.js agent that uses Claude to handle natural-language queries against Salesforce data. No LangChain, no abstraction layers — just the raw API so you understand what's actually happening.
 
+## Claude vs OpenAI for Salesforce agents: my practical comparison
+
+Before diving into code, here's where I actually see the difference:
+
+| Factor | Claude (Anthropic) | GPT-4o / GPT-4.1 (OpenAI) |
+|---|---|---|
+| **Tool use reliability** | Excellent on complex multi-step sequences | Very good; slightly more unpredictable on nested calls |
+| **Context window** | 200K tokens (Claude 3 Opus/Sonnet) | 128K tokens (GPT-4o) |
+| **SOQL generation** | Careful, lower hallucination rate | Good but needs stronger schema grounding |
+| **JSON output fidelity** | Highly reliable | Reliable with `response_format: json_object` |
+| **Cost (per 1M input tokens)** | Claude Sonnet 4: ~$3 | GPT-4o: ~$2.50 |
+| **Streaming support** | Yes | Yes |
+| **Function calling syntax** | `tools` array + `tool_use` blocks | `tools` array + `tool_calls` in message |
+| **When to pick Claude** | Complex reasoning chains, large context | When OpenAI ecosystem tools matter (Assistants, Vector Stores) |
+
+For a **Salesforce agent** specifically, Claude's larger context window matters when you're loading record history, related list data, and knowledge articles into a single call. I've hit GPT-4o's 128K limit on Case triage when loading 50+ email threads. Claude handles that gracefully.
+
 ## What We're Building
 
 A lightweight agent that can:
@@ -273,8 +290,127 @@ main().catch(console.error)
 
 **Tool descriptions are prompts.** Spend as much time on your tool descriptions as on your prompts. Vague descriptions ("query Salesforce") lead to bad decisions. Specific descriptions ("use this when the user asks about existing records") lead to reliable routing.
 
+## Production error handling: the part nobody shows you
+
+The tutorial above is clean, but production Salesforce integrations hit rate limits, network timeouts, and context overflows. Here's the retry and error-handling layer I add before shipping:
+
+```typescript
+// lib/agent-production.ts
+const MAX_TURNS = 10
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1000
+
+async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn()
+    } catch (err: unknown) {
+      const isRateLimit = err instanceof Error && err.message.includes('rate_limit')
+      const isLast = attempt === retries - 1
+      if (isLast || !isRateLimit) throw err
+      const backoff = RETRY_DELAY_MS * Math.pow(2, attempt)
+      console.warn(`Rate limited — retrying in ${backoff}ms (attempt ${attempt + 1}/${retries})`)
+      await new Promise(r => setTimeout(r, backoff))
+    }
+  }
+  throw new Error('Max retries exceeded')
+}
+
+export async function runAgentSafe(userMessage: string): Promise<string> {
+  const auth = await getSalesforceToken()
+  const messages: Anthropic.MessageParam[] = [{ role: 'user', content: userMessage }]
+  let turns = 0
+
+  while (turns < MAX_TURNS) {
+    turns++
+
+    const response = await withRetry(() =>
+      client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 4096,
+        system: systemPrompt,
+        tools: salesforceTools,
+        messages,
+      })
+    )
+
+    messages.push({ role: 'assistant', content: response.content })
+
+    if (response.stop_reason === 'end_turn') {
+      const textBlock = response.content.find((b) => b.type === 'text')
+      return textBlock?.type === 'text' ? textBlock.text : 'Done.'
+    }
+
+    if (response.stop_reason === 'max_tokens') {
+      return 'Agent response was truncated — try a more specific question or reduce result set.'
+    }
+
+    const toolResults: Anthropic.ToolResultBlockParam[] = []
+
+    for (const block of response.content) {
+      if (block.type !== 'tool_use') continue
+
+      let result: string
+      try {
+        result = await executeTool(block.name, block.input as Record<string, unknown>, auth)
+      } catch (err: unknown) {
+        // Return the error as a tool result — Claude can reason over failures
+        result = JSON.stringify({
+          error: true,
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }
+
+      toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
+    }
+
+    messages.push({ role: 'user', content: toolResults })
+  }
+
+  return 'Agent exceeded maximum turns — possible loop detected. Check tool definitions.'
+}
+```
+
+Key additions: turn limit to prevent infinite loops, exponential backoff on rate limits, error wrapping in tool results so Claude can gracefully report back rather than crashing the loop.
+
+## Context management: keeping token costs sane
+
+Every Salesforce query result that comes back into the Claude context costs tokens. Here's the pattern I use to keep a production agent under control:
+
+```typescript
+// In executeTool, before returning to Claude:
+function summarizeQueryResult(result: Record<string, unknown>): string {
+  const records = (result.records ?? []) as Record<string, unknown>[]
+
+  if (records.length === 0) return 'No records found.'
+
+  // Return count + first 5 records only
+  const preview = records.slice(0, 5)
+  const summary = `Found ${records.length} record(s). Showing first ${preview.length}:\n`
+  return summary + JSON.stringify(preview, null, 2)
+}
+```
+
+Rule of thumb: **never return more than 5 records verbatim** unless the user asked for a specific list. For counts, aggregates, and analytics queries, parse in the tool layer and return a one-line string. A typical session with 10 tool calls will cost ~$0.05–0.15 with Claude Sonnet if you do this right.
+
+## Production readiness checklist
+
+Before shipping a Claude + Salesforce agent to real users:
+
+- [ ] Salesforce Connected App uses **Client Credentials flow** (no user sessions)
+- [ ] API key stored as encrypted env var, not in code or Salesforce custom metadata
+- [ ] All SOQL queries use `WITH USER_MODE` or explicit sharing model
+- [ ] Tool results are trimmed to 5–10 records max before returning to Claude
+- [ ] Turn limit implemented (`MAX_TURNS = 10` or similar)
+- [ ] Rate-limit retry with exponential backoff
+- [ ] Tool errors caught and returned as structured error results (not thrown)
+- [ ] All agent runs logged with request/response for debugging
+- [ ] `describe_object` pre-called for any object Claude might query
+- [ ] System prompt explicitly states objects and fields Claude is allowed to query
+- [ ] Kill switch: feature flag to disable agent without deployment
+
 ## TL;DR
 
 - Claude's tool-use API + Salesforce Connected App = a surprisingly capable agent in under 200 lines.
 - The agent loop is simple: call Claude → execute tool → feed result back → repeat until `end_turn`.
-- Invest in tool descriptions and manage context size to keep the agent reliable in production.
+- In production: add turn limits, retry logic on rate limits, and always summarize tool results before returning them to Claude — context costs compound fast.

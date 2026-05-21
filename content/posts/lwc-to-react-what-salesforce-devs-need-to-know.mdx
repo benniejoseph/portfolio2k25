@@ -147,6 +147,29 @@ React does not solve those. Your architecture does.
 ![](/images/blog/lwc-to-react-what-salesforce-devs-need-to-know/image-1.png)
 
 
+## LWC → React concept mapping
+
+If you are reading code or reviewing PRs for the first time, this table is your cheat sheet:
+
+| LWC Concept | React Equivalent | Key Difference |
+|---|---|---|
+| `@api` property | `props` | Props are read-only in both; LWC enforces it via decorator |
+| `@track` property | `useState` | React re-renders on any state change by default |
+| `@wire` adapter | `useQuery` (TanStack Query) | Wire is platform-aware; `useQuery` needs your cache config |
+| Lifecycle: `connectedCallback` | `useEffect(() => {}, [])` | React fires after render; LWC fires on DOM insert |
+| Lifecycle: `disconnectedCallback` | `useEffect` cleanup function | `return () => cleanup()` inside `useEffect` |
+| Lifecycle: `renderedCallback` | `useEffect(() => {}, [dep])` | Runs after each render where dep changed |
+| `dispatchEvent(new CustomEvent(...))` | `onAction` callback prop | React passes callbacks down; LWC bubbles events up |
+| `template.querySelector` | `useRef` | Same DOM handle concept; different wiring |
+| `LightningDataService / getRecord` | Custom fetch + TanStack Query | No auto-refresh in React — you manage cache invalidation |
+| Apex `@AuraEnabled` controller | REST API endpoint (Express / Next.js) | React has no concept of platform callouts |
+| `with sharing` in Apex | Server-side auth middleware | You must rebuild the permission boundary in your backend |
+| `lightning-record-form` | Build it with React Hook Form + Zod | SLDS components don't exist outside Salesforce |
+| `NavigationMixin` | `useNavigate` (React Router) | React Router handles routing; no Salesforce page ref |
+| `jest.mock('@salesforce/apex/...')` | `vi.mock('./api')` or `msw` handler | MSW is the idiomatic React testing approach |
+
+The hardest thing to unlearn: **in LWC, the platform handles auth, permissions, and data caching for you**. In React, you build or buy every one of those layers.
+
 ## Component Model: Similar Surface, Different Contract
 
 LWC and React both push you toward component-based UI. That similarity is real but shallow.
@@ -466,7 +489,41 @@ I choose React when:
 
 React is excellent when you need product engineering flexibility. But it comes with responsibility. If your team does not have backend, security, DevOps, and frontend architecture maturity, React can become an expensive way to recreate things Salesforce already gave you.
 
-## The Practical Learning Path
+## Practical migration checklist
+
+If you are moving a real LWC app to React, or building a greenfield React app that replaces Salesforce pages, go through this before you write the first component:
+
+### Architecture decisions (do these first)
+- [ ] Defined the authentication strategy: PKCE + OAuth, JWT Bearer, or backend-for-frontend?
+- [ ] Chose a backend for Salesforce callouts (Next.js API routes, Express, Cloud Run, etc.)
+- [ ] Decided how Salesforce API limits are protected (rate limiting at BFF layer)
+- [ ] Confirmed FLS and record sharing enforcement happens in your backend, not the client
+- [ ] Picked a state management strategy for server state (TanStack Query recommended)
+
+### Component migration
+- [ ] Mapped all `@wire` adapters to API endpoints
+- [ ] Replaced `@track` with `useState` / `useReducer`
+- [ ] Replaced `@api` with typed props interfaces
+- [ ] Replaced `dispatchEvent` + event bubbling with callback props
+- [ ] Replaced `NavigationMixin` with React Router `useNavigate`
+- [ ] Replaced `lightning-record-form` with React Hook Form + Zod schema validation
+- [ ] Replaced `jest.mock('@salesforce/apex/...')` with MSW API mocks
+
+### Security checklist (often missed)
+- [ ] All Salesforce API calls go through a server layer (not directly from browser)
+- [ ] CORS configured properly — Salesforce origin not open to all
+- [ ] OAuth tokens stored in httpOnly cookies, not localStorage
+- [ ] FLS-sensitive fields stripped server-side, not filtered in component
+- [ ] Error messages don't expose internal Salesforce IDs or schema names
+
+### Deployment readiness
+- [ ] Environment variables injected at build/runtime (not hardcoded)
+- [ ] Feature flags in place for phased rollout
+- [ ] Error boundary components added for Salesforce API failure states
+- [ ] Loading and error states handled for all async operations
+- [ ] Browser compatibility tested (Safari is often the edge case)
+
+### The Practical Learning Path
 
 If you are an LWC developer learning React, do not start with Redux. Do not start with Next.js server components. Do not start with micro-frontends.
 
@@ -474,13 +531,13 @@ Start here:
 
 1. Learn JSX and component composition.
 2. Learn `useState`, `useEffect`, and custom hooks.
-3. Learn TypeScript properly.
+3. Learn TypeScript properly — this is the biggest career unlock.
 4. Learn server-state management with TanStack Query.
-5. Learn routing.
-6. Learn form handling and validation.
-7. Learn authentication patterns.
-8. Learn how a backend-for-frontend protects Salesforce.
-9. Learn deployment and observability.
+5. Learn routing with React Router or Next.js App Router.
+6. Learn form handling with React Hook Form + Zod.
+7. Learn authentication patterns (OAuth PKCE, httpOnly cookies, session management).
+8. Learn how a backend-for-frontend protects Salesforce API limits and credentials.
+9. Learn deployment, environment variables, and observability basics.
 
 The biggest career unlock is TypeScript. LWC developers often write JavaScript with platform safety nets. React teams need stronger type discipline because the app boundary is wider and the failure modes are more varied.
 
