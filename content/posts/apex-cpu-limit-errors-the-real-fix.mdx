@@ -58,7 +58,7 @@ Moving bad logic to async gives you more CPU headroom, but it does not make the 
 The real fix is to profile the transaction, find the repeated work, and remove it.
 
 
-![](/images/blog/apex-cpu-limit-errors-the-real-fix/image-1.png)
+![Fake fixes vs real fixes: comparison of 5 common Apex CPU workarounds versus the real transaction mapping approach](/images/blog/apex-cpu-limit-errors-the-real-fix/image-1.png)
 
 
 ## Start with transaction mapping, not code changes
@@ -395,7 +395,7 @@ This is not perfect for every case, but it is much better than a global `hasRun`
 For complex enterprise orgs, I also design handlers to be idempotent. If the same logic runs twice, it should detect that no further work is required.
 
 
-![](/images/blog/apex-cpu-limit-errors-the-real-fix/image-2.png)
+![Recursion guard pattern: operation-specific TriggerExecutionGuard versus a global hasRun boolean anti-pattern](/images/blog/apex-cpu-limit-errors-the-real-fix/image-2.png)
 
 
 ## Real enterprise example: service escalation meltdown

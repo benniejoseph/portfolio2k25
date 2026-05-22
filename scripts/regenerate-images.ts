@@ -606,6 +606,91 @@ results = vectordb.search(
     ],
   },
 
+  'apex-cpu-limit-errors-the-real-fix': {
+    cover: styleComparison({
+      title: 'APEX CPU LIMIT ERRORS: The Real Fix',
+      subtitle: '5 Fake Fixes Teams Try vs The Real Transaction Design Approach',
+      col1Title: '❌ FAKE FIXES — Masking the Problem',
+      col1Points: [
+        'Move everything to Queueable — same bad logic, more headroom',
+        'Add @future — hides the issue, delays the crash',
+        'Reduce debug logs — saves ~10ms, not 6,000ms',
+        'Split batch size — increases total cost, fixes nothing',
+        'Ask Salesforce for a limit increase — they won\'t',
+        'Result: CPU hits 10,000ms, transaction rolls back, user sees error',
+      ],
+      col2Title: '✓ REAL FIX — Reduce Transaction Work',
+      col2Points: [
+        'Map the full transaction: triggers + flows + packages + Agentforce',
+        'Add CpuProbe checkpoints — find where CPU is actually spent',
+        'Filter unchanged records before any loop or query runs',
+        'Replace nested loops (O n²) with maps (O n+n)',
+        'Move only non-critical work async — AI summaries, audit snapshots',
+        'Result: 10,000ms failures → 2,800ms stable transaction',
+      ],
+    }),
+    images: [
+      styleComparison({
+        title: 'CPU TRANSACTION ANATOMY',
+        subtitle: 'Every Layer That Shares Your 10,000ms Budget in a Modern Salesforce Org',
+        col1Title: '❌ UNOPTIMIZED TRANSACTION',
+        col1Points: [
+          'Trigger handler processes ALL 200 records regardless of field changes',
+          'Nested loop: 200 Accounts × 20,000 Contacts = 4,000,000 comparisons',
+          'Query returns all open Cases — 800 records, 400 irrelevant',
+          'Record-triggered Flow re-updates unchanged Cases, fires Case triggers',
+          'Agentforce 2.0 insight write happens synchronously in same transaction',
+          'CPU hits 10,000ms → transaction rolls back → user sees failure',
+        ],
+        col2Title: '✓ OPTIMIZED TRANSACTION',
+        col2Points: [
+          'Change detection first: 200 records → filter to 8 with real field changes',
+          'Map lookup: O(n+n) — 200 + 20,000 passes, not 4,000,000 comparisons',
+          'Selective SOQL: IsClosed = false AND status IN relevant set → 40 records',
+          'Flow decision guard: entry criteria prevents re-processing unchanged records',
+          'Agentforce insight generation enqueued as Queueable — off critical path',
+          'CPU lands at 2,800–4,000ms → transaction commits → user sees success',
+        ],
+      }),
+      styleBlueprint({
+        title: 'TRIGGER EXECUTION GUARD',
+        subtitle: 'Operation-Specific Recursion Guards vs The Global hasRun Anti-Pattern',
+        badLabel: 'ANTI-PATTERN — Global Boolean',
+        goodLabel: 'BEST PRACTICE — Operation-Specific Keys',
+        badCode: `public class BadTriggerGuard {
+  public static Boolean hasRun = false;
+}
+// Blocks ALL trigger logic after first run
+// Hides design problems instead of fixing them
+// One flag stops legitimate work in same tx`,
+        goodCode: `public class TriggerExecutionGuard {
+  private static Set<String> executedKeys =
+    new Set<String>();
+  public static Boolean firstRun(String key) {
+    if (executedKeys.contains(key)) return false;
+    executedKeys.add(key);
+    return true;
+  }
+}
+// Usage: firstRun('Account.afterUpdate.v1')`,
+        whyCards: [
+          { label: 'Granular Control', icon: 'target' },
+          { label: 'Idempotent Design', icon: 'shield' },
+          { label: 'Audit Safe', icon: 'checkmark' },
+        ],
+        checklist: [
+          'Use operation-specific keys — not one global flag',
+          'Design handlers to be idempotent by default',
+          'Combine with change-detection filtering for CPU safety',
+          'Never use hasRun to hide a recursion you don\'t understand',
+          'Test with realistic bulk data: 200 records, 5 related each',
+        ],
+        authorLabel: 'Bennie Joseph | Salesforce Architect',
+        footerItems: ['CPU Budget', 'Recursion Guard', 'Idempotency', 'Bulk Safety'],
+      }),
+    ],
+  },
+
   'multi-agent-workflows-lessons-from-building-in-production': {
     cover: styleComparison({
       title: 'MULTI-AGENT WORKFLOWS IN PRODUCTION',
