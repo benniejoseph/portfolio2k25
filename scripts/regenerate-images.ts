@@ -606,6 +606,91 @@ results = vectordb.search(
     ],
   },
 
+  'flow-vs-apex-in-2026-when-to-use-which': {
+    cover: styleComparison({
+      title: 'FLOW vs APEX IN 2026',
+      subtitle: 'When to Use Which — The Architectural Decision Framework',
+      col1Title: '✓ USE FLOW WHEN...',
+      col1Points: [
+        'Logic is declarative, linear, and easy to visualize',
+        'Admins or business users need to adjust it regularly',
+        'Screen-guided user input or approval routing is needed',
+        'Field updates, notifications, and basic routing apply',
+        'Agentforce 2.0 needs admin-configurable process steps',
+        'Moderate volume — no nested loops or complex joins',
+      ],
+      col2Title: '✓ USE APEX WHEN...',
+      col2Points: [
+        'Logic is algorithmic, high-volume, or multi-object',
+        'You need deterministic behavior and serious unit tests',
+        'Reusable domain services shared across triggers, LWC, agents',
+        'Advanced transaction control, dynamic SOQL, bulk DML',
+        'Exposing safe, typed, tested actions to Agentforce 2.0',
+        'Flow would become a 300-node maze nobody wants to touch',
+      ],
+    }),
+    images: [
+      styleComparison({
+        title: 'FLOW vs APEX: Real Production Scenarios',
+        subtitle: '8 Decision Points — Which Tool Wins and Why',
+        col1Title: 'FLOW WINS',
+        col1Points: [
+          'Lead routing rules that change every quarter → admins own it',
+          'Screen wizard for guided renewal opportunity creation',
+          'Approval escalation with manager notification + task creation',
+          'Agentforce 2.0 triggered process: collect missing billing data',
+          'Record-triggered: if Country = Germany → apply DACH sales path',
+          'Fault email to ops team when exception path fires',
+        ],
+        col2Title: 'APEX WINS',
+        col2Points: [
+          'SLA recalculation across Critical / High / Standard tiers',
+          'Bulk case update: 200+ records, premium tier checks, queue routing',
+          'Dynamic SOQL with multi-object joins and conditional filters',
+          'Invocable action reused by Flow, LWC, Queueable, and agent',
+          'Logic requiring 20+ test methods to trust in production',
+          'Transactional write with idempotency key + audit log insert',
+        ],
+      }),
+      styleBlueprint({
+        title: 'HYBRID PATTERN: FLOW + APEX',
+        subtitle: 'Flow Owns the Process. Apex Owns the Complexity. Agentforce Triggers Both.',
+        badLabel: 'ANTI-PATTERN — All Logic in Flow',
+        goodLabel: 'BEST PRACTICE — Hybrid Boundary',
+        badCode: `// All logic in Flow — the 300-node maze
+// Get Records inside conditional path
+// Duplicated assignment rules across
+//   case-create and case-update flows
+// No unit tests possible for SLA rules
+// Random CPU timeouts under prod volume
+// Admins afraid to touch it`,
+        goodCode: `@InvocableMethod(label='Recalculate Entitlement')
+public static List<Response> recalculate(
+  List<Request> requests
+) {
+  // Flow: detects event, calls this action
+  // Apex: SLA calc, region, escalation tier
+  // Output: typed Response back to Flow
+  // Reusable: Flow + LWC + Agentforce 2.0
+}`,
+        whyCards: [
+          { label: 'Admin Visibility', icon: 'eye' },
+          { label: 'Eng Testability', icon: 'shield' },
+          { label: 'Agent Ready', icon: 'bot' },
+        ],
+        checklist: [
+          'Flow detects business event and calls invocable Apex action',
+          'Apex returns typed Response — no SLA logic inside Flow Builder',
+          'Same Apex action reused by LWC, Queueable, and Agentforce 2.0',
+          'Admins own process steps. Devs own the algorithm.',
+          'All complex rules covered by Apex unit tests at 200-record scale',
+        ],
+        authorLabel: 'Bennie Joseph | Salesforce Architect',
+        footerItems: ['Flow Orchestration', 'Apex Services', 'Invocable Actions', 'Agentforce 2.0'],
+      }),
+    ],
+  },
+
   'apex-cpu-limit-errors-the-real-fix': {
     cover: styleComparison({
       title: 'APEX CPU LIMIT ERRORS: The Real Fix',
