@@ -912,7 +912,20 @@ async function ensureCoverImageInFrontmatter(slug: string): Promise<void> {
 }
 
 async function regeneratePost(slug: string): Promise<void> {
-  const config = POST_IMAGE_CONFIGS[slug]
+  let config = POST_IMAGE_CONFIGS[slug]
+
+  // Fallback: read prompts from sidecar JSON saved during generation
+  if (!config) {
+    const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
+    if (fs.existsSync(sidecarPath)) {
+      const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'))
+      if (sidecar.cover && Array.isArray(sidecar.images)) {
+        config = { cover: sidecar.cover, images: sidecar.images }
+        console.log(`  ℹ Loaded image prompts from ${slug}.images.json`)
+      }
+    }
+  }
+
   if (!config) {
     console.log(`  ⚠ No image config found for slug: ${slug} — skipping`)
     return

@@ -65,8 +65,10 @@ Rules:
 - Use ## for H2, ### for H3
 - Code blocks must specify language: \`\`\`apex, \`\`\`typescript, etc.
 - Tone: direct, practitioner, occasionally opinionated ("Here's the unpopular take...")
-- At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this exact format:
-  {IMAGE_PROMPT: "your prompt here"}
+- At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this EXACT format (both fields required):
+  {IMAGE_PROMPT: "your detailed image generation prompt here" | ALT: "short descriptive alt text for accessibility and SEO, under 20 words"}
+
+  The ALT text must describe what the infographic shows — e.g. "Flow vs Apex decision matrix comparing 8 real production scenarios" not just "diagram".
 
   ═══════════════════════════════════════════════════
   HOW TO WRITE IMAGE_PROMPTs — PICK ONE OF 4 STYLES
@@ -173,8 +175,11 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   return text
 }
 
-// Regex to find image placeholder lines written by the LLM
-const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"([^"]+)"\}/g
+// Regex to find image placeholder lines written by the LLM.
+// Supports both formats:
+//   New: {IMAGE_PROMPT: "prompt" | ALT: "alt text"}
+//   Old: {IMAGE_PROMPT: "prompt"}  ← backward compat, alt will be empty
+const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"((?:[^"\\]|\\.)*)"\s*(?:\|\s*ALT:\s*"((?:[^"\\]|\\.)*)")?\}/g
 
 /**
  * Generate an image using Nano Banana 2 (gemini-3.1-flash-image-preview).
@@ -231,7 +236,7 @@ const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> 
         },
       ],
       centralNode: 'Salesforce Platform',
-      integrationModules: ['REST API v62.0', 'Streaming API'],
+      integrationModules: ['REST API v64.0', 'Streaming API'],
       bottomPanel: {
         label: 'KEY INSIGHTS',
         modules: ['Governor Limits Managed', 'FLS + Sharing Enforced', 'Bulkified Patterns'],
@@ -251,7 +256,7 @@ const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> 
         {
           name: 'LLM / Reasoning Engine',
           color: 'neon green',
-          components: ['Model: claude-sonnet / gpt-4.1', 'tool_use blocks', 'Structured JSON output', '200K context'],
+          components: ['Model: claude-sonnet-4-7 / gpt-5.5', 'tool_use blocks', 'Structured JSON output', '200K context'],
         },
         {
           name: 'Execution & Audit',
@@ -260,7 +265,7 @@ const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> 
         },
       ],
       centralNode: 'Agent Loop — runAgent()',
-      integrationModules: ['Anthropic API / OpenAI API', 'Salesforce REST API v62.0'],
+      integrationModules: ['Anthropic API / OpenAI API', 'Salesforce REST API v64.0'],
       bottomPanel: {
         label: 'AGENT METRICS',
         modules: ['Tool Call Accuracy', 'Cost per Run', 'Hallucination Rate'],
@@ -302,7 +307,7 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   fs.mkdirSync(imgDir, { recursive: true })
 
   // Generate cover image (16:9 wide landscape)
-  console.log('Generating cover image with Gemini Imagen 3...')
+  console.log('Generating cover image with Nano Banana 2 (gemini-3.1-flash-image-preview)...')
   const coverPromptFn = COVER_PROMPTS[opts.pillar] ?? COVER_PROMPTS.salesforce
   const coverPrompt = coverPromptFn(opts.title, opts.keyword)
   const coverBuffer = await generateImage(coverPrompt, '16:9')
@@ -312,16 +317,22 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Replace inline image placeholders with generated images
   let mdx = rawMdx
   const matches = [...rawMdx.matchAll(IMAGE_PLACEHOLDER_RE)]
+  const collectedImagePrompts: string[] = []
 
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i]
     const imgPrompt = match[1]
-    console.log(`Generating inline image ${i + 1}/${matches.length} with Gemini Imagen 3...`)
+    const altText = match[2] ?? ''
+    collectedImagePrompts.push(imgPrompt)
+
+    console.log(`Generating inline image ${i + 1}/${matches.length} with Nano Banana 2...`)
     const imgBuffer = await generateImage(imgPrompt, '1:1')
     const imgFilename = `image-${i + 1}.png`
     fs.writeFileSync(path.join(imgDir, imgFilename), imgBuffer)
     console.log(`✓ Inline image ${i + 1} saved`)
-    mdx = mdx.replace(match[0], `\n![](/images/blog/${slug}/${imgFilename})\n`)
+
+    // Use alt text from placeholder — fallback to empty string for backward compat
+    mdx = mdx.replace(match[0], `\n![${altText}](/images/blog/${slug}/${imgFilename})\n`)
   }
 
   // Inject coverImage field into frontmatter (before the closing ---)
@@ -329,6 +340,16 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   if (fmCloseIdx !== -1) {
     mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.png${mdx.slice(fmCloseIdx)}`
   }
+
+  // Save image prompts as sidecar JSON — allows regenerate-images.ts to
+  // regenerate this post's images without a manual POST_IMAGE_CONFIGS entry
+  const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
+  fs.writeFileSync(
+    sidecarPath,
+    JSON.stringify({ cover: coverPrompt, images: collectedImagePrompts }, null, 2),
+    'utf-8'
+  )
+  console.log(`✓ Image prompts saved to ${slug}.images.json`)
 
   const filePath = path.join(process.cwd(), 'content/posts', `${slug}.mdx`)
   fs.writeFileSync(filePath, mdx, 'utf-8')
