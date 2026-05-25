@@ -65,6 +65,20 @@ Rules:
 - Use ## for H2, ### for H3
 - Code blocks must specify language: \`\`\`apex, \`\`\`typescript, etc.
 - Tone: direct, practitioner, occasionally opinionated ("Here's the unpopular take...")
+
+COVER IMAGE (placed on its own line immediately after the closing --- of the frontmatter, before the first paragraph):
+  {COVER_PROMPT: "your detailed 16:9 cover image prompt tailored to THIS post's specific topic" | ALT: "cover image alt text under 20 words"}
+
+  The cover MUST be unique and specific to this post — NOT a generic Salesforce org diagram or generic agent loop.
+  A SOQL post → show actual query patterns. A prompt engineering post → show prompt anatomy.
+  A career post → show the roadmap. A Flow vs Apex post → show the decision.
+
+  Cover style selection:
+  - Code quality / performance / limits / best practices → Style 3 DARK BLUEPRINT
+  - Comparison / migration / vs / before-after → Style 2 SPLIT-SCREEN COMPARISON
+  - Pipelines / multi-agent systems / architecture → Style 4 ARCHITECTURE MAP
+  - Career / learning / overview / mindset → Style 1 WHITEBOARD
+
 - At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this EXACT format (both fields required):
   {IMAGE_PROMPT: "your detailed image generation prompt here" | ALT: "short descriptive alt text for accessibility and SEO, under 20 words"}
 
@@ -175,7 +189,11 @@ export async function generatePost(opts: GeneratePostOptions): Promise<string> {
   return text
 }
 
-// Regex to find image placeholder lines written by the LLM.
+// Regex to find the cover image directive placed after frontmatter by the LLM.
+// Format: {COVER_PROMPT: "prompt" | ALT: "alt text"}
+const COVER_DIRECTIVE_RE = /\{COVER_PROMPT:\s*"((?:[^"\\]|\\.)*)"\s*(?:\|\s*ALT:\s*"((?:[^"\\]|\\.)*)")?\}\n?/
+
+// Regex to find inline image placeholder lines written by the LLM.
 // Supports both formats:
 //   New: {IMAGE_PROMPT: "prompt" | ALT: "alt text"}
 //   Old: {IMAGE_PROMPT: "prompt"}  ← backward compat, alt will be empty
@@ -306,17 +324,30 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
   fs.mkdirSync(imgDir, { recursive: true })
 
+  // Extract {COVER_PROMPT} directive written by the LLM (post-specific cover)
+  // Falls back to COVER_PROMPTS[pillar] template if the LLM didn't write one
+  let mdx = rawMdx
+  let coverPrompt: string
+
+  const coverDirectiveMatch = mdx.match(COVER_DIRECTIVE_RE)
+  if (coverDirectiveMatch) {
+    coverPrompt = coverDirectiveMatch[1]
+    mdx = mdx.replace(coverDirectiveMatch[0], '') // strip directive from MDX body
+    console.log('Using LLM-generated post-specific cover prompt')
+  } else {
+    const coverPromptFn = COVER_PROMPTS[opts.pillar] ?? COVER_PROMPTS.salesforce
+    coverPrompt = coverPromptFn(opts.title, opts.keyword)
+    console.log(`Using fallback cover template for pillar: ${opts.pillar}`)
+  }
+
   // Generate cover image (16:9 wide landscape)
   console.log('Generating cover image with Nano Banana 2 (gemini-3.1-flash-image-preview)...')
-  const coverPromptFn = COVER_PROMPTS[opts.pillar] ?? COVER_PROMPTS.salesforce
-  const coverPrompt = coverPromptFn(opts.title, opts.keyword)
   const coverBuffer = await generateImage(coverPrompt, '16:9')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
   console.log('✓ Cover image saved')
 
   // Replace inline image placeholders with generated images
-  let mdx = rawMdx
-  const matches = [...rawMdx.matchAll(IMAGE_PLACEHOLDER_RE)]
+  const matches = [...mdx.matchAll(IMAGE_PLACEHOLDER_RE)]
   const collectedImagePrompts: string[] = []
 
   for (let i = 0; i < matches.length; i++) {

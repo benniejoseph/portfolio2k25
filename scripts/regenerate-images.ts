@@ -911,7 +911,7 @@ async function ensureCoverImageInFrontmatter(slug: string): Promise<void> {
   }
 }
 
-async function regeneratePost(slug: string): Promise<void> {
+async function regeneratePost(slug: string, coverOnly = false): Promise<void> {
   let config = POST_IMAGE_CONFIGS[slug]
 
   // Fallback: read prompts from sidecar JSON saved during generation
@@ -934,18 +934,20 @@ async function regeneratePost(slug: string): Promise<void> {
   const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
   fs.mkdirSync(imgDir, { recursive: true })
 
-  console.log(`\n📸 Regenerating images for: ${slug}`)
+  console.log(`\n📸 Regenerating ${coverOnly ? 'cover only' : 'all images'} for: ${slug}`)
 
   console.log('  → Generating cover (16:9)...')
   const coverBuf = await generateImage(config.cover, '16:9')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
   console.log('  ✓ cover.png saved')
 
-  for (let i = 0; i < config.images.length; i++) {
-    console.log(`  → Generating image-${i + 1} (1:1)...`)
-    const buf = await generateImage(config.images[i], '1:1')
-    fs.writeFileSync(path.join(imgDir, `image-${i + 1}.png`), buf)
-    console.log(`  ✓ image-${i + 1}.png saved`)
+  if (!coverOnly) {
+    for (let i = 0; i < config.images.length; i++) {
+      console.log(`  → Generating image-${i + 1} (1:1)...`)
+      const buf = await generateImage(config.images[i], '1:1')
+      fs.writeFileSync(path.join(imgDir, `image-${i + 1}.png`), buf)
+      console.log(`  ✓ image-${i + 1}.png saved`)
+    }
   }
 
   await ensureCoverImageInFrontmatter(slug)
@@ -954,16 +956,17 @@ async function regeneratePost(slug: string): Promise<void> {
 async function main() {
   const args = process.argv.slice(2)
   const slugArg = args.indexOf('--slug')
+  const coverOnly = args.includes('--cover-only')
 
   const slugs =
     slugArg !== -1
       ? [args[slugArg + 1]]
       : Object.keys(POST_IMAGE_CONFIGS)
 
-  console.log(`\n🔄 Regenerating images for ${slugs.length} post(s)\n`)
+  console.log(`\n🔄 Regenerating ${coverOnly ? 'covers only' : 'all images'} for ${slugs.length} post(s)\n`)
 
   for (const slug of slugs) {
-    await regeneratePost(slug)
+    await regeneratePost(slug, coverOnly)
   }
 
   console.log('\n✅ All done. Commit public/images/blog/ to deploy.')
