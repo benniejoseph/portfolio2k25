@@ -1,0 +1,516 @@
+---
+title: "Agentforce 2.0: What Actually Changed from 1.0"
+excerpt: "Agentforce 2.0 new features Winter 26 explained: multi-agent orchestration, Atlas v2, custom reasoning, and real org lessons."
+date: "2026-05-26"
+tags: ["Salesforce", "Agentforce", "Winter26"]
+keyword: "agentforce 2.0 new features winter 26"
+featured: false
+coverImage: /images/blog/agentforce-20-what-actually-changed-from-10/cover.png
+---
+
+
+If you search for **agentforce 2.0 new features winter 26**, you’ll find a lot of release-note language. Useful, but not enough.
+
+I care about what changes when I’m designing an enterprise Salesforce org that has real data access rules, brittle integrations, overloaded service teams, legal approval steps, and executives asking why the agent confidently did the wrong thing.
+
+Here’s the short version: **Agentforce 2.0 is not just “Agentforce with more actions.”** The meaningful shift is from isolated assistant-style agents to orchestrated, governed, multi-agent business workflows.
+
+Agentforce 1.0 proved the pattern.
+
+Agentforce 2.0 makes it architectable.
+
+That distinction matters.
+
+## The real difference: from agent as assistant to agent as workflow participant
+
+Agentforce 1.0 was useful when the job was narrow:
+
+- Answer this customer question.
+- Summarize this case.
+- Trigger this Flow.
+- Look up this policy.
+- Create a follow-up task.
+
+That was a solid starting point, but most enterprise work is not a single step. A refund request, renewal risk, onboarding exception, warranty claim, loan escalation, or partner dispute usually needs several roles:
+
+- Someone interprets the request.
+- Someone checks policy.
+- Someone verifies entitlement.
+- Someone looks at customer value.
+- Someone recommends the next action.
+- Someone logs the audit trail.
+
+In Agentforce 1.0, teams often tried to cram all of that into one large agent instruction set. I’ve seen this in real Salesforce orgs: one “super agent” with a giant prompt, fifteen actions, overlapping topics, and no clear boundary between recommendation, execution, and compliance.
+
+It works in demos. It gets ugly in production.
+
+Agentforce 2.0, released in Winter ’26, fixes the architecture direction with:
+
+- **Multi-agent orchestration**
+- **Atlas Reasoning Engine v2**
+- **Custom reasoning steps**
+- **Better action control and observability**
+- **Tighter Data Cloud integration, including native vector search**
+- **More realistic enterprise governance patterns**
+
+The biggest change is not one feature. It is the fact that Agentforce 2.0 now has a better mental model for how enterprise work actually happens.
+
+## What changed in multi-agent orchestration
+
+Multi-agent orchestration is the headline feature for me.
+
+In Agentforce 1.0, you could build multiple agents, but coordination was mostly your problem. You either wired handoffs through Flow, separated use cases manually, or made one agent responsible for too much.
+
+In Agentforce 2.0, orchestration is a first-class design concern. You can design agents around responsibilities instead of forcing one agent to become a messy procedural script.
+
+A practical enterprise setup now looks like this:
+
+- **Intake Agent** classifies the request and determines intent.
+- **Knowledge Agent** retrieves policy, product, or contract context.
+- **Eligibility Agent** checks account, entitlement, warranty, SLA, or subscription status.
+- **Compliance Agent** blocks unsafe or unauthorized actions.
+- **Execution Agent** performs approved Salesforce updates.
+- **Summary Agent** writes the human-readable case note or customer response.
+
+This is better than one massive prompt because the failure modes are easier to isolate.
+
+If the wrong policy is retrieved, I inspect the Knowledge Agent.  
+If the refund is blocked incorrectly, I inspect Eligibility or Compliance.  
+If the case update is malformed, I inspect Execution.
+
+That is architecture. Not prompt soup.
+
+
+![Agentforce 2.0 multi-agent orchestration architecture](/images/blog/agentforce-20-what-actually-changed-from-10/image-1.png)
+
+
+## Atlas Reasoning Engine v2 is the under-the-hood upgrade that matters
+
+I’m usually skeptical when vendors talk about “better reasoning.” It can mean anything.
+
+With Agentforce 2.0, **Atlas Reasoning Engine v2** matters because it supports more structured planning, tool selection, and custom reasoning steps. That means I can stop treating the agent like a black box that magically decides what to do.
+
+The old pattern was:
+
+1. Give the agent instructions.
+2. Give the agent actions.
+3. Hope the model chooses the right action.
+4. Add more prompt text when it does not.
+5. Repeat until everyone hates the prompt.
+
+The Agentforce 2.0 pattern is closer to:
+
+1. Classify the user request.
+2. Retrieve relevant business context.
+3. Run custom reasoning checks.
+4. Decide whether execution is allowed.
+5. Invoke the correct action.
+6. Record the decision path.
+
+That is a serious improvement.
+
+The unpopular take: **prompt engineering is not enough for enterprise agents.** Prompts are configuration. They are not governance, not integration architecture, and not a substitute for deterministic business rules.
+
+## Custom reasoning steps are where architects should spend time
+
+Custom reasoning steps are the feature I’d focus on first if I were upgrading an Agentforce 1.0 implementation.
+
+A custom reasoning step lets you insert explicit business logic into the agent’s decision flow. That matters when the outcome has financial, legal, operational, or customer-impacting consequences.
+
+For example, don’t let the model “reason” whether a customer is eligible for a refund from free-text policy alone. Let it gather context, then call deterministic logic that checks:
+
+- Order age
+- Contract type
+- Customer tier
+- Prior refund count
+- Open disputes
+- Product category
+- Region-specific rules
+
+Here’s a simplified Apex action pattern I would use for an Agentforce 2.0 refund eligibility step. The point is not that all logic belongs in Apex. The point is that enterprise guardrails should be deterministic where they need to be deterministic.
+
+```apex
+public with sharing class RefundEligibilityAction {
+    public class Request {
+        @InvocableVariable(required=true)
+        public Id caseId;
+
+        @InvocableVariable(required=true)
+        public Id accountId;
+
+        @InvocableVariable(required=true)
+        public Decimal requestedAmount;
+    }
+
+    public class Response {
+        @InvocableVariable
+        public Boolean eligible;
+
+        @InvocableVariable
+        public String decisionCode;
+
+        @InvocableVariable
+        public String explanation;
+
+        @InvocableVariable
+        public Boolean requiresHumanApproval;
+    }
+
+    @InvocableMethod(
+        label='Check Refund Eligibility'
+        description='Used by Agentforce 2.0 custom reasoning steps before refund execution.'
+    )
+    public static List<Response> checkEligibility(List<Request> requests) {
+        Set<Id> accountIds = new Set<Id>();
+        Set<Id> caseIds = new Set<Id>();
+
+        for (Request request : requests) {
+            accountIds.add(request.accountId);
+            caseIds.add(request.caseId);
+        }
+
+        Map<Id, Account> accounts = new Map<Id, Account>([
+            SELECT Id, Name, Customer_Tier__c, Open_Disputes__c
+            FROM Account
+            WHERE Id IN :accountIds
+        ]);
+
+        Map<Id, Case> cases = new Map<Id, Case>([
+            SELECT Id, Status, Origin, Refund_Count__c, Order_Age_Days__c
+            FROM Case
+            WHERE Id IN :caseIds
+        ]);
+
+        List<Response> responses = new List<Response>();
+
+        for (Request request : requests) {
+            Account account = accounts.get(request.accountId);
+            Case supportCase = cases.get(request.caseId);
+
+            Response response = new Response();
+
+            if (account == null || supportCase == null) {
+                response.eligible = false;
+                response.decisionCode = 'MISSING_CONTEXT';
+                response.explanation = 'Required account or case context was not found.';
+                response.requiresHumanApproval = true;
+                responses.add(response);
+                continue;
+            }
+
+            if (account.Open_Disputes__c > 0) {
+                response.eligible = false;
+                response.decisionCode = 'OPEN_DISPUTE';
+                response.explanation = 'Refund blocked because the account has open disputes.';
+                response.requiresHumanApproval = true;
+            } else if (supportCase.Refund_Count__c >= 2) {
+                response.eligible = false;
+                response.decisionCode = 'REFUND_LIMIT_REACHED';
+                response.explanation = 'Refund blocked because the case exceeded refund limits.';
+                response.requiresHumanApproval = true;
+            } else if (request.requestedAmount > 500 && account.Customer_Tier__c != 'Strategic') {
+                response.eligible = false;
+                response.decisionCode = 'AMOUNT_REQUIRES_APPROVAL';
+                response.explanation = 'Refund amount requires manager approval for this tier.';
+                response.requiresHumanApproval = true;
+            } else if (supportCase.Order_Age_Days__c > 90) {
+                response.eligible = false;
+                response.decisionCode = 'ORDER_OUTSIDE_WINDOW';
+                response.explanation = 'Refund blocked because the order is outside the 90-day window.';
+                response.requiresHumanApproval = true;
+            } else {
+                response.eligible = true;
+                response.decisionCode = 'ELIGIBLE';
+                response.explanation = 'Refund meets account, dispute, amount, and order-age rules.';
+                response.requiresHumanApproval = false;
+            }
+
+            responses.add(response);
+        }
+
+        return responses;
+    }
+}
+```
+
+This is the kind of action I want Agentforce to call before it touches money.
+
+In Salesforce API v64.0 orgs, I’m also more comfortable exposing these kinds of actions because the surrounding platform story is stronger: better agent orchestration, better Data Cloud retrieval, better observability, and cleaner integration options.
+
+## Real enterprise example: service refund agent for a global manufacturer
+
+One enterprise project I worked on had a familiar service problem.
+
+A global manufacturer had regional support teams handling warranty claims and goodwill refunds. The process looked simple from the outside, but it had real complexity:
+
+- North America and EMEA had different warranty windows.
+- Strategic accounts had special commercial terms.
+- Some products required serial-number validation.
+- Refunds above a threshold needed finance approval.
+- Distributors had different entitlement rules than direct customers.
+- Agents were copying policy snippets into case comments manually.
+
+The early agent design looked like a classic Agentforce 1.0 pattern: one service agent with a long instruction set and several actions.
+
+It could summarize cases and suggest next steps. That helped.
+
+But once users asked it to recommend refunds, the cracks showed. The agent sometimes mixed regional policies, cited outdated knowledge, or suggested escalation when it should have blocked the request.
+
+The Agentforce 2.0 design is what I would use now:
+
+- Intake Agent classifies the request as warranty, refund, shipment damage, or product support.
+- Knowledge Agent retrieves current policy from Data Cloud vector search.
+- Eligibility Agent calls Apex and external warranty APIs through governed actions.
+- Compliance Agent checks regional restrictions and approval thresholds.
+- Execution Agent creates the approval request or updates the Case.
+- Summary Agent writes the case note with decision code and supporting context.
+
+That design gives the business what it actually needs: speed without losing control.
+
+## Native Data Cloud vector search changes retrieval design
+
+Agentforce 2.0 benefits from the current Data Cloud direction: real-time unification and native vector search.
+
+This matters because most bad agent answers are not model failures. They are context failures.
+
+If the agent retrieves stale policy, incomplete customer context, or a generic knowledge article when the customer has a custom contract, the answer will be wrong no matter how capable the model is.
+
+With Data Cloud vector search native, I can design retrieval around enterprise context:
+
+- Knowledge articles
+- Contract clauses
+- Product manuals
+- Case history
+- Entitlement records
+- Customer segment data
+- Interaction transcripts
+- Order and asset metadata
+
+I don’t want my Salesforce agent guessing from generic text. I want it grounded in the customer, product, policy, and transaction at hand.
+
+This is also where I’d be careful. Vector search is powerful, but it does not remove the need for filtering. Retrieval should respect region, customer type, effective dates, product line, and permissions.
+
+Bad retrieval is just a faster way to produce confident nonsense.
+
+## Agentforce 2.0 versus 1.0: the practical comparison
+
+Here’s how I’d explain the upgrade to an executive sponsor or architecture review board.
+
+| Area | Agentforce 1.0 | Agentforce 2.0 |
+|---|---|---|
+| Agent design | Often one agent per broad use case | Multiple specialized agents orchestrated together |
+| Reasoning | Prompt-heavy | Atlas Reasoning Engine v2 with custom reasoning steps |
+| Governance | Possible, but more manually designed | More natural fit for approvals, logs, policy checks |
+| Data grounding | Knowledge and CRM context | Stronger Data Cloud real-time and vector retrieval patterns |
+| Execution | Actions and Flow invocation | More controlled action routing through orchestration |
+| Debugging | Harder to isolate failures | Easier to inspect agent responsibility boundaries |
+| Best use case | Assistant-style productivity | Enterprise workflow automation with guardrails |
+
+The win is not that Agentforce 2.0 makes agents “smarter” in some vague way.
+
+The win is that it gives architects better separation of concerns.
+
+
+![Agentforce 1.0 and 2.0 production pattern comparison](/images/blog/agentforce-20-what-actually-changed-from-10/image-2.png)
+
+
+## What did not magically change
+
+Let me be blunt: Agentforce 2.0 does not remove architecture work.
+
+You still need to design:
+
+- Data access
+- Permission boundaries
+- Record-level security
+- Prompt and instruction management
+- Action contracts
+- Error handling
+- Human approval points
+- Audit logging
+- Evaluation datasets
+- Rollback procedures
+
+I would not deploy an Agentforce 2.0 workflow that can update customer-facing records, issue credits, cancel orders, or change entitlements without deterministic checks and human approval thresholds.
+
+I also would not let every team create agents independently with no naming convention, no action review, and no lifecycle management. That is how you end up with “automation sprawl,” just with better branding.
+
+Salesforce architects have seen this movie before with Workflow Rules, Process Builder, Flow, unmanaged Apex, and duplicate integrations.
+
+Agent sprawl will be worse if you let it happen.
+
+## Where LWC native state fits into Agentforce UX
+
+Agentforce is not only backend orchestration. Users still need a clean interface.
+
+With Summer ’26 LWC native state management, I’m more willing to build focused agent-assist panels inside service or sales workspaces without dragging in unnecessary client-side state libraries.
+
+For example, a service console component can track an agent recommendation, approval state, and execution result in a small local store. Keep the UI boring. Make the decision trail visible.
+
+```typescript
+import { LightningElement } from 'lwc';
+
+type AgentDecision = {
+  decisionCode: string;
+  explanation: string;
+  requiresHumanApproval: boolean;
+};
+
+export default class AgentforceDecisionPanel extends LightningElement {
+  state = {
+    isLoading: false,
+    decision: null as AgentDecision | null,
+    errorMessage: ''
+  };
+
+  async handleReviewRecommendation() {
+    this.state = {
+      ...this.state,
+      isLoading: true,
+      errorMessage: ''
+    };
+
+    try {
+      const decision = await this.getMockAgentforceDecision();
+
+      this.state = {
+        ...this.state,
+        isLoading: false,
+        decision
+      };
+    } catch (error) {
+      this.state = {
+        ...this.state,
+        isLoading: false,
+        errorMessage: 'Agentforce recommendation could not be loaded.'
+      };
+    }
+  }
+
+  async getMockAgentforceDecision(): Promise<AgentDecision> {
+    return {
+      decisionCode: 'AMOUNT_REQUIRES_APPROVAL',
+      explanation: 'Refund amount exceeds the automated threshold for this account tier.',
+      requiresHumanApproval: true
+    };
+  }
+
+  get showApprovalWarning(): boolean {
+    return this.state.decision?.requiresHumanApproval === true;
+  }
+}
+```
+
+This is not fancy, and that is the point.
+
+For enterprise users, I want the UI to show:
+
+- What the agent decided
+- Why it decided it
+- Whether it executed anything
+- Whether approval is required
+- Which policy or rule was used
+
+If users cannot understand the decision, they will not trust the agent. If admins cannot audit it, they should not approve it.
+
+## My upgrade advice from Agentforce 1.0 to 2.0
+
+If you already have Agentforce 1.0 in production, I would not start by rebuilding everything.
+
+I’d do this instead.
+
+### 1. Inventory your current agents and actions
+
+List every agent, topic, action, Flow, Apex class, external API, and permission set involved.
+
+Then mark each action as:
+
+- Read-only
+- Draft-only
+- Updates internal records
+- Updates customer-facing records
+- Financial or legal impact
+
+Anything in the last two categories needs stronger governance in Agentforce 2.0.
+
+### 2. Split overloaded agents by responsibility
+
+If one agent has twenty instructions and twelve actions, it is probably doing too much.
+
+Split by business responsibility:
+
+- Intake
+- Retrieval
+- Eligibility
+- Compliance
+- Execution
+- Summary
+
+Do not split just for the sake of it. Split when ownership, risk, or debugging improves.
+
+### 3. Move critical decisions out of prompt text
+
+Policy language can help the model understand context. It should not be the only control for high-risk decisions.
+
+Use custom reasoning steps, Apex, Flow, approval processes, external services, and validation rules where appropriate.
+
+### 4. Build evaluation datasets before expanding scope
+
+Do not test agents only with happy-path demos.
+
+Use real historical cases:
+
+- Ambiguous customer requests
+- Missing data
+- Conflicting policies
+- VIP exceptions
+- Fraud-like patterns
+- Regional restrictions
+- Edge-case entitlement scenarios
+
+A good eval set is the difference between “cool demo” and “production candidate.”
+
+### 5. Treat Data Cloud retrieval as architecture, not plumbing
+
+Define what the agent is allowed to retrieve and under what filters.
+
+If your vector search can retrieve an expired policy or a contract from the wrong account hierarchy, you have a design problem.
+
+## Model choice still matters, but less than architecture
+
+People love asking whether Agentforce should use one model or another.
+
+As of May 2026, the broader AI landscape includes models like **claude-sonnet-4-7**, **claude-opus-4-7**, **gpt-5.5**, **gpt-5.5-mini**, **o3**, **gemini-3.1-pro**, and **Llama 4 Scout**. These models are impressive.
+
+But inside Salesforce enterprise workflows, I care less about leaderboard debates and more about:
+
+- Is the agent grounded in the right Salesforce data?
+- Are actions scoped correctly?
+- Can I inspect the reasoning path?
+- Are approvals enforced?
+- Can I stop the agent from doing expensive damage?
+- Can admins maintain this after consultants leave?
+
+A better model will not fix a bad permission model.  
+A larger context window will not fix stale knowledge.  
+A stronger reasoning engine will not fix missing business rules.
+
+Agentforce 2.0 gives you better tools. You still need architecture discipline.
+
+## Final take
+
+Agentforce 2.0 is a meaningful upgrade because it moves Salesforce agents closer to how enterprise work actually operates: multiple roles, governed decisions, auditable actions, and contextual data.
+
+The teams that win with Agentforce 2.0 will not be the teams with the longest prompts. They will be the teams that design clean agent responsibilities, deterministic guardrails, strong retrieval filters, and boring-but-reliable execution paths.
+
+That is what actually changed from 1.0.
+
+Not magic.
+
+Architecture.
+
+## TL;DR
+
+- Agentforce 2.0’s biggest Winter ’26 change is multi-agent orchestration with Atlas Reasoning Engine v2 and custom reasoning steps.
+- The practical upgrade path is splitting overloaded 1.0 agents into governed agents for intake, retrieval, eligibility, compliance, and execution.
+- Do not trust prompts alone for enterprise decisions; use deterministic checks, Data Cloud grounding, approvals, and audit trails.
