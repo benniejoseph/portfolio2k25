@@ -942,19 +942,22 @@ async function updateCoverImageInFrontmatter(slug: string): Promise<void> {
   }
 }
 
-async function regeneratePost(slug: string, coverOnly = false): Promise<void> {
-  let config = POST_IMAGE_CONFIGS[slug]
+async function regeneratePost(slug: string, coverOnly = false, inlineOnly = false): Promise<void> {
+  let config: { cover: string; images: string[] } | undefined
 
-  // Fallback: read prompts from sidecar JSON saved during generation
-  if (!config) {
-    const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
-    if (fs.existsSync(sidecarPath)) {
-      const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'))
-      if (sidecar.cover && Array.isArray(sidecar.images)) {
-        config = { cover: sidecar.cover, images: sidecar.images }
-        console.log(`  ℹ Loaded image prompts from ${slug}.images.json`)
-      }
+  // Sidecar JSON wins — it is always the authoritative up-to-date source.
+  // POST_IMAGE_CONFIGS is only a fallback for posts that predate sidecar support.
+  const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
+  if (fs.existsSync(sidecarPath)) {
+    const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'))
+    if (sidecar.cover && Array.isArray(sidecar.images)) {
+      config = { cover: sidecar.cover, images: sidecar.images }
     }
+  }
+
+  // Fallback to hardcoded config only if no sidecar exists
+  if (!config) {
+    config = POST_IMAGE_CONFIGS[slug]
   }
 
   if (!config) {
@@ -965,12 +968,16 @@ async function regeneratePost(slug: string, coverOnly = false): Promise<void> {
   const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
   fs.mkdirSync(imgDir, { recursive: true })
 
-  console.log(`\n📸 Regenerating ${coverOnly ? 'cover only' : 'all images'} for: ${slug}`)
+  const mode = coverOnly ? 'cover only' : inlineOnly ? 'inline images only' : 'all images'
+  console.log(`\n📸 Regenerating ${mode} for: ${slug}`)
 
-  console.log('  → Generating cover (16:9)...')
-  const coverBuf = await generateImageWithRetry(config.cover, '16:9')
-  fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
-  console.log('  ✓ cover.png saved')
+  if (!inlineOnly) {
+    console.log('  → Generating cover (16:9)...')
+    const coverBuf = await generateImageWithRetry(config.cover, '16:9')
+    fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
+    console.log('  ✓ cover.png saved')
+    await updateCoverImageInFrontmatter(slug)
+  }
 
   if (!coverOnly) {
     for (let i = 0; i < config.images.length; i++) {
@@ -980,14 +987,13 @@ async function regeneratePost(slug: string, coverOnly = false): Promise<void> {
       console.log(`  ✓ image-${i + 1}.png saved`)
     }
   }
-
-  await updateCoverImageInFrontmatter(slug)
 }
 
 async function main() {
   const args = process.argv.slice(2)
   const slugArg = args.indexOf('--slug')
   const coverOnly = args.includes('--cover-only')
+  const inlineOnly = args.includes('--inline-only')
 
   // When no --slug given, regenerate all posts that have a config or sidecar JSON
   const allSlugs = new Set<string>([
@@ -1003,7 +1009,7 @@ async function main() {
   console.log(`\n🔄 Regenerating ${coverOnly ? 'covers only' : 'all images'} for ${slugs.length} post(s)\n`)
 
   for (const slug of slugs) {
-    await regeneratePost(slug, coverOnly)
+    await regeneratePost(slug, coverOnly, inlineOnly)
   }
 
   console.log('\n✅ All done. Commit public/images/blog/ to deploy.')

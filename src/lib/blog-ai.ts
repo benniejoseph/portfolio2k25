@@ -155,13 +155,12 @@ COVER IMAGE (placed on its own line immediately after the closing --- of the fro
   ═══════════════════════
   ASSIGNMENT RULES:
   ═══════════════════════
-  - Post about code quality / best practices / limits → Style 3 (Blueprint)
-  - Post about comparison / migration / vs → Style 2 (Comparison)
-  - Post about pipelines / architecture / systems → Style 4 (Architecture)
-  - Post about career / learning / overview → Style 1 (Whiteboard)
-  - FIRST image: usually the architecture/how-it-works (Style 3 or 4)
-  - SECOND image: usually the comparison/checklist (Style 2 or 3)
-  - NEVER use generic prompts like "diagram of X" — name EVERY component, code line, and metric
+  - DEFAULT for BOTH inline images → Style 3 DARK BLUEPRINT (dark navy, neon, real code)
+  - Career / learning / overview posts only → Style 1 Whiteboard
+  - NEVER default to Style 2 (Comparison) or Style 4 (Architecture) for inline images
+  - Every Blueprint image MUST show real, specific code in the bad/good blocks
+    (not placeholder text like "// bad pattern here" — actual Apex, TypeScript, or SOQL)
+  - NEVER use generic prompts like "diagram of X" — name EVERY variable, method, and metric
 
 Output ONLY the raw MDX file content starting with --- frontmatter. No preamble.`
 
