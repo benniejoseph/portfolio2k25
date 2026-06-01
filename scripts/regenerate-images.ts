@@ -37,6 +37,7 @@ if (fs.existsSync(envPath)) {
 
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
+
 // Per-post image definitions — using style-specific prompt generators
 const POST_IMAGE_CONFIGS: Record<string, { cover: string; images: string[] }> = {
   'agentforce-vs-einstein-copilot-what-is-actually-different': {
@@ -888,25 +889,55 @@ async function generateImage(
   return Buffer.from(imagePart.inlineData.data, 'base64')
 }
 
-async function ensureCoverImageInFrontmatter(slug: string): Promise<void> {
+async function generateImageWithRetry(
+  prompt: string,
+  aspectRatio: '16:9' | '1:1' = '1:1',
+  maxAttempts = 3
+): Promise<Buffer> {
+  let lastError: Error | undefined
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await generateImage(prompt, aspectRatio)
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (attempt < maxAttempts) {
+        const delayMs = attempt * 8000
+        console.log(`  ⚠ Attempt ${attempt} failed: ${lastError.message}`)
+        console.log(`  ↻ Retrying in ${delayMs / 1000}s...`)
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
+    }
+  }
+  throw lastError
+}
+
+async function updateCoverImageInFrontmatter(slug: string): Promise<void> {
   const postPath = path.join(process.cwd(), 'content/posts')
   const files = fs.readdirSync(postPath).filter((f) => f.endsWith('.mdx'))
 
   for (const file of files) {
-    const content = fs.readFileSync(path.join(postPath, file), 'utf-8')
-    const { data: fm } = matter(content)
-
     const fileSlug = file.replace('.mdx', '')
     if (fileSlug !== slug && !file.includes(slug.slice(0, 30))) continue
 
+    const raw = fs.readFileSync(path.join(postPath, file), 'utf-8')
+    const { data: fm } = matter(raw)
+    const pngCoverPath = `/images/blog/${slug}/cover.png`
+
     if (!fm.coverImage) {
-      const coverPath = `/images/blog/${slug}/cover.png`
-      const raw = fs.readFileSync(path.join(postPath, file), 'utf-8')
+      // Add missing coverImage field
       const updated = raw.replace(/^---\n([\s\S]*?)\n---/, (_, fmBody) => {
-        return `---\n${fmBody}\ncoverImage: ${coverPath}\n---`
+        return `---\n${fmBody}\ncoverImage: ${pngCoverPath}\n---`
       })
       fs.writeFileSync(path.join(postPath, file), updated, 'utf-8')
-      console.log(`  ✓ Added coverImage to ${file}`)
+      console.log(`  ✓ Added coverImage: ${pngCoverPath} to ${file}`)
+    } else if (fm.coverImage !== pngCoverPath) {
+      // Upgrade .webp → .png (or any wrong path → correct path)
+      const updated = raw.replace(
+        /^(coverImage:\s*)(.+)$/m,
+        `$1${pngCoverPath}`
+      )
+      fs.writeFileSync(path.join(postPath, file), updated, 'utf-8')
+      console.log(`  ✓ Updated coverImage: ${fm.coverImage} → ${pngCoverPath}`)
     }
   }
 }
@@ -937,20 +968,20 @@ async function regeneratePost(slug: string, coverOnly = false): Promise<void> {
   console.log(`\n📸 Regenerating ${coverOnly ? 'cover only' : 'all images'} for: ${slug}`)
 
   console.log('  → Generating cover (16:9)...')
-  const coverBuf = await generateImage(config.cover, '16:9')
+  const coverBuf = await generateImageWithRetry(config.cover, '16:9')
   fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
   console.log('  ✓ cover.png saved')
 
   if (!coverOnly) {
     for (let i = 0; i < config.images.length; i++) {
       console.log(`  → Generating image-${i + 1} (1:1)...`)
-      const buf = await generateImage(config.images[i], '1:1')
+      const buf = await generateImageWithRetry(config.images[i], '1:1')
       fs.writeFileSync(path.join(imgDir, `image-${i + 1}.png`), buf)
       console.log(`  ✓ image-${i + 1}.png saved`)
     }
   }
 
-  await ensureCoverImageInFrontmatter(slug)
+  await updateCoverImageInFrontmatter(slug)
 }
 
 async function main() {
@@ -958,10 +989,16 @@ async function main() {
   const slugArg = args.indexOf('--slug')
   const coverOnly = args.includes('--cover-only')
 
-  const slugs =
-    slugArg !== -1
-      ? [args[slugArg + 1]]
-      : Object.keys(POST_IMAGE_CONFIGS)
+  // When no --slug given, regenerate all posts that have a config or sidecar JSON
+  const allSlugs = new Set<string>([
+    ...Object.keys(POST_IMAGE_CONFIGS),
+    ...fs
+      .readdirSync(path.join(process.cwd(), 'content/posts'))
+      .filter((f) => f.endsWith('.images.json'))
+      .map((f) => f.replace('.images.json', '')),
+  ])
+
+  const slugs = slugArg !== -1 ? [args[slugArg + 1]] : [...allSlugs]
 
   console.log(`\n🔄 Regenerating ${coverOnly ? 'covers only' : 'all images'} for ${slugs.length} post(s)\n`)
 

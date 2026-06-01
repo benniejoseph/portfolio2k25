@@ -1,7 +1,9 @@
 import OpenAI from 'openai'
 import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
+import { spawnSync } from 'child_process'
 import {
   styleWhiteboard,
   styleComparison,
@@ -14,6 +16,28 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 // Gemini for image generation (Imagen 4)
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+
+function writeWebpImage(outputPath: string, sourceBuffer: Buffer): void {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-image-'))
+  const pngPath = path.join(tempDir, 'source.png')
+
+  try {
+    fs.writeFileSync(pngPath, sourceBuffer)
+    const result = spawnSync('cwebp', ['-quiet', '-q', '82', pngPath, '-o', outputPath], {
+      encoding: 'utf-8',
+    })
+
+    if (result.error) {
+      throw new Error(`Unable to run cwebp: ${result.error.message}`)
+    }
+
+    if (result.status !== 0) {
+      throw new Error(result.stderr || `cwebp exited with status ${result.status}`)
+    }
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+}
 
 export interface GeneratePostOptions {
   title: string
@@ -230,6 +254,28 @@ async function generateImage(
   return Buffer.from(imagePart.inlineData.data, 'base64')
 }
 
+async function generateImageWithRetry(
+  prompt: string,
+  aspectRatio: '16:9' | '1:1' = '1:1',
+  maxAttempts = 3
+): Promise<Buffer> {
+  let lastError: Error | undefined
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await generateImage(prompt, aspectRatio)
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (attempt < maxAttempts) {
+        const delayMs = attempt * 8000
+        console.log(`  ⚠ Image gen attempt ${attempt} failed: ${lastError.message}`)
+        console.log(`  ↻ Retrying in ${delayMs / 1000}s...`)
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
+    }
+  }
+  throw lastError
+}
+
 // Cover image prompts per content pillar — using structured style functions
 const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> = {
   salesforce: (title, keyword) =>
@@ -342,8 +388,8 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
 
   // Generate cover image (16:9 wide landscape)
   console.log('Generating cover image with Nano Banana 2 (gemini-3.1-flash-image-preview)...')
-  const coverBuffer = await generateImage(coverPrompt, '16:9')
-  fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
+  const coverBuffer = await generateImageWithRetry(coverPrompt, '16:9')
+  writeWebpImage(path.join(imgDir, 'cover.webp'), coverBuffer)
   console.log('✓ Cover image saved')
 
   // Replace inline image placeholders with generated images
@@ -357,9 +403,9 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
     collectedImagePrompts.push(imgPrompt)
 
     console.log(`Generating inline image ${i + 1}/${matches.length} with Nano Banana 2...`)
-    const imgBuffer = await generateImage(imgPrompt, '1:1')
-    const imgFilename = `image-${i + 1}.png`
-    fs.writeFileSync(path.join(imgDir, imgFilename), imgBuffer)
+    const imgBuffer = await generateImageWithRetry(imgPrompt, '1:1')
+    const imgFilename = `image-${i + 1}.webp`
+    writeWebpImage(path.join(imgDir, imgFilename), imgBuffer)
     console.log(`✓ Inline image ${i + 1} saved`)
 
     // Use alt text from placeholder — fallback to empty string for backward compat
@@ -369,7 +415,7 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Inject coverImage field into frontmatter (before the closing ---)
   const fmCloseIdx = mdx.indexOf('\n---', 4)
   if (fmCloseIdx !== -1) {
-    mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.png${mdx.slice(fmCloseIdx)}`
+    mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.webp${mdx.slice(fmCloseIdx)}`
   }
 
   // Save image prompts as sidecar JSON — allows regenerate-images.ts to

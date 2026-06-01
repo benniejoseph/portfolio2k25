@@ -49,7 +49,7 @@ We rebuilt it as a constrained multi-agent workflow:
 The key improvement was separation of responsibility. Each agent had a narrow job, a typed input, a typed output, and no authority outside its lane.
 
 
-![](/images/blog/multi-agent-workflows-lessons-from-building-in-production/image-1.png)
+![Multi-Agent Workflows: Lessons from Building in Production supporting diagram 1](/images/blog/multi-agent-workflows-lessons-from-building-in-production/image-1.png)
 
 
 ## Pattern 1: Use an Orchestrator, Not a Group Chat
@@ -339,7 +339,7 @@ Here’s the rule I use: **one retry for recoverable errors, zero retries for po
 If the Knowledge Agent fails because retrieval timed out, retry once. If the Knowledge Agent and Entitlement Agent disagree on policy eligibility, send it to a human.
 
 
-![](/images/blog/multi-agent-workflows-lessons-from-building-in-production/image-2.png)
+![Multi-Agent Workflows: Lessons from Building in Production supporting diagram 2](/images/blog/multi-agent-workflows-lessons-from-building-in-production/image-2.png)
 
 
 ## Pattern 5: Keep Memory Boring

@@ -73,7 +73,7 @@ A practical setup looks like this:
 I have used variations of this architecture for enterprise service teams where agents handled thousands of cases per week. In one implementation, the Knowledge Base had product support content across North America, EMEA, and APAC. The first prototype retrieved the right article but the wrong regional policy. That was enough to fail user acceptance testing. The fix was not prompt engineering. The fix was indexing region, language, channel, and data category metadata alongside every vector.
 
 
-![](/images/blog/rag-for-salesforce-orgs-index-your-knowledge-base/image-1.png)
+![RAG for Salesforce Orgs: Index Your Knowledge Base supporting diagram 1](/images/blog/rag-for-salesforce-orgs-index-your-knowledge-base/image-1.png)
 
 
 ## What to Extract from Salesforce Knowledge
@@ -362,7 +362,7 @@ I do not like this pattern when permissions are highly granular. Index duplicati
 Here’s my usual recommendation: start with metadata filtering, then add Salesforce verification for sensitive article groups.
 
 
-![](/images/blog/rag-for-salesforce-orgs-index-your-knowledge-base/image-2.png)
+![RAG for Salesforce Orgs: Index Your Knowledge Base supporting diagram 2](/images/blog/rag-for-salesforce-orgs-index-your-knowledge-base/image-2.png)
 
 
 ## Retrieval Query Design
