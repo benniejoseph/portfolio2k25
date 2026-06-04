@@ -1,9 +1,7 @@
 import OpenAI from 'openai'
 import { GoogleGenAI } from '@google/genai'
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
-import { spawnSync } from 'child_process'
 import {
   styleWhiteboard,
   styleComparison,
@@ -17,27 +15,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 // Gemini for image generation (Imagen 4)
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-function writeWebpImage(outputPath: string, sourceBuffer: Buffer): void {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blog-image-'))
-  const pngPath = path.join(tempDir, 'source.png')
-
-  try {
-    fs.writeFileSync(pngPath, sourceBuffer)
-    const result = spawnSync('cwebp', ['-quiet', '-q', '82', pngPath, '-o', outputPath], {
-      encoding: 'utf-8',
-    })
-
-    if (result.error) {
-      throw new Error(`Unable to run cwebp: ${result.error.message}`)
-    }
-
-    if (result.status !== 0) {
-      throw new Error(result.stderr || `cwebp exited with status ${result.status}`)
-    }
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true })
-  }
-}
 
 export interface GeneratePostOptions {
   title: string
@@ -388,7 +365,7 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Generate cover image (16:9 wide landscape)
   console.log('Generating cover image with Nano Banana 2 (gemini-3.1-flash-image-preview)...')
   const coverBuffer = await generateImageWithRetry(coverPrompt, '16:9')
-  writeWebpImage(path.join(imgDir, 'cover.webp'), coverBuffer)
+  fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuffer)
   console.log('✓ Cover image saved')
 
   // Replace inline image placeholders with generated images
@@ -403,8 +380,8 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
 
     console.log(`Generating inline image ${i + 1}/${matches.length} with Nano Banana 2...`)
     const imgBuffer = await generateImageWithRetry(imgPrompt, '1:1')
-    const imgFilename = `image-${i + 1}.webp`
-    writeWebpImage(path.join(imgDir, imgFilename), imgBuffer)
+    const imgFilename = `image-${i + 1}.png`
+    fs.writeFileSync(path.join(imgDir, imgFilename), imgBuffer)
     console.log(`✓ Inline image ${i + 1} saved`)
 
     // Use alt text from placeholder — fallback to empty string for backward compat
@@ -414,7 +391,7 @@ export async function generateAndSave(opts: GeneratePostOptions): Promise<string
   // Inject coverImage field into frontmatter (before the closing ---)
   const fmCloseIdx = mdx.indexOf('\n---', 4)
   if (fmCloseIdx !== -1) {
-    mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.webp${mdx.slice(fmCloseIdx)}`
+    mdx = `${mdx.slice(0, fmCloseIdx)}\ncoverImage: /images/blog/${slug}/cover.png${mdx.slice(fmCloseIdx)}`
   }
 
   // Save image prompts as sidecar JSON — allows regenerate-images.ts to
