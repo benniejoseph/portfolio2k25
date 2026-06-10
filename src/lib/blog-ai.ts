@@ -200,17 +200,61 @@ const COVER_DIRECTIVE_RE = /\{COVER_PROMPT:\s*"((?:[^"\\]|\\.)*)"\s*(?:\|\s*ALT:
 const IMAGE_PLACEHOLDER_RE = /\{IMAGE_PROMPT:\s*"((?:[^"\\]|\\.)*)"\s*(?:\|\s*ALT:\s*"((?:[^"\\]|\\.)*)")?\}/g
 
 /**
+ * Reference photo of the author (Bennie Joseph), used so Nano Banana 2 can
+ * keep his likeness consistent across every generated avatar/profile icon
+ * instead of inventing a new face each time.
+ */
+const AUTHOR_REFERENCE_PATH = path.join(process.cwd(), 'public/images/profile.webp')
+let authorReferenceCache: { mimeType: string; data: string } | null | undefined
+
+function loadAuthorReferenceImage(): { mimeType: string; data: string } | null {
+  if (authorReferenceCache !== undefined) return authorReferenceCache
+  try {
+    const buf = fs.readFileSync(AUTHOR_REFERENCE_PATH)
+    authorReferenceCache = { mimeType: 'image/webp', data: buf.toString('base64') }
+  } catch {
+    authorReferenceCache = null
+  }
+  return authorReferenceCache
+}
+
+/** True if the prompt asks for an avatar/profile portrait of the author. */
+function promptNeedsAuthorPhoto(prompt: string): boolean {
+  return /Bennie Joseph/i.test(prompt)
+}
+
+const AUTHOR_PHOTO_INSTRUCTION = `
+
+Note: The first attached image is a real reference photo of the author. Use his likeness (face, beard, hairstyle, skin tone) for any avatar or portrait of him in this scene, rendered in the described illustration style.`
+
+/**
  * Generate an image using Nano Banana 2 (gemini-3.1-flash-image-preview).
  * Uses generateContent API (not generateImages).
  * aspectRatio: '16:9' for wide cover images, '1:1' for square inline images
+ * useAuthorPhoto: attach the author's reference photo when the prompt calls
+ *   for his avatar/portrait. Set to false to fall back to a plain text-only
+ *   prompt (used as a last resort if the photo-attached generation fails).
  */
 async function generateImage(
   prompt: string,
-  aspectRatio: '16:9' | '1:1' = '1:1'
+  aspectRatio: '16:9' | '1:1' = '1:1',
+  useAuthorPhoto = true
 ): Promise<Buffer> {
+  let contents: Array<{ inlineData: { mimeType: string; data: string } } | string> | string = prompt
+
+  if (useAuthorPhoto && promptNeedsAuthorPhoto(prompt)) {
+    const reference = loadAuthorReferenceImage()
+    if (reference) {
+      contents = [
+        { inlineData: { mimeType: reference.mimeType, data: reference.data } },
+        prompt + AUTHOR_PHOTO_INSTRUCTION,
+      ]
+    }
+  }
+
   const response = await gemini.models.generateContent({
     model: 'gemini-3.1-flash-image-preview',
-    contents: prompt,
+    contents,
     config: {
       responseModalities: ['TEXT', 'IMAGE'],
       imageConfig: {
@@ -249,6 +293,20 @@ async function generateImageWithRetry(
       }
     }
   }
+
+  // Last resort: if every attempt with the author's reference photo failed
+  // (e.g. the model returned IMAGE_OTHER for that prompt+image combo), retry
+  // once without the photo so the pipeline doesn't crash. Likeness will be
+  // less accurate for this one image, but the post still gets a cover/image.
+  if (promptNeedsAuthorPhoto(prompt)) {
+    try {
+      console.log('  ↻ Retrying without author reference photo as a fallback...')
+      return await generateImage(prompt, aspectRatio, false)
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
+  }
+
   throw lastError
 }
 

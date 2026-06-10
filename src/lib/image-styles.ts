@@ -149,7 +149,7 @@ Section 3: "CODE PATTERNS" (Main Center)
     ${goodCode}
 
 Section 4: "DEVELOPER PROFILE & CHECKLIST" (Bottom Row)
-- Left Side: A 3D Pixar-style cartoon avatar portrait of a dark-skinned South Asian male with a full thick black beard, shoulder-length wavy dark hair pulled up into a messy top bun, warm friendly smile showing teeth, wearing a grey crew-neck sweatshirt with the word "MAGNETIC" on it, set against a warm orange bokeh background. The avatar is labeled "${authorLabel}". Next to it is a quote bubble: "Architecting intuitive systems, engineering scalable solutions."
+- Left Side: A 3D Pixar-style cartoon avatar portrait of Bennie Joseph (see attached reference photo for his real likeness — match his face shape, skin tone, beard, and hairstyle), with a warm friendly smile showing teeth, wearing a grey crew-neck sweatshirt with the word "MAGNETIC" on it, set against a warm orange bokeh background. The avatar is labeled "${authorLabel}". Next to it is a quote bubble: "Architecting intuitive systems, engineering scalable solutions."
 - Right Side: A checklist with points: ${checklistItems || '"Follow best practices", "Test thoroughly", "Document everything"'}.
 - Footer: A thin bar with icons for "${footerItems}" and the text "CODE SMART. AUTOMATE FASTER. DELIVER EXCELLENCE."
 
@@ -183,7 +183,7 @@ Background: A very clean, subtle light gray background with faint grid lines.
 Header:
 - At the top-center, a massive dark bold rounded header block displaying "${data.title}".
 - Below the title, a small subtitle: "${data.subtitle}".
-- In the top-right corner, a small circular profile icon labeled "Bennie Joseph | Architect".
+- In the top-right corner, a small circular profile icon showing Bennie Joseph's likeness (see attached reference photo — match his face, skin tone, beard, and hairstyle, rendered as a clean flat-vector portrait icon), labeled "Bennie Joseph | Architect".
 
 Architecture Layers (Arranged hierarchically with clear connections):
 - ${layerDescriptions}
