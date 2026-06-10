@@ -123,7 +123,7 @@ export default function ModernHero() {
               animate={{ opacity: 1 }}
               transition={{ delay: 1.1 }}
             >
-              <a href="/resume.pdf" download className="terminal-cmd terminal-cmd-solid">
+              <a href="/Bennie_J_Richard_SF.pdf" download className="terminal-cmd terminal-cmd-solid">
                 ▶&nbsp;DOWNLOAD_RESUME.PDF
               </a>
               <button
@@ -215,7 +215,7 @@ export default function ModernHero() {
                   style={{ background: 'linear-gradient(135deg, rgba(0,212,255,0.06) 0%, transparent 60%, rgba(124,58,237,0.08) 100%)' }}
                 />
                 <Image
-                  src="/images/profile.png"
+                  src="/images/profile.webp"
                   alt="Bennie Joseph — Salesforce Architect & AI Builder"
                   fill
                   style={{ objectFit: 'cover', objectPosition: 'center 8%' }}

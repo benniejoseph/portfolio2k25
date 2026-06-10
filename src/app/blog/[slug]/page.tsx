@@ -10,6 +10,7 @@ import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 import type { Metadata } from 'next'
+import { absoluteUrl, siteConfig, siteUrl } from '@/lib/site'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -23,27 +24,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = getPostBySlug(slug)
   if (!post) return {}
+  const ogImage = absoluteUrl(`/api/og?title=${encodeURIComponent(post.title)}&tags=${encodeURIComponent(post.tags.join(','))}`)
+  const brandedTitle = `${post.title} | ${siteConfig.name}`
+  const pageTitle = brandedTitle.length <= 60 ? brandedTitle : post.title
+
   return {
-    title: `${post.title} | Bennie Joseph`,
+    title: { absolute: pageTitle },
     description: post.excerpt,
-    keywords: [post.keyword ?? '', ...post.tags].filter(Boolean).join(', '),
-    authors: [{ name: 'Bennie Joseph' }],
+    keywords: [post.keyword ?? '', ...post.tags].filter(Boolean),
+    authors: [{ name: siteConfig.author.name, url: siteUrl }],
+    creator: siteConfig.author.name,
+    publisher: siteConfig.author.name,
     openGraph: {
       title: post.title,
       description: post.excerpt,
       type: 'article',
+      url: absoluteUrl(`/blog/${slug}`),
       publishedTime: post.date,
+      modifiedTime: post.date,
+      authors: [siteConfig.author.name],
+      section: post.tags[0],
       tags: post.tags,
-      images: [`/api/og?title=${encodeURIComponent(post.title)}&tags=${encodeURIComponent(post.tags.join(','))}`],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.excerpt,
-      images: [`/api/og?title=${encodeURIComponent(post.title)}&tags=${encodeURIComponent(post.tags.join(','))}`],
+      images: [ogImage],
     },
     alternates: {
-      canonical: `https://benniejoseph.dev/blog/${slug}`,
+      canonical: `/blog/${slug}`,
     },
   }
 }
@@ -77,15 +88,28 @@ export default async function PostPage({ params }: Props) {
   if (!post) notFound()
 
   const related = getRelatedPosts(slug, post.tags)
+  const postUrl = absoluteUrl(`/blog/${slug}`)
+  const imageUrl = post.coverImage ? absoluteUrl(post.coverImage) : absoluteUrl(`/api/og?title=${encodeURIComponent(post.title)}`)
+  const wordCount = post.content.trim().split(/\s+/).filter(Boolean).length
 
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
+    '@id': `${postUrl}#article`,
     headline: post.title,
     description: post.excerpt,
+    url: postUrl,
+    mainEntityOfPage: postUrl,
+    image: imageUrl,
     datePublished: post.date,
-    author: { '@type': 'Person', name: 'Bennie Joseph', url: 'https://benniejoseph.dev' },
+    dateModified: post.date,
+    author: { '@type': 'Person', '@id': `${siteUrl}/#person`, name: siteConfig.author.name, url: siteUrl },
+    publisher: { '@type': 'Person', '@id': `${siteUrl}/#person`, name: siteConfig.author.name, url: siteUrl },
     keywords: [post.keyword, ...post.tags].filter(Boolean).join(', '),
+    articleSection: post.tags[0],
+    wordCount,
+    inLanguage: 'en',
+    isAccessibleForFree: true,
   }
 
   return (
@@ -158,19 +182,15 @@ export default async function PostPage({ params }: Props) {
               {post.coverImage && (
                 <div
                   className="relative mb-10 overflow-hidden"
-                  style={{ width: '100%', aspectRatio: '3/2', maxHeight: '480px', borderRadius: '4px', border: '1px solid var(--border-2)', position: 'relative', overflow: 'hidden' }}
+                  style={{ width: '100%', aspectRatio: '16/9', borderRadius: '4px', border: '1px solid var(--border-2)', position: 'relative', overflow: 'hidden' }}
                 >
                   <Image
                     src={post.coverImage}
                     alt={post.title}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 1200px) 100vw, 900px"
                     priority
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: 'linear-gradient(to bottom, transparent 55%, var(--void) 100%)' }}
                   />
                 </div>
               )}
