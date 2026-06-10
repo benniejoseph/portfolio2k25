@@ -30,27 +30,72 @@ if (!fs.existsSync(postPath)) {
   process.exit(1)
 }
 
-const { data } = matter(fs.readFileSync(postPath, 'utf-8'))
+const { data, content } = matter(fs.readFileSync(postPath, 'utf-8'))
 
 const title   = (data.title   as string) ?? slug
 const excerpt = (data.excerpt as string) ?? ''
 const tags    = (data.tags    as string[]) ?? []
 
-const postUrl    = `https://benniejoseph.dev/blog/${slug}`
+const postUrl    = `https://www.bennierichard.com/blog/${slug}`
 const shareUrl   = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`
 const hashtags   = tags.map(t => `#${t.replace(/[^a-zA-Z0-9]/g, '')}`).join(' ')
 
-// ── The actual LinkedIn post copy ──────────────────────────────────────────
-const linkedInPost = `🚀 New post on my blog:
+// ── Strip markdown formatting so it reads cleanly as plain LinkedIn text ──
+function toPlainText(md: string): string {
+  return md
+    .replace(/^>\s?/gm, '')             // > blockquote -> plain line
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold** -> bold
+    .replace(/\*(.+?)\*/g, '$1')       // *italic* -> italic
+    .replace(/`([^`]+)`/g, '$1')       // `code` -> code
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // [text](link) -> text
+    .trim()
+}
 
-${title}
+// ── Pull the TL;DR bullets out of the post body for a quick gist ──────────
+function extractTldr(body: string): string[] {
+  const match = body.match(/##\s*TL;?DR\s*\n([\s\S]*?)(?:\n##\s|$)/i)
+  if (!match) return []
+  return match[1]
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('-') || l.startsWith('*'))
+    .map((l) => toPlainText(l.replace(/^[-*]\s*/, '')))
+    .filter(Boolean)
+}
+
+// ── Pull the opening hook paragraph (first non-empty line of the body) ────
+function extractHook(body: string): string {
+  const firstParagraph = body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .find(
+      (p) =>
+        p &&
+        !p.startsWith('#') &&
+        !p.startsWith('!') &&
+        !p.startsWith('---') &&
+        !p.startsWith('`') &&
+        !p.endsWith(':') // skip lead-ins to code blocks/lists
+    )
+  return firstParagraph ? toPlainText(firstParagraph) : ''
+}
+
+const tldrBullets = extractTldr(content)
+const hook = extractHook(content)
+
+const tldrSection = tldrBullets.length
+  ? `\nHere's the gist 👇\n${tldrBullets.map((b) => `✅ ${b}`).join('\n')}\n`
+  : ''
+
+// ── The actual LinkedIn post copy ──────────────────────────────────────────
+const linkedInPost = `🚀 New post: ${title}
 
 ${excerpt}
+${hook && hook !== excerpt ? `\n${hook}\n` : ''}${tldrSection}
+Full breakdown with real code examples 👇
+${postUrl}
 
-${hashtags} #SalesforceDeveloper #AIBuilder #TechBlog
-
-Full post 👇
-${postUrl}`
+${hashtags} #SalesforceDeveloper #AIBuilder #TechBlog`
 
 // ── 1. stdout ──────────────────────────────────────────────────────────────
 console.log('\n' + '─'.repeat(60))
@@ -78,7 +123,7 @@ ${linkedInPost}
 | Action | Link |
 |--------|------|
 | 🔗 Open LinkedIn share dialog (URL pre-filled) | [Share on LinkedIn](${shareUrl}) |
-| 📖 Preview post on site | [benniejoseph.dev/blog/${slug}](${postUrl}) |
+| 📖 Preview post on site | [bennierichard.com/blog/${slug}](${postUrl}) |
 
 > **Tip:** Open the share link → paste the text above → post. Takes ~30 seconds.
 `
