@@ -27,8 +27,8 @@ export interface GeneratePostOptions {
 const AI_LANDSCAPE = `
 CURRENT DATE: ${new Date().toISOString().split('T')[0]}
 
-CURRENT AI MODEL VERSIONS (as of May 2026 — use these in ALL code examples and comparisons):
-- Anthropic Claude: claude-sonnet-4-7 (latest), claude-opus-4-7 (most capable), claude-haiku-4-7 (fast/cheap)
+CURRENT AI MODEL VERSIONS (as of June 2026 — use these in ALL code examples and comparisons):
+- Anthropic Claude: claude-sonnet-4-7 (latest), claude-opus-4-8 (most capable), claude-haiku-4-7 (fast/cheap)
   API version header: anthropic-version: 2026-01-01
 - OpenAI GPT: gpt-5.5 (latest flagship), gpt-5.5-mini (fast/cheap), o3 (reasoning)
   Use model ID: "gpt-5.5" in all code
@@ -39,17 +39,26 @@ CURRENT AI MODEL VERSIONS (as of May 2026 — use these in ALL code examples and
 - Agentforce: Agentforce 2.0 (released Winter '26), Atlas Reasoning Engine v2
 
 CURRENT SALESFORCE VERSIONS:
-- Salesforce API: v64.0 (Summer '26)
-- LWC: supports native state management (Summer '26)
-- Agentforce: 2.0 with multi-agent orchestration, custom reasoning steps
-- Data Cloud: Real-time unification, vector search native
+- Salesforce API: v64.0 (Summer '26); v67.0 next — SOQL/DML/Database methods default to user mode; WITH SECURITY_ENFORCED removed (use WITH USER_MODE)
+- LWC: native state management GA (Summer '26)
+- Agentforce: 2.0 with multi-agent orchestration, custom reasoning steps, Atlas Reasoning Engine v2
+- Agentforce Builder (new GA): Agent Script language (.agent files), AiAuthoringBundle metadata type; old builder deprecated July 2026
+- Agentforce DX: sf agent CLI (generate agent-spec, preview, sessions, end); @salesforce/mcp package; open-sourced Agent Script toolchain (parser, linter, LSP)
+- Salesforce MCP (@salesforce/mcp): 60+ MCP tools, 30+ coding skills, GA for Enterprise Edition+; MuleSoft API-to-MCP; Heroku MCP hosting; AgentExchange MCP marketplace
+- Salesforce Headless 360 (announced TDX April 2026): entire platform as API + MCP + CLI — 4000+ APIs, 220+ CLI commands, 60+ MCP tools, no browser required
+- Data 360 (formerly Data Cloud): Zero Copy federation (Snowflake/BigQuery), Federated Grounding, native vector search, Unified Catalog, Retriever API for unstructured data
+- Apex security: v67 defaults all SOQL/DML to user mode; classes without explicit sharing declaration now default to 'with sharing'
+- GraphQL API: GA with full CRUD support (Summer '26); Named Query API GA
+- Conditional Composite API: reduces API call volume 40-60%
+- CI/CD: sf CLI credential security overhaul — credentials redacted in outputs; separate commands to view credentials; breaking change for existing pipelines
 
 DO NOT reference or use: claude-3-5-sonnet, gpt-4, gpt-4.1, claude-opus-4-5, claude-sonnet-4-5,
-anthropic-version 2023-06-01, Salesforce API v59/v61/v62. These are outdated.
+anthropic-version 2023-06-01, Salesforce API v59/v61/v62, "Data Cloud" (use Data 360),
+WITH SECURITY_ENFORCED (removed in v67), legacy Agentforce Builder. These are outdated.
 `
 // ──────────────────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
+const SYSTEM_PROMPT = `You are a Salesforce Architecht and a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
 with 9+ years of enterprise experience who also builds AI agents and SaaS products.
 
 Write in first-person, opinionated, practitioner tone. No fluff. No filler paragraphs.
@@ -61,7 +70,7 @@ Rules:
 - Every post MUST include at least one real code snippet (Apex, LWC, TypeScript, or Python)
 - Every post MUST include a real-world example from enterprise projects
 - Every post MUST end with a TL;DR section (3 bullet points max)
-- Word count: 1200–1800 words
+- Word count: 1200–2800 words
 - Format: valid MDX with frontmatter
 - Use ## for H2, ### for H3
 - Code blocks must specify language: \`\`\`apex, \`\`\`typescript, etc.
@@ -604,5 +613,85 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     keyword: 'einstein 1 platform vs custom llm stack',
     pillar: 'salesforce',
     tags: ['Salesforce', 'Einstein', 'AI', 'Architecture'],
+  },
+
+  // ── June 2026 — Headless 360, MCP, Agent Script, API v67, Data 360 ──────────
+  {
+    title: 'Salesforce Headless 360: The Entire Platform Is Now an API',
+    keyword: 'salesforce headless 360 api mcp cli',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Headless360', 'API', 'MCP'],
+  },
+  {
+    title: 'Building with @salesforce/mcp: Connect AI Agents to Your Org Without Code',
+    keyword: 'salesforce mcp model context protocol agentforce',
+    pillar: 'ai-agentic',
+    tags: ['Salesforce', 'MCP', 'Agentforce', 'AI'],
+  },
+  {
+    title: 'Agent Script: The New Language for Building Agentforce Agents',
+    keyword: 'agent script agentforce builder language 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Agentforce', 'Agent Script', 'Summer26'],
+  },
+  {
+    title: 'Agentforce DX: CI/CD, Metadata Lifecycle, and the .agent File',
+    keyword: 'agentforce dx metadata lifecycle aiauthoringbundle 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Agentforce', 'DevOps', 'CI/CD'],
+  },
+  {
+    title: 'Apex API v67: User Mode Is Now the Default — What Breaks and What to Fix',
+    keyword: 'apex api v67 user mode default soql security 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Apex', 'Security', 'API'],
+  },
+  {
+    title: 'Data 360 Federated Grounding: RAG Without Moving Your Data',
+    keyword: 'salesforce data 360 federated grounding vector search rag',
+    pillar: 'ai-agentic',
+    tags: ['Salesforce', 'Data360', 'RAG', 'AI', 'Agentforce'],
+  },
+  {
+    title: 'Salesforce GraphQL API Is GA: When to Use It Over REST',
+    keyword: 'salesforce graphql api ga vs rest soql 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'GraphQL', 'API', 'REST'],
+  },
+  {
+    title: 'Salesforce CI/CD Security Overhaul 2026: What Breaks and How to Fix It',
+    keyword: 'salesforce cicd sf cli security credential update 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'DevOps', 'CI/CD', 'Security'],
+  },
+  {
+    title: 'sf agent CLI: The Developer Guide to Headless Agentforce Automation',
+    keyword: 'sf agent cli commands headless agentforce dx 2026',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'CLI', 'Agentforce', 'DevOps'],
+  },
+  {
+    title: 'Conditional Composite API: Cut Your Salesforce API Calls by 40%',
+    keyword: 'salesforce conditional composite api v64 reduce api calls',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'API', 'Performance', 'Integration'],
+  },
+  {
+    title: 'Salesforce Named Query API: Typed, Versioned SOQL Without String Bugs',
+    keyword: 'salesforce named query api ga summer 26',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'API', 'SOQL', 'Summer26'],
+  },
+  {
+    title: 'Data 360 Zero Copy: How to Connect Snowflake and BigQuery Without ETL',
+    keyword: 'salesforce data 360 zero copy snowflake bigquery federation',
+    pillar: 'salesforce',
+    tags: ['Salesforce', 'Data360', 'Integration', 'Architecture'],
+  },
+  {
+    title: 'Agentforce Multi-Model Routing: Picking the Right LLM per Task',
+    keyword: 'agentforce multi model routing gpt claude gemini 2026',
+    pillar: 'ai-agentic',
+    tags: ['Salesforce', 'Agentforce', 'AI', 'Architecture'],
   },
 ]

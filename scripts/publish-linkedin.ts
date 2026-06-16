@@ -63,35 +63,53 @@ function extractTldr(body: string): string[] {
     .filter(Boolean)
 }
 
-// ── Pull the opening hook paragraph (first non-empty line of the body) ────
-function extractHook(body: string): string {
-  const firstParagraph = body
+// ── Pull the opening narrative paragraphs (skip headings, images, code, lists) ──
+function extractIntroParagraphs(body: string, count: number): string[] {
+  return body
     .split(/\n\s*\n/)
     .map((p) => p.trim())
-    .find(
+    .filter(
       (p) =>
         p &&
         !p.startsWith('#') &&
         !p.startsWith('!') &&
         !p.startsWith('---') &&
         !p.startsWith('`') &&
+        !p.startsWith('-') &&
+        !p.startsWith('|') &&
         !p.endsWith(':') // skip lead-ins to code blocks/lists
     )
-  return firstParagraph ? toPlainText(firstParagraph) : ''
+    .slice(0, count)
+    .map(toPlainText)
+}
+
+// ── A tag-aware prompt to spark comments/discussion ────────────────────────
+function buildDiscussionQuestion(keyword: string, tags: string[]): string {
+  const subject = keyword || tags[0] || 'this'
+  return `💬 Where does your team stand on ${subject}? Drop a comment — I'd love to compare notes.`
 }
 
 const tldrBullets = extractTldr(content)
-const hook = extractHook(content)
+const introParagraphs = extractIntroParagraphs(content, 2).filter((p) => p !== excerpt)
+const keyword = (data.keyword as string) ?? ''
+
+const introSection = introParagraphs.length
+  ? `\n${introParagraphs.join('\n\n')}\n`
+  : ''
 
 const tldrSection = tldrBullets.length
   ? `\nHere's the gist 👇\n${tldrBullets.map((b) => `✅ ${b}`).join('\n')}\n`
   : ''
 
+const discussionQuestion = buildDiscussionQuestion(keyword, tags)
+
 // ── The actual LinkedIn post copy ──────────────────────────────────────────
 const linkedInPost = `🚀 New post: ${title}
 
 ${excerpt}
-${hook && hook !== excerpt ? `\n${hook}\n` : ''}${tldrSection}
+${introSection}${tldrSection}
+${discussionQuestion}
+
 Full breakdown with real code examples 👇
 ${postUrl}
 
