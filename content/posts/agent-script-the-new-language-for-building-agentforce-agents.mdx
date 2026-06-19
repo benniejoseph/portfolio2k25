@@ -1,0 +1,567 @@
+---
+title: "Agent Script: The New Language for Building Agentforce Agents"
+excerpt: "Agent Script is the Agentforce Builder language 2026 teams need for versioned, testable, CI-ready Agentforce agents."
+date: "2026-06-19"
+tags: ["Salesforce", "Agentforce", "Agent Script", "Summer26"]
+keyword: "agent script agentforce builder language 2026"
+featured: false
+coverImage: /images/blog/agent-script-the-new-language-for-building-agentforce-agents/cover.png
+---
+
+
+Agent Script is the first Agentforce feature in a while that made me say: good, now we can treat agents like actual software.
+
+The primary keyword here is **agent script agentforce builder language 2026**, but the practical point is simpler: if your enterprise Agentforce implementation still depends on screenshots, manual prompt edits, and undocumented production tweaks, you are building operational risk into your AI layer.
+
+Agentforce 2.0, released in Winter ’26, changes the conversation. We now have multi-agent orchestration, custom reasoning steps, Atlas Reasoning Engine v2, the new GA Agentforce Builder, the `.agent` file format, the `AiAuthoringBundle` metadata type, Agentforce DX, and the `sf agent` CLI.
+
+That means agents can move through the same engineering lifecycle as Apex, LWC, Flow metadata, GraphQL Named Queries, and permission sets.
+
+Here’s the unpopular take: the biggest Agentforce skill in 2026 is not prompt writing. It is **agent software engineering**.
+
+## What Agent Script Actually Solves
+
+Agent Script gives me a text-first way to define an Agentforce agent.
+
+That matters because most failed enterprise agent programs do not fail because the model is weak. Salesforce has strong native orchestration now with Agentforce 2.0 and Atlas Reasoning Engine v2. They fail because teams cannot answer basic questions:
+
+- What changed in this agent last Thursday?
+- Which prompt version caused the refund escalation bug?
+- Who approved this reasoning step?
+- Which Apex action does the agent call?
+- Does this agent use Data 360 grounding or raw CRM records?
+- Can I test this before production?
+- Can I promote it across sandboxes without a click checklist?
+
+Agent Script answers those questions by moving agent definition into files.
+
+A `.agent` file can define the agent identity, instructions, topics, actions, guardrails, grounding, orchestration rules, and test scenarios. Those files compile into Salesforce metadata through `AiAuthoringBundle`.
+
+That is the right abstraction. I do not want production AI behavior trapped inside a browser-only builder. I want it in Git, reviewed in pull requests, scanned in CI, promoted with packages, and validated with preview sessions.
+
+## Agent Script Is Not Just “Prompts in Git”
+
+A lot of teams will misunderstand Agent Script at first. They will treat it like a glorified prompt template.
+
+That is too small.
+
+A production Agentforce agent is not a prompt. It is a controlled runtime contract between:
+
+- user intent
+- CRM security
+- business rules
+- grounded enterprise data
+- deterministic actions
+- reasoning steps
+- escalation paths
+- observability
+
+Agent Script is the language layer for that contract.
+
+A simplified `.agent` definition for a service agent might look like this:
+
+```typescript
+// support-order-resolution.agent
+agent SupportOrderResolutionAgent {
+  apiVersion = "64.0"
+  runtime = "agentforce-2.0"
+  reasoningEngine = "atlas-v2"
+
+  description = "Resolves customer order status and delivery exception questions."
+
+  instructions {
+    role = "You are a service operations agent for authenticated customers."
+    tone = "Clear, concise, and policy-safe."
+    refusal = "Do not expose internal margin, fraud scores, or employee-only notes."
+  }
+
+  grounding {
+    salesforce {
+      objects = ["Case", "Order__c", "Shipment__c", "Knowledge__kav"]
+      mode = "user"
+    }
+
+    data360 {
+      retriever = "delivery_policy_retriever"
+      maxChunks = 5
+      requireCitation = true
+    }
+  }
+
+  topic orderStatus {
+    trigger = "Customer asks about order status, delivery ETA, or shipment delay."
+
+    action getOrderStatus {
+      type = "apex"
+      className = "OrderStatusAgentAction"
+      method = "getStatus"
+      access = "user"
+      timeoutMs = 8000
+    }
+
+    respond {
+      include = ["status", "estimatedDeliveryDate", "nextBestAction"]
+      citeGrounding = true
+    }
+  }
+
+  topic escalation {
+    trigger = "Customer reports lost delivery, damaged item, or third failed delivery."
+
+    handoff {
+      target = "ServiceQueue.DeliveryExceptions"
+      createCase = true
+      priority = "High"
+    }
+  }
+
+  guardrails {
+    pii = "mask"
+    financialRefundLimit = 250
+    requireHumanApprovalWhen = [
+      "refundAmount > financialRefundLimit",
+      "customerSentiment == 'angry'",
+      "policyConfidence < 0.70"
+    ]
+  }
+
+  tests {
+    scenario "authenticated customer asks for delayed order" {
+      input = "Where is order SO-104921? It was supposed to arrive yesterday."
+      expectAction = "getOrderStatus"
+      expectNoEscalation = true
+    }
+
+    scenario "customer demands refund above limit" {
+      input = "Refund my $600 order now."
+      expectHumanApproval = true
+    }
+  }
+}
+```
+
+Do not get distracted by syntax. The point is the shape of the asset.
+
+I can now review the agent like software. I can see grounding. I can see action boundaries. I can see guardrails. I can see tests. I can see whether the agent is allowed to perform a refund or only recommend one.
+
+That is a different world from “we changed the prompt in production and hope it behaves.”
+
+## The Enterprise Example: Order Exceptions at Scale
+
+On one enterprise service project, the client had roughly 1.8 million active customer accounts and a messy order fulfillment process across Salesforce, an ERP, and a third-party logistics provider.
+
+The business wanted an Agentforce agent to answer order status questions and create exception cases. The first prototype worked in demos but failed my production-readiness test.
+
+Why?
+
+Because the agent could answer simple questions, but nobody could explain the runtime boundary:
+
+- Was the agent reading customer-visible delivery notes or internal warehouse notes?
+- Could it create a case under a user who lacked Case create permission?
+- What happened when the ERP returned conflicting delivery dates?
+- Did refund language come from policy knowledge or model improvisation?
+- How would QA test 40 edge cases after a prompt change?
+
+Agent Script would have changed that implementation plan.
+
+I would define three agents, not one:
+
+1. **Customer Order Agent** for authenticated customer conversations.
+2. **Delivery Exception Agent** for operational triage.
+3. **Refund Policy Agent** for grounded policy interpretation.
+
+Then I would use Agentforce 2.0 multi-agent orchestration to route between them. The Customer Order Agent should not decide refund eligibility by itself. It should ask the Refund Policy Agent for policy interpretation and hand off high-risk actions to humans.
+
+The important part: each agent gets its own `.agent` file, action contracts, tests, and deployment path.
+
+That is how I keep autonomy from turning into chaos.
+
+
+![Agent Script source control workflow with bad and good patterns](/images/blog/agent-script-the-new-language-for-building-agentforce-agents/image-1.png)
+
+
+## The Apex Action Still Matters
+
+Here is where I get opinionated again: Agent Script does not remove the need for good Apex.
+
+If your agent calls sloppy Apex, you now have a fast, confident interface on top of bad business logic. That is worse than a slow UI.
+
+For Agentforce actions, I still write Apex with the same standards I use for enterprise automation:
+
+- explicit sharing
+- user-mode data access
+- bulk-safe inputs
+- predictable response DTOs
+- no hidden DML surprises
+- no business logic inside prompt text
+
+Here is a simplified Apex action I would expose to an Agentforce order status topic.
+
+```apex
+public with sharing class OrderStatusAgentAction {
+    public class Request {
+        @InvocableVariable(required=true label='Order Number')
+        public String orderNumber;
+    }
+
+    public class Response {
+        @InvocableVariable(label='Order Number')
+        public String orderNumber;
+
+        @InvocableVariable(label='Status')
+        public String status;
+
+        @InvocableVariable(label='Estimated Delivery Date')
+        public Date estimatedDeliveryDate;
+
+        @InvocableVariable(label='Next Best Action')
+        public String nextBestAction;
+
+        @InvocableVariable(label='Found')
+        public Boolean found;
+    }
+
+    @InvocableMethod(
+        label='Get Order Status for Agentforce'
+        description='Returns customer-visible order status and next best action.'
+    )
+    public static List<Response> getStatus(List<Request> requests) {
+        Set<String> orderNumbers = new Set<String>();
+
+        for (Request request : requests) {
+            if (String.isNotBlank(request.orderNumber)) {
+                orderNumbers.add(request.orderNumber.trim());
+            }
+        }
+
+        Map<String, Order__c> ordersByNumber = new Map<String, Order__c>();
+
+        if (!orderNumbers.isEmpty()) {
+            for (Order__c orderRecord : [
+                SELECT
+                    Id,
+                    Name,
+                    Status__c,
+                    Estimated_Delivery_Date__c,
+                    Delivery_Exception_Code__c
+                FROM Order__c
+                WHERE Name IN :orderNumbers
+                WITH USER_MODE
+            ]) {
+                ordersByNumber.put(orderRecord.Name, orderRecord);
+            }
+        }
+
+        List<Response> responses = new List<Response>();
+
+        for (Request request : requests) {
+            Response response = new Response();
+            response.orderNumber = request.orderNumber;
+            response.found = false;
+
+            Order__c orderRecord = ordersByNumber.get(request.orderNumber);
+
+            if (orderRecord == null) {
+                response.status = 'Not found';
+                response.nextBestAction = 'Ask the customer to confirm the order number.';
+            } else {
+                response.found = true;
+                response.status = orderRecord.Status__c;
+                response.estimatedDeliveryDate = orderRecord.Estimated_Delivery_Date__c;
+                response.nextBestAction = determineNextBestAction(orderRecord);
+            }
+
+            responses.add(response);
+        }
+
+        return responses;
+    }
+
+    private static String determineNextBestAction(Order__c orderRecord) {
+        if (orderRecord.Delivery_Exception_Code__c == 'LOST') {
+            return 'Create a delivery exception case for human review.';
+        }
+
+        if (orderRecord.Status__c == 'Delivered') {
+            return 'Confirm delivery and offer help with returns if needed.';
+        }
+
+        if (orderRecord.Estimated_Delivery_Date__c != null &&
+            orderRecord.Estimated_Delivery_Date__c < Date.today()) {
+            return 'Apologize and create a delayed delivery case.';
+        }
+
+        return 'Provide the current delivery status to the customer.';
+    }
+}
+```
+
+Notice the boring parts. They are the important parts.
+
+The query uses `WITH USER_MODE`. The class is `with sharing`. The response only returns fields the agent needs. The method supports multiple requests. The action returns structured data instead of asking the model to infer everything from raw records.
+
+In Salesforce API v64.0, I still prefer being explicit about user-mode behavior. Looking ahead, v67.0 makes user mode the default for SOQL, DML, and Database methods, and classes without an explicit sharing declaration default to `with sharing`. I still write the declaration because future maintainers should not need release-note archaeology to understand the security posture.
+
+## How I Structure an Agent Script Project
+
+For a serious Agentforce program, I do not put all files in a random folder named `agents`.
+
+I use a structure like this:
+
+```typescript
+// package-layout.ts
+export const agentforceProjectLayout = {
+  forceApp: {
+    main: {
+      default: {
+        aiAuthoringBundles: [
+          'support-order-resolution',
+          'delivery-exception-triage',
+          'refund-policy-advisor'
+        ],
+        classes: [
+          'OrderStatusAgentAction.cls',
+          'DeliveryExceptionCaseAction.cls',
+          'RefundEligibilityAction.cls'
+        ],
+        permissionsets: [
+          'Agentforce_Service_Actions.permissionset-meta.xml'
+        ]
+      }
+    }
+  },
+  agentScripts: [
+    'agents/support-order-resolution.agent',
+    'agents/delivery-exception-triage.agent',
+    'agents/refund-policy-advisor.agent'
+  ],
+  tests: [
+    'agent-tests/order-delay.scenario.json',
+    'agent-tests/refund-limit.scenario.json',
+    'agent-tests/lost-package-escalation.scenario.json'
+  ]
+};
+```
+
+The exact folder structure matters less than the principle: separate agent behavior, Apex actions, permissions, grounding assets, and tests.
+
+I also keep agent scenarios close to the agent script. If the Refund Policy Agent changes its guardrail from `$250` to `$500`, I want the test diff in the same pull request.
+
+## CI/CD With Agentforce DX
+
+Agentforce DX is the part that makes Agent Script operational.
+
+The `sf agent` CLI gives teams a way to generate agent specs, preview behavior, inspect sessions, and end sessions without treating the browser as the deployment tool. Combined with the `AiAuthoringBundle` metadata type, I can put agents into normal Salesforce release pipelines.
+
+A typical CI flow should do this:
+
+1. Lint `.agent` files.
+2. Validate referenced Apex actions exist.
+3. Validate permissions are included.
+4. Run Apex tests.
+5. Generate or validate the agent spec.
+6. Run preview sessions against scenario files.
+7. Deploy to integration sandbox.
+8. Promote through UAT and production.
+
+I also care about Salesforce’s 2026 CLI credential security overhaul. Credentials are redacted in CLI output now, and separate commands are required to view credentials. That is a good breaking change. If your pipeline scraped CLI output for auth details, fix it. Do not work around the security model.
+
+Here is a TypeScript example of a lightweight CI validation script I would run before deployment. It checks that every action referenced by an agent script maps to an Apex class file in the repo.
+
+```typescript
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+type AgentActionReference = {
+  agentFile: string;
+  className: string;
+  methodName: string;
+};
+
+const AGENT_DIR = 'agents';
+const APEX_CLASS_DIR = 'force-app/main/default/classes';
+
+function findAgentFiles(): string[] {
+  return readdirSync(AGENT_DIR)
+    .filter((fileName) => fileName.endsWith('.agent'))
+    .map((fileName) => join(AGENT_DIR, fileName));
+}
+
+function extractActionReferences(agentFile: string): AgentActionReference[] {
+  const source = readFileSync(agentFile, 'utf8');
+  const actionRegex = /className\s*=\s*"(?<className>[A-Za-z0-9_]+)"[\s\S]*?method\s*=\s*"(?<methodName>[A-Za-z0-9_]+)"/g;
+
+  const references: AgentActionReference[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = actionRegex.exec(source)) !== null) {
+    references.push({
+      agentFile,
+      className: match.groups?.className ?? '',
+      methodName: match.groups?.methodName ?? ''
+    });
+  }
+
+  return references;
+}
+
+function assertApexClassExists(reference: AgentActionReference): void {
+  const apexClassPath = join(APEX_CLASS_DIR, `${reference.className}.cls`);
+
+  if (!existsSync(apexClassPath)) {
+    throw new Error(
+      `Agent action reference is invalid. ` +
+      `${reference.agentFile} references ${reference.className}.${reference.methodName}, ` +
+      `but ${apexClassPath} does not exist.`
+    );
+  }
+}
+
+const references = findAgentFiles().flatMap(extractActionReferences);
+
+for (const reference of references) {
+  assertApexClassExists(reference);
+}
+
+console.log(`Validated ${references.length} Agentforce Apex action references.`);
+```
+
+This is intentionally simple. I do not need a massive framework to catch stupid mistakes. A missing Apex class reference should fail the pull request before anyone opens Agentforce Builder.
+
+
+![Agent Script CI checks for Apex actions and preview sessions](/images/blog/agent-script-the-new-language-for-building-agentforce-agents/image-2.png)
+
+
+## Where MCP Fits
+
+Salesforce MCP matters because agents need tools, not just instructions.
+
+The `@salesforce/mcp` package gives enterprise teams access to Salesforce MCP tools and coding skills. With Salesforce Headless 360, the direction is clear: Salesforce is becoming API + MCP + CLI accessible across the platform. No browser required for serious engineering workflows.
+
+For Agentforce, MCP gives me a cleaner way to expose operational capabilities to agents, especially when the source system is not only Salesforce.
+
+A pattern I like:
+
+- Use Apex actions for transactional Salesforce business logic.
+- Use MuleSoft API-to-MCP for governed external APIs.
+- Use Data 360 Retriever API for unstructured policy and knowledge grounding.
+- Use Agent Script to define which agent can use which tool and under what guardrails.
+
+Do not give every agent every tool. That is lazy architecture.
+
+The Customer Order Agent should not have direct access to refund approval tools. The Refund Policy Agent should not create shipment exception cases. The Delivery Exception Agent should not browse unrelated customer financial data.
+
+Tool boundaries are security boundaries.
+
+## Agent Script and Data 360 Grounding
+
+Agent Script also makes grounding explicit, and that is a big deal.
+
+Data 360 now gives teams Zero Copy federation, Federated Grounding, native vector search, Unified Catalog, and the Retriever API for unstructured data. That means your agent can answer from governed data without copying everything into a random vector database your security team hates.
+
+In the service example, I would ground the Refund Policy Agent on:
+
+- published refund policies
+- region-specific exceptions
+- product warranty terms
+- customer-visible knowledge articles
+- historical case resolution snippets, if approved
+
+I would not ground it on:
+
+- internal legal drafts
+- employee coaching notes
+- raw Slack exports
+- unrestricted ERP tables
+- stale PDF folders nobody owns
+
+Agent Script should name the retriever or grounding source. If I cannot tell where an answer came from, I do not trust the answer in an enterprise workflow.
+
+## How This Changes Agentforce Builder
+
+The new GA Agentforce Builder is still useful. I like visual tools for discovery, demos, and business collaboration.
+
+But Agent Script changes what the builder is for.
+
+In my ideal workflow:
+
+1. Business and admins shape the agent in Agentforce Builder.
+2. Architects export or generate the agent spec.
+3. Developers refine the `.agent` files.
+4. QA owns scenario tests.
+5. DevOps promotes `AiAuthoringBundle` metadata.
+6. Production changes go through pull requests.
+
+The previous UI-first authoring model is deprecated in July 2026, and that is the right call. AI behavior is too important to live outside release management.
+
+This does not mean admins are pushed out. It means admins, developers, architects, and compliance teams can finally collaborate on the same artifact.
+
+## Model Choice Still Matters, But Less Than Boundaries
+
+Every Agentforce architecture discussion eventually drifts into model comparisons. I get it. Models matter.
+
+As of June 2026, the relevant enterprise comparison is not old model IDs. It is current capability and cost:
+
+- Claude Sonnet 4.7 is strong for balanced enterprise reasoning.
+- Claude Opus 4.8 is the heavy-duty option when quality matters more than cost.
+- GPT-5.5 is the current OpenAI flagship.
+- GPT-5.5-mini is the fast and cheaper option.
+- o3 is still useful when explicit reasoning depth is the requirement.
+- Gemini 3.1 Pro and Ultra are strong options depending on Google ecosystem fit.
+- Llama 4 Scout matters when local/open-source constraints dominate.
+
+But inside Salesforce, I care more about Agentforce-native governance than model fashion. Einstein Copilot powered by Agentforce, Agentforce 2.0, Atlas Reasoning Engine v2, Data 360 grounding, and Salesforce security boundaries are what make the platform viable for enterprise work.
+
+The model is the engine. Agent Script is the chassis, wiring, safety system, and maintenance manual.
+
+## What I Would Standardize on Day One
+
+If I were starting an Agentforce 2.0 program today, I would enforce these standards immediately:
+
+### 1. Every production agent has a `.agent` file
+
+No exceptions. If the behavior matters, it belongs in source control.
+
+### 2. Every action has an owner
+
+Apex action, MCP tool, MuleSoft API, Retriever source — someone owns it. Agents should not depend on mystery integrations.
+
+### 3. Every high-risk topic has tests
+
+Refunds, cancellations, escalations, medical, financial, legal, contractual, employment, security — test them.
+
+### 4. Every agent has least-privilege tools
+
+Do not create a super-agent with access to everything. That is how teams create AI-powered permission problems.
+
+### 5. Every answer path has observability
+
+Use Agentforce sessions, logs, preview results, and business outcome metrics. If you cannot inspect behavior, you cannot improve it.
+
+## The Real Shift
+
+Agent Script is not just a new Agentforce Builder language in 2026. It is Salesforce admitting that agents are now first-class enterprise software assets.
+
+That is the shift.
+
+We went through this with Apex. We went through it with LWC. We went through it with metadata-driven DevOps. Now we are going through it with AI agents.
+
+The teams that win will not be the teams with the longest prompts. They will be the teams with the clearest contracts:
+
+- what the agent can do
+- what the agent cannot do
+- what data it can use
+- what tools it can call
+- when it must escalate
+- how it is tested
+- how it is deployed
+
+Agent Script gives us the language for those contracts.
+
+Use it like an architect, not like a prompt hobbyist.
+
+## TL;DR
+
+- Agent Script makes Agentforce agents versioned, testable, reviewable software assets through `.agent` files and `AiAuthoringBundle`.
+- The best Agentforce 2.0 implementations combine Agent Script, user-mode Apex actions, Data 360 grounding, MCP tools, and CI preview sessions.
+- Do not build super-agents; build bounded agents with clear tools, guardrails, tests, and escalation paths.
