@@ -1,0 +1,653 @@
+---
+title: "Data 360 Federated Grounding: RAG Without Moving Your Data"
+excerpt: "Build Salesforce Data 360 federated grounding, vector search, and RAG for Agentforce without copying enterprise data."
+date: "2026-06-22"
+tags: ["Salesforce", "Data360", "RAG", "AI", "Agentforce"]
+keyword: "salesforce data 360 federated grounding vector search rag"
+featured: false
+coverImage: /images/blog/data-360-federated-grounding-rag-without-moving-your-data/cover.png
+---
+
+
+Most enterprise RAG implementations fail for one boring reason: the data is not where the AI team wants it to be.
+
+Sales agreements live in Snowflake. Product telemetry sits in BigQuery. Knowledge articles are in Salesforce. Policy PDFs are in SharePoint. Case history is in Service Cloud. Then somebody says, “Let’s copy everything into a vector database.”
+
+Here’s the unpopular take: if your first move is duplicating regulated enterprise data into another datastore, you probably designed the system around the demo, not the business.
+
+Data 360 Federated Grounding changes the shape of the problem. Instead of moving everything into one AI-specific repository, I can ground Agentforce 2.0 responses against governed enterprise data where it already lives, using Data 360 federation, native vector search, the Retriever API, and Salesforce security boundaries.
+
+That is the practical version of `salesforce data 360 federated grounding vector search rag`: RAG without turning your architecture into a data-copying mess.
+
+## What Federated Grounding Actually Means
+
+RAG has three jobs:
+
+1. Retrieve relevant context.
+2. Ground the model on that context.
+3. Generate an answer with traceable citations.
+
+Traditional RAG usually means this:
+
+- Extract data from source systems.
+- Transform it into chunks.
+- Generate embeddings.
+- Store chunks and vectors in a vector database.
+- Query the vector database at runtime.
+- Send top matches to the model.
+
+That works for small, clean, non-regulated datasets. It gets ugly in enterprise Salesforce implementations.
+
+Federated grounding flips the design. Data 360 becomes the governed semantic and retrieval layer across source systems. With Zero Copy federation, Unified Catalog, native vector search, and Retriever API access, I can retrieve grounded context from Snowflake, BigQuery, Salesforce records, and unstructured sources without blindly replicating everything into an external vector store.
+
+The point is not “no data ever moves.” Embeddings, metadata, indexes, and retrieved snippets still exist somewhere. The point is that I do not need to create a second uncontrolled copy of every source record just to make an agent useful.
+
+For Agentforce 2.0, that matters because Atlas Reasoning Engine v2 is only as good as the context and policy boundaries I give it.
+
+## The Bad RAG Pattern I Still See
+
+I still see teams build this:
+
+```typescript
+const answer = await openai.responses.create({
+  model: "gpt-5.5",
+  input: `
+    Customer question: ${question}
+
+    Context:
+    ${allContractTextCopiedFromSomewhere}
+
+    Answer the customer.
+  `
+});
+```
+
+That code is fast to demo and dangerous in production.
+
+It usually has no source-level authorization, no row-level filtering, no data residency story, no citation discipline, and no revocation path when a contract changes. If a customer loses access to an asset today, your copied vector chunk may still answer tomorrow.
+
+In Salesforce terms, that is not an AI architecture. That is a compliance incident with a nicer UI.
+
+A better pattern is:
+
+- Data 360 handles identity-aware, governed retrieval.
+- Agentforce calls a retrieval action.
+- The retrieval action returns only allowed context.
+- The agent answers only from the retrieved context.
+- Citations are stored for audit.
+- The model is treated as a reasoning layer, not a database.
+
+
+![Bad copy-first RAG compared with Data 360 federated grounding](/images/blog/data-360-federated-grounding-rag-without-moving-your-data/image-1.png)
+
+
+## Reference Architecture I Use
+
+For enterprise Agentforce projects, I use this shape:
+
+1. **Source systems**
+   - Salesforce CRM records
+   - Knowledge articles
+   - Snowflake tables
+   - BigQuery event data
+   - SharePoint or document repositories
+   - External product databases
+
+2. **Data 360**
+   - Zero Copy federation for structured data
+   - Unified Catalog for metadata and governance
+   - Identity and policy alignment
+   - Native vector search for semantic retrieval
+   - Retriever API for unstructured and grounded retrieval
+
+3. **Salesforce platform**
+   - Apex action or Flow action exposed to Agentforce
+   - Salesforce API v64.0 for integration
+   - User-mode SOQL and DML
+   - Audit objects for prompt, retrieval, and citation logging
+
+4. **Agentforce 2.0**
+   - Agent Script-based configuration
+   - Custom reasoning step if needed
+   - Atlas Reasoning Engine v2
+   - Strict instruction: answer only from grounded context
+
+5. **Optional external model**
+   - `gpt-5.5`, `claude-sonnet-4-7`, or `gemini-3.1-pro` for specialist reasoning
+   - Only after policy-filtered context is retrieved
+
+I do not let the model directly query enterprise systems. I let the platform retrieve governed context, then the model reasons over that context.
+
+That distinction matters.
+
+## Apex Retrieval Action for Agentforce
+
+Below is a simplified Apex service pattern I use for Agentforce custom actions. The endpoint path should come from configuration in real projects. I am showing the shape because the important part is not the HTTP syntax; it is the boundary.
+
+The agent passes a question. Apex adds user context, calls the Data 360 retriever through a Named Credential, returns citations, and logs the retrieval event.
+
+```apex
+public with sharing class Data360GroundingAction {
+    public class GroundingRequest {
+        @InvocableVariable(required=true)
+        public String question;
+
+        @InvocableVariable
+        public String accountId;
+
+        @InvocableVariable
+        public Integer topK;
+    }
+
+    public class GroundingResponse {
+        @InvocableVariable
+        public String groundedContext;
+
+        @InvocableVariable
+        public String citationsJson;
+
+        @InvocableVariable
+        public Boolean hasEnoughContext;
+    }
+
+    @InvocableMethod(
+        label='Retrieve Grounded Context from Data 360'
+        description='Retrieves governed context from Data 360 for Agentforce answers.'
+    )
+    public static List<GroundingResponse> retrieve(List<GroundingRequest> requests) {
+        List<GroundingResponse> responses = new List<GroundingResponse>();
+
+        for (GroundingRequest request : requests) {
+            Integer limitSize = request.topK == null ? 8 : Math.min(request.topK, 12);
+
+            HttpRequest httpRequest = new HttpRequest();
+            httpRequest.setMethod('POST');
+            httpRequest.setEndpoint(
+                'callout:Data360Retriever/services/data/v64.0/data360/retrievers/Enterprise_Knowledge/query'
+            );
+            httpRequest.setHeader('Content-Type', 'application/json');
+            httpRequest.setTimeout(20000);
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'query' => request.question,
+                'topK' => limitSize,
+                'groundingMode' => 'FEDERATED',
+                'includeCitations' => true,
+                'filters' => new Map<String, Object>{
+                    'runningUserId' => UserInfo.getUserId(),
+                    'accountId' => request.accountId,
+                    'enforceSourcePermissions' => true
+                }
+            };
+
+            httpRequest.setBody(JSON.serialize(payload));
+
+            HttpResponse httpResponse = new Http().send(httpRequest);
+
+            if (httpResponse.getStatusCode() >= 300) {
+                throw new CalloutException(
+                    'Data 360 retrieval failed: ' +
+                    httpResponse.getStatusCode() +
+                    ' ' +
+                    httpResponse.getBody()
+                );
+            }
+
+            Map<String, Object> result =
+                (Map<String, Object>) JSON.deserializeUntyped(httpResponse.getBody());
+
+            List<Object> chunks = (List<Object>) result.get('chunks');
+            List<Object> citations = (List<Object>) result.get('citations');
+
+            GroundingResponse response = new GroundingResponse();
+            response.groundedContext = buildContext(chunks);
+            response.citationsJson = JSON.serialize(citations);
+            response.hasEnoughContext = chunks != null && chunks.size() >= 2;
+
+            responses.add(response);
+
+            insertAuditEvent(request, response);
+        }
+
+        return responses;
+    }
+
+    private static String buildContext(List<Object> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return 'NO_GROUNDED_CONTEXT_FOUND';
+        }
+
+        List<String> contextParts = new List<String>();
+
+        for (Object rawChunk : chunks) {
+            Map<String, Object> chunk = (Map<String, Object>) rawChunk;
+
+            contextParts.add(
+                'SOURCE: ' + String.valueOf(chunk.get('sourceName')) + '\n' +
+                'TITLE: ' + String.valueOf(chunk.get('title')) + '\n' +
+                'TEXT: ' + String.valueOf(chunk.get('text')) + '\n' +
+                'CITATION_ID: ' + String.valueOf(chunk.get('citationId'))
+            );
+        }
+
+        return String.join(contextParts, '\n\n---\n\n');
+    }
+
+    private static void insertAuditEvent(
+        GroundingRequest request,
+        GroundingResponse response
+    ) {
+        AI_Retrieval_Audit__c audit = new AI_Retrieval_Audit__c(
+            Question__c = request.question.left(32000),
+            Running_User__c = UserInfo.getUserId(),
+            Account__c = request.accountId,
+            Has_Enough_Context__c = response.hasEnoughContext,
+            Citations_JSON__c = response.citationsJson == null
+                ? null
+                : response.citationsJson.left(131000)
+        );
+
+        Database.insert(audit, AccessLevel.USER_MODE);
+    }
+}
+```
+
+A few things I care about in this code:
+
+- The class is explicitly `with sharing`.
+- The audit insert uses `AccessLevel.USER_MODE`.
+- The retriever receives `runningUserId` and source permission enforcement flags.
+- The response tells the agent whether there is enough context.
+- Citations are first-class output, not decoration.
+
+In Salesforce API v64.0, I still write the access mode explicitly in important security code. Yes, v67.0 is moving more platform operations toward user-mode defaults, but I do not like security by implication in AI retrieval paths.
+
+## TypeScript Version for a Headless Agent Gateway
+
+Sometimes I do not put the retrieval gateway inside Apex. For high-throughput agent systems, I put it behind a Node.js service running on Heroku, protected by Salesforce OAuth and monitored like any other integration.
+
+This example calls Data 360 first, then calls `gpt-5.5` only with retrieved context. If retrieval returns weak context, it refuses to answer.
+
+```typescript
+import OpenAI from "openai";
+
+type Data360Chunk = {
+  text: string;
+  title: string;
+  sourceName: string;
+  citationId: string;
+  score: number;
+};
+
+type Data360RetrievalResponse = {
+  chunks: Data360Chunk[];
+  citations: Array<Record<string, unknown>>;
+};
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
+export async function answerWithFederatedGrounding(input: {
+  question: string;
+  salesforceAccessToken: string;
+  instanceUrl: string;
+  runningUserId: string;
+  accountId?: string;
+}) {
+  const retrievalResponse = await fetch(
+    `${input.instanceUrl}/services/data/v64.0/data360/retrievers/Enterprise_Knowledge/query`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.salesforceAccessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        query: input.question,
+        topK: 8,
+        groundingMode: "FEDERATED",
+        includeCitations: true,
+        filters: {
+          runningUserId: input.runningUserId,
+          accountId: input.accountId,
+          enforceSourcePermissions: true
+        }
+      })
+    }
+  );
+
+  if (!retrievalResponse.ok) {
+    throw new Error(
+      `Data 360 retrieval failed: ${retrievalResponse.status} ${await retrievalResponse.text()}`
+    );
+  }
+
+  const grounded: Data360RetrievalResponse = await retrievalResponse.json();
+
+  const strongChunks = grounded.chunks.filter((chunk) => chunk.score >= 0.72);
+
+  if (strongChunks.length < 2) {
+    return {
+      answer:
+        "I do not have enough grounded enterprise context to answer that safely.",
+      citations: grounded.citations,
+      grounded: false
+    };
+  }
+
+  const context = strongChunks
+    .map(
+      (chunk) =>
+        `SOURCE=${chunk.sourceName}\nTITLE=${chunk.title}\nCITATION_ID=${chunk.citationId}\nTEXT=${chunk.text}`
+    )
+    .join("\n\n---\n\n");
+
+  const completion = await openai.responses.create({
+    model: "gpt-5.5",
+    input: [
+      {
+        role: "system",
+        content:
+          "You are an enterprise Salesforce assistant. Answer only from the grounded context. If the answer is not present, say you do not have enough context. Include citation IDs."
+      },
+      {
+        role: "user",
+        content: `Question:\n${input.question}\n\nGrounded context:\n${context}`
+      }
+    ]
+  });
+
+  return {
+    answer: completion.output_text,
+    citations: grounded.citations,
+    grounded: true
+  };
+}
+```
+
+Would I always use `gpt-5.5` here? No. For most Service Cloud agent use cases, Agentforce 2.0 with Atlas Reasoning Engine v2 is the better default because it is closer to Salesforce permissions, actions, and auditability. I use external models like `claude-sonnet-4-7`, `gpt-5.5`, or `gemini-3.1-pro` when I need a specific reasoning profile, not because I want another integration to babysit.
+
+## Real Enterprise Example: Warranty Claims Without Copying Contracts
+
+One of the cleanest use cases I worked through was a global manufacturing support process.
+
+The business problem was simple:
+
+A service rep or partner asked:
+
+> “Is this customer entitled to an expedited replacement for asset X under their current contract and recent failure history?”
+
+The data was not simple:
+
+- Customer and asset records were in Salesforce.
+- Contract terms were mastered in Snowflake.
+- Machine telemetry was in BigQuery.
+- Historical cases were in Service Cloud.
+- Repair policy PDFs were in a document repository.
+- Regional entitlement rules had country-level restrictions.
+
+The first proposed design was classic RAG: copy contract text, policy documents, case summaries, and telemetry summaries into an external vector database.
+
+I rejected that design.
+
+Not because vector databases are bad. They are useful. I rejected it because the proposed system could not answer basic architecture questions:
+
+- What happens when a contract amendment is signed?
+- How are revoked partner permissions reflected?
+- Can Germany support users retrieve US-only policy details?
+- Who audits which source record influenced the answer?
+- How do we delete derived chunks after retention expiry?
+
+The better design used Data 360 as the governed retrieval layer:
+
+- Snowflake contract tables were exposed through Zero Copy federation.
+- BigQuery telemetry summaries were federated rather than copied.
+- Salesforce assets, cases, and entitlements stayed in Salesforce.
+- Policy documents were made available for Retriever API-based retrieval.
+- Agentforce 2.0 used a custom grounding action before generating an answer.
+- Every answer included citation IDs tied back to contract, policy, or case sources.
+
+The agent did not “decide” entitlement from vibes. It retrieved contract clauses, policy sections, failure thresholds, and recent case history. Then Atlas Reasoning Engine v2 evaluated the question against that grounded context.
+
+The result was not magic. It was better plumbing.
+
+We reduced duplicate data movement, simplified revocation, improved auditability, and made the system easier for compliance to approve. The performance was also better than expected because the retrieval strategy was scoped by account, asset, region, and policy category before semantic search ran.
+
+That last part matters. Vector search is not a replacement for filters. In enterprise RAG, filters are how you keep semantic search from becoming expensive guesswork.
+
+## How I Design the Retrieval Query
+
+For Data 360 federated grounding, I try to make every retrieval query include four layers:
+
+### 1. Identity
+
+Who is asking?
+
+That means user ID, permission context, persona, business unit, and sometimes delegated access.
+
+### 2. Business Scope
+
+What business entity anchors the question?
+
+For Salesforce projects, this is usually:
+
+- `AccountId`
+- `ContactId`
+- `AssetId`
+- `CaseId`
+- `ContractId`
+- `OpportunityId`
+
+RAG without a business anchor is noisy.
+
+### 3. Source Filters
+
+Which source systems are relevant?
+
+For an entitlement question, I might retrieve from contracts, policy docs, and cases. I probably do not need marketing content.
+
+### 4. Semantic Query
+
+What is the natural-language intent?
+
+Only after identity, scope, and source filters are applied do I want vector search to rank semantic matches.
+
+Here is the shape I prefer:
+
+```typescript
+const data360Query = {
+  query:
+    "Does the customer qualify for expedited replacement based on contract terms and failure history?",
+  topK: 8,
+  groundingMode: "FEDERATED",
+  includeCitations: true,
+  filters: {
+    runningUserId: "005xx0000012345",
+    accountId: "001xx00000ABC123",
+    assetId: "02ixx000000XYZ9",
+    region: "EMEA",
+    sourceTypes: ["CONTRACT", "POLICY_DOCUMENT", "CASE_HISTORY"],
+    enforceSourcePermissions: true
+  }
+};
+```
+
+Notice what I do not do: I do not ask vector search to search the whole enterprise.
+
+That is lazy retrieval design.
+
+## Prompting Agentforce with Grounded Context
+
+Prompting still matters, but not the way most teams think it does.
+
+I do not write giant prompts begging the model to behave. I give the agent clear operating rules and make the retrieval boundary non-negotiable.
+
+Example instruction:
+
+```typescript
+const agentInstruction = `
+You are an Agentforce 2.0 service assistant.
+
+Rules:
+1. Use only the grounded context returned by the Data 360 retrieval action.
+2. If groundedContext is "NO_GROUNDED_CONTEXT_FOUND", say you do not have enough enterprise context.
+3. Do not infer contract terms that are not explicitly present.
+4. Include citation IDs for every factual claim about entitlement, warranty, policy, or customer history.
+5. If citations conflict, explain the conflict and recommend human review.
+`;
+```
+
+That is the difference between an AI assistant and an AI liability.
+
+The model can reason. It cannot invent enterprise truth.
+
+
+![Strict grounded Agentforce prompt rules with citation enforcement](/images/blog/data-360-federated-grounding-rag-without-moving-your-data/image-2.png)
+
+
+## Where Native Vector Search Fits
+
+Vector search is a ranking tool. It is not the architecture.
+
+I use native vector search in Data 360 to find semantically relevant chunks after the system has already narrowed the search space with governance and business filters.
+
+Good vector search questions:
+
+- “Which contract clauses mention expedited replacement?”
+- “Which policy section applies to repeat failures within 90 days?”
+- “Which case summaries describe the same asset fault code?”
+- “Which knowledge article explains this error pattern?”
+
+Bad vector search questions:
+
+- “Search everything about this customer.”
+- “Find all relevant enterprise data.”
+- “Tell me whether this account is risky.”
+
+Those are not retrieval queries. Those are hopes.
+
+For production, I care about:
+
+- `topK`
+- score threshold
+- source type weighting
+- freshness
+- citation quality
+- chunk size
+- permission filtering
+- fallback behavior
+
+If the agent retrieves weak context, it should say so. A refusal with good auditability is better than a confident hallucination.
+
+## Security and Governance Checklist
+
+This is the checklist I use before I let an agent touch enterprise data:
+
+### Source Permissions
+
+The retriever must enforce source-system access. If the user cannot see the contract in the source system, the agent should not use it.
+
+### User-Mode Salesforce Operations
+
+For Salesforce reads and writes, use user-mode access intentionally. In Apex, I still make it explicit in sensitive paths.
+
+```apex
+List<Case> recentCases = [
+    SELECT Id, CaseNumber, Subject, Status, AssetId, CreatedDate
+    FROM Case
+    WHERE AccountId = :accountId
+    ORDER BY CreatedDate DESC
+    LIMIT 10
+    WITH USER_MODE
+];
+```
+
+### Citation Storage
+
+Store citation IDs with the answer. If a customer challenges an AI-generated response, “the model said it” is not an acceptable audit trail.
+
+### Prompt Injection Handling
+
+Retrieved documents can contain malicious text. Treat retrieved content as data, not instructions.
+
+A policy PDF saying “ignore previous instructions” should be quoted as content, not obeyed as a command.
+
+### Revocation
+
+If a user's access changes, retrieval must reflect that immediately. This is where federated grounding beats copy-first vector stores.
+
+### Regional Boundaries
+
+Do not assume global agents can retrieve global data. Region, business unit, data residency, and legal basis all matter.
+
+## Agentforce 2.0 Is the Right Runtime for This
+
+Agentforce 2.0 is more than a chatbot wrapper. With multi-agent orchestration, custom reasoning steps, Agent Script, and Atlas Reasoning Engine v2, I can separate responsibilities:
+
+- A triage agent classifies the question.
+- A retrieval step calls Data 360.
+- A policy agent checks whether the answer needs escalation.
+- A response agent drafts the final answer with citations.
+- A human handoff happens when confidence or policy fails.
+
+This is where the Salesforce platform has an advantage over generic RAG stacks. CRM context, permissions, audit, actions, and user experience are already there.
+
+With Headless 360, `sf agent` CLI, `@salesforce/mcp`, and the Salesforce MCP ecosystem, I can also test and operate this without living inside the browser. That matters for real CI/CD.
+
+The browser is not an architecture tool. It is a UI.
+
+## What I Would Not Do
+
+I would not build an unmanaged shadow warehouse for AI.
+
+I would not let an LLM query Snowflake directly with generated SQL.
+
+I would not skip citations because “the answer sounds right.”
+
+I would not treat vector similarity as authorization.
+
+I would not launch without audit records.
+
+I would not use a single global retriever for every agent use case.
+
+And I definitely would not copy sensitive contracts, health data, or financial documents into a random vector database just because the AI framework tutorial made it look easy.
+
+## Practical Build Sequence
+
+If I were starting this today, I would build in this order:
+
+1. Pick one high-value use case with measurable outcomes.
+2. Identify source systems and access policies.
+3. Define the business anchor object in Salesforce.
+4. Configure Data 360 federation and catalog metadata.
+5. Create source-specific retrieval indexes.
+6. Build a Retriever API wrapper.
+7. Expose the wrapper as an Agentforce custom action.
+8. Require citations in the agent response.
+9. Log retrievals and answers.
+10. Test revocation, stale data, weak context, and conflicting sources.
+
+Do not start with the model. Start with the question, the sources, and the permission model.
+
+The model choice is usually less important than the retrieval boundary. `claude-sonnet-4-7`, `gpt-5.5`, and `gemini-3.1-pro` are all capable when the context is clean. They are all risky when the context is ungoverned.
+
+## The Architecture Principle
+
+The principle is simple:
+
+> Enterprise AI should move questions to governed data, not governed data to every AI experiment.
+
+Data 360 Federated Grounding is useful because it respects how enterprise data actually lives: distributed, regulated, permissioned, and constantly changing.
+
+RAG is not dead. Copy-first RAG is just the wrong default for serious Salesforce programs.
+
+If you are building Agentforce on top of Salesforce, Data 360, and external enterprise systems, federated grounding should be your default pattern. Use vector search, but do not worship it. Use models, but do not let them become your data layer. Use agents, but make them prove where the answer came from.
+
+That is how I build RAG systems I am willing to support after go-live.
+
+## TL;DR
+
+- Data 360 Federated Grounding lets Agentforce use governed enterprise context without copying everything into a shadow vector store.
+- Vector search should run after identity, business scope, source filters, and permissions are applied.
+- Production RAG needs citations, audit logs, revocation handling, and strict grounded-answer rules.
