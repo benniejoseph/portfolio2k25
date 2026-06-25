@@ -19,7 +19,7 @@ const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 export interface GeneratePostOptions {
   title: string
   keyword: string
-  pillar: 'salesforce' | 'ai-agentic' | 'career'
+  pillar: 'salesforce' | 'ai-agentic' | 'career' | 'architecture'
   tags: string[]
 }
 
@@ -58,8 +58,14 @@ WITH SECURITY_ENFORCED (removed in v67), legacy Agentforce Builder. These are ou
 `
 // ──────────────────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are a Salesforce Architecht and a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
+const SYSTEM_PROMPT = `You are a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
 with 9+ years of enterprise experience who also builds AI agents and SaaS products.
+He is actively exploring CTA-level (Certified Technical Architect) architecture concepts
+and writes about system design, integration patterns, data architecture, and enterprise
+governance from a practitioner's perspective. He does NOT hold the CTA certification —
+he is studying these concepts deeply and sharing what he learns with the community.
+Never claim or imply CTA certification. Frame architecture content as exploration,
+study, and practitioner experience — not as credentialed authority.
 
 Write in first-person, opinionated, practitioner tone. No fluff. No filler paragraphs.
 
@@ -70,11 +76,14 @@ Rules:
 - Every post MUST include at least one real code snippet (Apex, LWC, TypeScript, or Python)
 - Every post MUST include a real-world example from enterprise projects
 - Every post MUST end with a TL;DR section (3 bullet points max)
-- Word count: 1200–2800 words
+- Word count: 1200–2800 words (architecture pillar: 2000–3500 words)
 - Format: valid MDX with frontmatter
 - Use ## for H2, ### for H3
 - Code blocks must specify language: \`\`\`apex, \`\`\`typescript, etc.
 - Tone: direct, practitioner, occasionally opinionated ("Here's the unpopular take...")
+- Architecture posts MUST include a decision matrix (table comparing approaches with tradeoffs)
+- Architecture posts MUST address scale — what happens at 1K, 100K, 10M records/users
+- Architecture posts should reference CTA exam domains where relevant (Data Lifecycle, Integration, Identity/Access, System Design) as learning context, not credential claims
 
 COVER IMAGE (placed on its own line immediately after the closing --- of the frontmatter, before the first paragraph):
   {COVER_PROMPT: "your detailed 16:9 cover image prompt tailored to THIS post's specific topic" | ALT: "cover image alt text under 20 words"}
@@ -399,6 +408,35 @@ const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> 
       ],
       footerQuote: 'Build the future with code and cloud. Ship > Perfect.',
     }),
+
+  architecture: (title, keyword) =>
+    styleArchitecture({
+      title: title.toUpperCase(),
+      subtitle: keyword,
+      layers: [
+        {
+          name: 'Enterprise Systems',
+          color: 'neon blue',
+          components: ['ERP', 'Data Warehouse', 'Identity Provider', 'External APIs'],
+        },
+        {
+          name: 'Integration & Middleware',
+          color: 'orange',
+          components: ['MuleSoft / API Gateway', 'Platform Events', 'CDC / Pub-Sub', 'Heroku'],
+        },
+        {
+          name: 'Salesforce Platform',
+          color: 'neon green',
+          components: ['Sales Cloud', 'Service Cloud', 'Experience Cloud', 'Data 360'],
+        },
+      ],
+      centralNode: 'Architecture Decision Record',
+      integrationModules: ['Governance & Security', 'Data Classification'],
+      bottomPanel: {
+        label: 'CTA DOMAINS',
+        modules: ['System Design', 'Data Lifecycle', 'Integration', 'Identity & Access'],
+      },
+    }),
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
@@ -693,5 +731,153 @@ export const TOPIC_BACKLOG: GeneratePostOptions[] = [
     keyword: 'agentforce multi model routing gpt claude gemini 2026',
     pillar: 'ai-agentic',
     tags: ['Salesforce', 'Agentforce', 'AI', 'Architecture'],
+  },
+
+  // ── CTA-Level Architecture Deep Dives — June 2026+ ────────────────────────
+  // Exploring Certified Technical Architect concepts: system design, integration
+  // patterns, data architecture, governance. NOT claiming CTA — learning in public.
+
+  // System Design & Enterprise Architecture
+  {
+    title: 'Designing a Multi-Cloud Salesforce Architecture: Sales + Service + Experience + Data 360',
+    keyword: 'salesforce multi cloud architecture sales service experience data 360 cta',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Multi-Cloud', 'CTA'],
+  },
+  {
+    title: 'Event-Driven Architecture on Salesforce: Platform Events, CDC, and Pub/Sub API at Scale',
+    keyword: 'salesforce event driven architecture platform events cdc pub sub api',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Integration', 'Events'],
+  },
+  {
+    title: 'Multi-Org vs Single-Org: The Architecture Decision Framework',
+    keyword: 'salesforce multi org single org architecture decision framework cta',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Multi-Org', 'CTA'],
+  },
+  {
+    title: 'API Gateway Patterns for Salesforce: When MuleSoft Is Not the Answer',
+    keyword: 'salesforce api gateway patterns mulesoft alternatives integration',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Integration', 'API'],
+  },
+  {
+    title: 'Disaster Recovery Architecture for Salesforce: RPO, RTO, and What Nobody Tests',
+    keyword: 'salesforce disaster recovery architecture rpo rto backup strategy',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'DR', 'Governance'],
+  },
+
+  // Data Architecture & Large Data Volumes
+  {
+    title: 'Large Data Volume Architecture: What Actually Happens at 200 Million Records',
+    keyword: 'salesforce large data volume ldv architecture 200 million records performance',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'LDV', 'Performance'],
+  },
+  {
+    title: 'Master Data Management on Salesforce: Golden Record Patterns That Scale',
+    keyword: 'salesforce master data management mdm golden record duplicate architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'MDM', 'Data'],
+  },
+  {
+    title: 'Data Migration Architecture: Moving 500M Records Without Downtime',
+    keyword: 'salesforce data migration architecture large volume zero downtime strategy',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Migration', 'Data'],
+  },
+  {
+    title: 'Archival Strategies: Big Objects, External Objects, and the 80/20 Rule',
+    keyword: 'salesforce archival big objects external objects data lifecycle architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Data Lifecycle', 'Performance'],
+  },
+
+  // Integration Architecture
+  {
+    title: 'Saga Pattern on Salesforce: Distributed Transactions Across Clouds',
+    keyword: 'salesforce saga pattern distributed transactions integration architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Integration', 'Patterns'],
+  },
+  {
+    title: 'Real-Time vs Near-Real-Time vs Batch: The Integration Decision Tree',
+    keyword: 'salesforce integration patterns real time near real time batch decision',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Integration', 'CTA'],
+  },
+  {
+    title: 'Salesforce-to-Salesforce Integration: What the Docs Do Not Tell You',
+    keyword: 'salesforce to salesforce integration patterns org connect s2s architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Integration', 'Multi-Org'],
+  },
+
+  // Identity, Access & Security Architecture
+  {
+    title: 'Zero Trust Architecture on Salesforce: Beyond Permission Sets',
+    keyword: 'salesforce zero trust architecture security identity access cta',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Security', 'Identity'],
+  },
+  {
+    title: 'Shield Platform Encryption: Architecture Decisions That Cannot Be Reversed',
+    keyword: 'salesforce shield platform encryption architecture decisions tradeoffs',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Security', 'Encryption'],
+  },
+  {
+    title: 'Compliance Architecture on Salesforce: HIPAA, SOX, and PCI Patterns',
+    keyword: 'salesforce compliance architecture hipaa sox pci regulatory patterns',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Compliance', 'Security'],
+  },
+
+  // Performance & Governance Architecture
+  {
+    title: 'Query Plan Analysis: Reading the Salesforce Optimizer Like an Architect',
+    keyword: 'salesforce query plan analysis optimizer soql performance architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Performance', 'SOQL'],
+  },
+  {
+    title: 'Governor Limit Architecture: Designing Systems That Never Hit Limits',
+    keyword: 'salesforce governor limits architecture design patterns bulkification',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Performance', 'Apex'],
+  },
+  {
+    title: 'Technical Debt Remediation: How to Refactor a 500-Object Org',
+    keyword: 'salesforce technical debt remediation refactor large org architecture',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Governance', 'Refactoring'],
+  },
+  {
+    title: 'Release Architecture: Managing 50 Developers in a Single Salesforce Org',
+    keyword: 'salesforce release architecture devops branching strategy large team',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'DevOps', 'Governance'],
+  },
+
+  // AI + Architecture (the intersection)
+  {
+    title: 'Agentforce Architecture Patterns: Where Agents Fit in Enterprise System Design',
+    keyword: 'agentforce architecture patterns enterprise system design cta 2026',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Agentforce', 'Architecture', 'AI'],
+  },
+  {
+    title: 'Grounding Architecture: Data 360 + RAG + Federated Search at Enterprise Scale',
+    keyword: 'salesforce grounding architecture data 360 rag federated search enterprise',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'Data360', 'RAG', 'AI'],
+  },
+  {
+    title: 'AI Trust Architecture: Guardrails, Audit Trails, and Compliance for Agentforce',
+    keyword: 'salesforce ai trust architecture guardrails audit compliance agentforce',
+    pillar: 'architecture',
+    tags: ['Salesforce', 'Architecture', 'AI', 'Compliance', 'Agentforce'],
   },
 ]
