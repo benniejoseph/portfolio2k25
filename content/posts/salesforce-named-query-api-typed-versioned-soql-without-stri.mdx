@@ -1,0 +1,535 @@
+---
+title: "Salesforce Named Query API: Typed, Versioned SOQL Without String Bugs"
+excerpt: "salesforce named query api ga summer 26 brings typed, versioned SOQL contracts that stop brittle string queries in integrations."
+date: "2026-07-01"
+tags: ["Salesforce", "API", "SOQL", "Summer26"]
+keyword: "salesforce named query api ga summer 26"
+featured: false
+coverImage: /images/blog/salesforce-named-query-api-typed-versioned-soql-without-stri/cover.png
+---
+
+
+The **salesforce named query api ga summer 26** release is one of those platform features that looks boring until you have lived through enough broken integrations.
+
+I have seen this pattern too many times:
+
+- A Node service builds SOQL with string interpolation.
+- A mobile backend copies a query from Workbench.
+- A middleware team adds one field and silently changes an API contract.
+- An Agentforce action lets an LLM generate filter logic it should never own.
+- A portal search endpoint works in sandbox but fails in production because of field-level security, selectivity, or one bad apostrophe.
+
+Named Query API is Salesforce finally giving us a cleaner contract: define the query once, give it a name, version it, bind parameters, and let consumers execute the contract instead of assembling SOQL strings.
+
+This is not a replacement for every SOQL query. I still write Apex. I still use GraphQL API where the consumer needs shape flexibility. I still use Composite and Conditional Composite APIs for transactional orchestration. But for stable read contracts exposed to external apps, integrations, portals, mobile clients, and agent tools, Named Query API belongs in the architecture conversation.
+
+Here’s the unpopular take: **most enterprise SOQL bugs are not SOQL bugs. They are contract ownership bugs.**
+
+## What Named Query API changes
+
+Before Named Query API, the normal integration choices were imperfect:
+
+| Pattern | What works | What hurts |
+|---|---|---|
+| Raw REST `/query` endpoint | Fast to start, flexible | Clients own SOQL strings, security review is harder, versioning is weak |
+| Apex REST | Strong control, custom logic | More code, more tests, more deployment surface |
+| GraphQL API | Great typed shape for UI/data graph needs | Can be overkill for simple operational queries |
+| Composite API | Good orchestration | Still needs stable subrequest design |
+| Named Query API | Stable query contracts, parameter binding, versioning | Requires query governance and lifecycle discipline |
+
+Named Query API gives me a middle path.
+
+The consumer does not send this:
+
+```typescript
+const soql =
+  "SELECT Id, Name, Industry, AnnualRevenue " +
+  "FROM Account " +
+  "WHERE Industry = '" + industry + "' " +
+  "ORDER BY AnnualRevenue DESC " +
+  "LIMIT " + limitSize;
+```
+
+The consumer sends something closer to this:
+
+```typescript
+const response = await executeNamedQuery<AccountSearchParams, AccountSearchRecord>(
+  accessToken,
+  instanceUrl,
+  "AccountSearch",
+  "v1",
+  {
+    industry: "Manufacturing",
+    minAnnualRevenue: 1000000,
+    limitSize: 50
+  }
+);
+```
+
+That difference matters.
+
+The first example makes the client responsible for query syntax, escaping, field selection, sort behavior, and limit handling. The second makes the client responsible for passing valid parameters into a named, reviewed, versioned contract.
+
+In Salesforce API v64.0, with Named Query API GA in Summer ’26, I’m treating named queries like integration assets. They belong in source control, they need owners, and they should have contract tests.
+
+## The bug Named Query API actually solves
+
+A real example from an enterprise project: we had a customer operations portal backed by Salesforce Service Cloud and a middleware API layer. The portal let regional support managers search high-value customer accounts by market, account tier, and revenue threshold.
+
+The first implementation used raw SOQL from the middleware service. Not because anyone was careless. It was just the fastest path during delivery.
+
+The query started simple:
+
+```typescript
+const soql = `
+  SELECT Id, Name, Industry, AnnualRevenue, Owner.Name
+  FROM Account
+  WHERE Industry = '${industry}'
+  ORDER BY AnnualRevenue DESC
+  LIMIT ${limitSize}
+`;
+```
+
+Then the business asked for account tier. Then region. Then “include strategic accounts even when revenue is missing.” Then a support leader in France searched for an industry value containing an apostrophe from a migrated picklist label. That broke the query.
+
+The bigger issue was not the apostrophe. The bigger issue was that query behavior lived in a middleware repo owned by an integration team, while the data model lived in Salesforce and the access decisions lived with the CRM team.
+
+That is a bad ownership boundary.
+
+With Named Query API, I want the Salesforce team to own the query contract:
+
+- selected fields
+- supported filters
+- default sort
+- maximum limit
+- parameter types
+- version lifecycle
+- security posture
+- performance review
+
+The integration team should call the contract, not recreate it.
+
+
+![SOQL string construction replaced by Named Query API contract](/images/blog/salesforce-named-query-api-typed-versioned-soql-without-stri/image-1.png)
+
+
+## A TypeScript wrapper I would actually ship
+
+I do not want every service team manually constructing Named Query API requests either. That just moves the mess one layer down.
+
+I usually push for a thin internal SDK per domain. For example, a `crm-data-client` package that exposes typed functions like `searchAccounts()` and internally calls Named Query API.
+
+The exact endpoint shape should be verified against your org’s Summer ’26 API reference and resource discovery output for Salesforce API v64.0. The important design point is that the path, API version, query name, and query version are centralized in one client.
+
+```typescript
+type NamedQueryResponse<TRecord> = {
+  done: boolean;
+  totalSize?: number;
+  records: TRecord[];
+  nextRecordsUrl?: string;
+};
+
+type AccountSearchParams = {
+  industry: string;
+  minAnnualRevenue: number;
+  limitSize: number;
+};
+
+type AccountSearchRecord = {
+  Id: string;
+  Name: string;
+  Industry: string | null;
+  AnnualRevenue: number | null;
+  Owner: {
+    Name: string;
+  };
+};
+
+class SalesforceNamedQueryClient {
+  constructor(
+    private readonly instanceUrl: string,
+    private readonly accessToken: string,
+    private readonly apiVersion = "v64.0"
+  ) {}
+
+  async execute<TParams, TRecord>(
+    queryName: string,
+    queryVersion: string,
+    params: TParams
+  ): Promise<NamedQueryResponse<TRecord>> {
+    const url =
+      `${this.instanceUrl}/services/data/${this.apiVersion}` +
+      `/namedQueries/${encodeURIComponent(queryName)}` +
+      `/versions/${encodeURIComponent(queryVersion)}` +
+      `/execute`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ parameters: params })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(
+        `Named Query API failed: ${response.status} ${response.statusText} ${body}`
+      );
+    }
+
+    return response.json() as Promise<NamedQueryResponse<TRecord>>;
+  }
+}
+
+export async function searchAccounts(
+  client: SalesforceNamedQueryClient,
+  params: AccountSearchParams
+): Promise<AccountSearchRecord[]> {
+  if (params.limitSize < 1 || params.limitSize > 200) {
+    throw new Error("limitSize must be between 1 and 200");
+  }
+
+  const result = await client.execute<AccountSearchParams, AccountSearchRecord>(
+    "AccountSearch",
+    "v1",
+    params
+  );
+
+  return result.records;
+}
+```
+
+Notice what is missing: no SOQL string in the client.
+
+The client still validates obvious boundary conditions. I do not wait for Salesforce to tell me that `limitSize = 50000` is a bad idea. But the query semantics live in Salesforce.
+
+I also keep the version explicit. I do not want `AccountSearch` to silently change because someone added a field, changed a filter, or adjusted sort order. If the response shape changes, publish `v2`.
+
+## Versioning is the feature people will underestimate
+
+The biggest value is not that the query has a name. The biggest value is that the query can become a versioned contract.
+
+A bad rollout looks like this:
+
+1. Add `Customer_Tier__c` to the query.
+2. Update middleware parsing.
+3. Deploy both.
+4. Hope every downstream consumer is ready.
+
+A better rollout:
+
+1. Keep `AccountSearch v1` unchanged.
+2. Publish `AccountSearch v2` with `Customer_Tier__c`.
+3. Add contract tests for v2.
+4. Move one consumer at a time.
+5. Retire v1 after telemetry proves nobody uses it.
+
+That is basic API discipline, but teams often forget it when the API is “just SOQL.”
+
+SOQL is still an API contract when another system depends on it.
+
+Here is how I like to model versions in TypeScript:
+
+```typescript
+type AccountSearchV1Record = {
+  Id: string;
+  Name: string;
+  Industry: string | null;
+  AnnualRevenue: number | null;
+};
+
+type AccountSearchV2Record = AccountSearchV1Record & {
+  Customer_Tier__c: "Strategic" | "Enterprise" | "Commercial" | null;
+  Region__c: string | null;
+};
+
+type AccountSearchVersion = "v1" | "v2";
+
+function parseAccountSearchVersion(version: string): AccountSearchVersion {
+  if (version === "v1" || version === "v2") {
+    return version;
+  }
+
+  throw new Error(`Unsupported AccountSearch version: ${version}`);
+}
+```
+
+This looks basic. That is the point. Stable contracts should be boring.
+
+If you need dynamic field selection, use GraphQL API. If you need transactional write orchestration, look at Composite or Conditional Composite API. If you need a stable query that powers five consumers, Named Query API is a cleaner fit.
+
+## Security: stop outsourcing access control to client code
+
+For Salesforce security, the wrong abstraction is dangerous.
+
+If an external service builds SOQL and calls REST `/query`, that service can accidentally become the place where access control is interpreted. That is not where I want security decisions to live.
+
+Named queries should be reviewed with the same seriousness as Apex selectors:
+
+- Does it run in the intended user context?
+- Are object permissions respected?
+- Are field permissions respected?
+- Are sharing rules respected?
+- Are filters selective?
+- Does the query leak relationship fields the consumer does not need?
+- Is the maximum limit sane?
+- Is there a version deprecation policy?
+
+In Apex, I am explicit about user mode. Salesforce API v64.0 is current for Summer ’26, and v67.0 is the next release where SOQL/DML/Database methods default to user mode and classes without sharing declarations default to `with sharing`. Even with platform defaults improving, I prefer readable intent.
+
+Here is the kind of Apex fallback selector I would write if Named Query API were not the right fit:
+
+```apex
+public with sharing class AccountSearchSelector {
+    public class AccountSearchResult {
+        @AuraEnabled public Id id;
+        @AuraEnabled public String name;
+        @AuraEnabled public String industry;
+        @AuraEnabled public Decimal annualRevenue;
+        @AuraEnabled public String ownerName;
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<AccountSearchResult> searchAccounts(
+        String industry,
+        Decimal minAnnualRevenue,
+        Integer limitSize
+    ) {
+        if (String.isBlank(industry)) {
+            throw new AuraHandledException('industry is required');
+        }
+
+        Integer safeLimit = Math.max(1, Math.min(limitSize == null ? 50 : limitSize, 200));
+
+        List<Account> accounts = [
+            SELECT Id, Name, Industry, AnnualRevenue, Owner.Name
+            FROM Account
+            WHERE Industry = :industry
+            AND AnnualRevenue >= :minAnnualRevenue
+            WITH USER_MODE
+            ORDER BY AnnualRevenue DESC
+            LIMIT :safeLimit
+        ];
+
+        List<AccountSearchResult> results = new List<AccountSearchResult>();
+
+        for (Account accountRecord : accounts) {
+            AccountSearchResult result = new AccountSearchResult();
+            result.id = accountRecord.Id;
+            result.name = accountRecord.Name;
+            result.industry = accountRecord.Industry;
+            result.annualRevenue = accountRecord.AnnualRevenue;
+            result.ownerName = accountRecord.Owner.Name;
+            results.add(result);
+        }
+
+        return results;
+    }
+}
+```
+
+I am intentionally not using `WITH SECURITY_ENFORCED`. That is gone in the v67 direction. Use `WITH USER_MODE`.
+
+Also, do not assume Named Query API removes the need for security design. It removes client-side SOQL ownership. You still need least privilege, permission set strategy, integration user governance, and test users that represent real access profiles.
+
+## Contract tests should be mandatory
+
+If a named query is an API contract, test it like one.
+
+I want tests that catch:
+
+- missing fields
+- renamed fields
+- type mismatches
+- unexpected null behavior
+- access failures for expected profiles
+- response size regressions
+- version drift
+
+Here is a simple Python contract test using a typed assertion layer. This is the kind of test I would run in CI against a seeded integration sandbox after deployment.
+
+```python
+from typing import TypedDict, Optional
+import os
+import requests
+
+
+class OwnerRecord(TypedDict):
+    Name: str
+
+
+class AccountSearchRecord(TypedDict):
+    Id: str
+    Name: str
+    Industry: Optional[str]
+    AnnualRevenue: Optional[float]
+    Owner: OwnerRecord
+
+
+def execute_named_query(
+    instance_url: str,
+    access_token: str,
+    query_name: str,
+    query_version: str,
+    parameters: dict
+) -> list[AccountSearchRecord]:
+    url = (
+        f"{instance_url}/services/data/v64.0"
+        f"/namedQueries/{query_name}"
+        f"/versions/{query_version}"
+        f"/execute"
+    )
+
+    response = requests.post(
+        url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        },
+        json={"parameters": parameters},
+        timeout=30
+    )
+
+    response.raise_for_status()
+    payload = response.json()
+    return payload["records"]
+
+
+def test_account_search_v1_contract():
+    records = execute_named_query(
+        instance_url=os.environ["SF_INSTANCE_URL"],
+        access_token=os.environ["SF_ACCESS_TOKEN"],
+        query_name="AccountSearch",
+        query_version="v1",
+        parameters={
+            "industry": "Manufacturing",
+            "minAnnualRevenue": 1000000,
+            "limitSize": 10
+        }
+    )
+
+    assert len(records) <= 10
+
+    for record in records:
+        assert isinstance(record["Id"], str)
+        assert isinstance(record["Name"], str)
+        assert "Owner" in record
+        assert isinstance(record["Owner"]["Name"], str)
+
+        if record["AnnualRevenue"] is not None:
+            assert record["AnnualRevenue"] >= 1000000
+```
+
+This is not a full test suite. But even this catches the common enterprise mistake: someone changes the query shape and breaks a consumer without realizing it.
+
+In CI/CD, be aware of the Summer ’26 `sf` CLI credential security overhaul. Credentials are now redacted in outputs, and existing pipelines that scraped command output need updates. That matters if your contract tests authenticate dynamically during deployment.
+
+
+![Named Query API contract tests validating fields access and limits](/images/blog/salesforce-named-query-api-typed-versioned-soql-without-stri/image-2.png)
+
+
+## Where this fits with LWC, GraphQL, and Agentforce 2.0
+
+Named Query API is not only an integration feature. It changes how I think about query ownership across the stack.
+
+For LWC, Summer ’26 native state management makes client-side state cleaner. But state management does not solve backend query governance. If an LWC needs highly interactive data composition, GraphQL API with full CRUD support may be the better option. If it needs a stable operational list — “top renewal accounts,” “eligible assets,” “open escalations for this customer” — a named query contract behind an Apex facade or API layer can be cleaner.
+
+For Agentforce 2.0, this matters even more.
+
+I do not want an agent generating arbitrary SOQL unless the use case is explicitly designed for that and heavily governed. With Atlas Reasoning Engine v2 and multi-agent orchestration, the better pattern is to expose safe tools:
+
+- `FindHighValueAccounts`
+- `GetOpenEscalationsForAccount`
+- `ListRenewalOpportunities`
+- `FindEligibleAssetsForReplacement`
+
+Each tool maps to bounded parameters and reviewed query behavior. Named Query API is a good backend contract for those tools.
+
+If you are using Salesforce MCP with `@salesforce/mcp`, MuleSoft API-to-MCP, or Heroku-hosted MCP tools, this becomes even more important. MCP makes tool access easier. It does not magically make data access safe. A named query with typed parameters is a better primitive than “here is a token, generate SOQL.”
+
+## How I decide between Named Query API and the alternatives
+
+This is my practical decision guide.
+
+| Use case | My default choice | Why |
+|---|---|---|
+| Stable read query used by multiple external consumers | Named Query API | Central contract, versioned shape, no client SOQL |
+| UI needs flexible nested data shape | GraphQL API | Better fit for client-driven graph traversal |
+| LWC-only read with business logic | Apex selector | Strong transaction/security control inside Salesforce |
+| Multi-step read/write integration | Composite or Conditional Composite API | Better orchestration and lower API call volume |
+| Complex transactional domain operation | Apex REST or custom service | Encapsulate business behavior, not just data retrieval |
+| Agentforce tool needing bounded data lookup | Named Query API behind tool/action | Prevent arbitrary query generation |
+
+The key question is: **who should own the query?**
+
+If the answer is “the Salesforce domain team,” Named Query API becomes attractive.
+
+## Performance and scale: 1K, 100K, 10M
+
+Named Query API does not exempt you from data architecture.
+
+At **1K records**, almost anything works. Bad selectivity hides. Missing indexes hide. Over-fetching hides.
+
+At **100K records**, weak filters start to hurt. You need to care about indexed fields, skinny response shapes, pagination, and maximum limits. You should avoid returning fields just because a downstream consumer “might need them later.”
+
+At **10M records**, query design becomes architecture. You need selective predicates, archival strategy, ownership skew awareness, sharing recalculation awareness, and sometimes a different data access pattern entirely. For analytics-style access, Data 360 Zero Copy federation, native vector search, or downstream warehouse patterns may be more appropriate. For operational access, keep named queries narrow and intentional.
+
+A named query called `SearchAccounts` is not good enough at 10M rows.
+
+A named query called `FindActiveEnterpriseAccountsByRegionAndTier` with required indexed filters and a hard limit has a chance.
+
+This maps directly to the CTA-level study areas I am spending time on: Data Lifecycle, Integration, Identity/Access, and System Design. Not because Named Query API is an exam topic by itself, but because the tradeoffs force the same thinking:
+
+- Where does data access logic live?
+- Who owns the API contract?
+- How do we protect user access?
+- How does the design behave as volume grows?
+- How do we version without breaking consumers?
+
+## My implementation checklist
+
+When I introduce Named Query API on a project, I want these decisions made up front:
+
+1. **Naming convention**  
+   Use domain-oriented names. `AccountSearch` is okay. `FindRenewalAccountsBySegment` is better.
+
+2. **Version policy**  
+   Additive field changes may still break strict clients. Treat response shape changes as version changes unless you control every consumer.
+
+3. **Parameter rules**  
+   Required vs optional. Max limits. Allowed sort fields if sorting is parameterized. Never allow raw filter fragments.
+
+4. **Security review**  
+   Validate object access, field access, sharing behavior, and integration user permissions.
+
+5. **Performance review**  
+   Check selectivity, query plan, expected volume, and pagination behavior.
+
+6. **Contract tests**  
+   Run tests for every supported version in CI.
+
+7. **Deprecation telemetry**  
+   Know who still calls `v1` before you retire it.
+
+8. **Consumer SDK**  
+   Do not let every team hand-roll HTTP calls. Give them a typed client.
+
+## Final opinion
+
+Named Query API is not flashy. It will not get the same attention as Agentforce 2.0 demos, Atlas Reasoning Engine v2, or Headless 360 announcements.
+
+But boring contract features are what keep enterprise systems alive.
+
+If your integration layer is full of SOQL strings, you do not have flexibility. You have distributed query ownership with weak governance.
+
+Named Query API gives Salesforce teams a way to pull that ownership back into the platform without forcing every use case into custom Apex REST.
+
+That is a good trade.
+
+## TL;DR
+
+- Named Query API GA in Summer ’26 gives Salesforce teams typed, versioned SOQL contracts instead of client-built query strings.
+- Use it for stable read contracts across integrations, portals, mobile apps, and Agentforce tools.
+- Treat named queries like APIs: version them, secure them, performance-test them, and add CI contract tests.
