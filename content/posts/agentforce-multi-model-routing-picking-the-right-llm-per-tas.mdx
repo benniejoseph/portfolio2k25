@@ -1,0 +1,802 @@
+---
+title: "Agentforce Multi-Model Routing: Picking the Right LLM per Task"
+excerpt: "Practical agentforce multi model routing gpt claude gemini 2026 patterns for cost, latency, reasoning, and governance."
+date: "2026-07-06"
+tags: ["Salesforce", "Agentforce", "AI", "Architecture"]
+keyword: "agentforce multi model routing gpt claude gemini 2026"
+featured: false
+coverImage: /images/blog/agentforce-multi-model-routing-picking-the-right-llm-per-tas/cover.png
+---
+
+
+Agentforce 2.0 makes it too easy to think “agent” first and “architecture” second.
+
+That is backwards.
+
+The real design question is not, “Can Agentforce call an LLM?” Of course it can. The better question is:
+
+> Which model should handle this task, under this security context, with this latency SLA, at this cost ceiling, with this audit requirement?
+
+That is where multi-model routing becomes useful.
+
+I’m not talking about random model hopping because it sounds advanced. I’m talking about a controlled routing layer between Agentforce and model providers like OpenAI, Anthropic, Google, Salesforce-native capabilities, and local open-source models.
+
+For 2026, the practical model set I’m designing around looks like this:
+
+- OpenAI: `gpt-5.5` for high-quality general reasoning, `gpt-5.5-mini` for fast/cheap work, `o3` for deeper reasoning workflows.
+- Anthropic: `claude-sonnet-4-7` for balanced reasoning and long-form synthesis, `claude-opus-4-8` for highest-complexity analysis, `claude-haiku-4-7` for low-latency utility tasks.
+- Google: `gemini-3.1-flash` for fast multimodal-ish utility work, `gemini-3.1-pro` for stronger reasoning, `gemini-3.1-ultra` for premium tasks.
+- Meta: Llama 4 Scout for local/private workloads where data boundary matters more than peak reasoning.
+- Salesforce: Einstein Copilot powered by Agentforce, Atlas Reasoning Engine v2, Data 360 grounding, Retriever API, and native platform actions.
+
+Here’s the unpopular take: a serious enterprise agent should not have a favorite model. It should have a routing policy.
+
+## Why Multi-Model Routing Matters in Agentforce
+
+Agentforce 2.0 gives us multi-agent orchestration, custom reasoning steps, Agent Script, AiAuthoringBundle metadata, and Atlas Reasoning Engine v2. That is a big jump from basic “prompt plus action” automation.
+
+But when an agent starts doing real work — summarizing claims, triaging cases, drafting contracts, querying Salesforce, invoking MuleSoft APIs, and grounding on Data 360 — model choice becomes an architecture decision.
+
+I care about five things:
+
+1. **Task fit** — Is this classification, extraction, summarization, reasoning, coding, retrieval, or final response generation?
+2. **Risk** — Does the task touch PII, regulated data, financial decisions, or customer commitments?
+3. **Latency** — Is this synchronous inside a service console, or async after a case update?
+4. **Cost** — Will this run 500 times a day or 5 million times a month?
+5. **Governance** — Can I explain why the model was selected and what context it saw?
+
+In CTA-level study terms, this crosses Integration, Data Lifecycle, Identity/Access, and System Design. I’m not presenting this as a certified architect pattern. I’m sharing the practitioner version I’d want in a real enterprise design review.
+
+## The Baseline Architecture
+
+My preferred pattern is simple:
+
+1. Agentforce determines the business intent.
+2. A custom reasoning step calls a routing service.
+3. The routing service classifies the task and chooses a model.
+4. The selected model receives only the minimum required context.
+5. The response returns to Agentforce with metadata: selected model, policy version, latency, token estimate, fallback status.
+6. Audit logs are written back to Salesforce or an enterprise observability platform.
+
+I do **not** like embedding provider-specific calls directly into every Agentforce action. That creates coupling. It also makes governance painful because every team invents its own model selection logic.
+
+The router should be boring, explicit, and testable.
+
+A simplified flow:
+
+```text
+Agentforce Topic
+  -> Custom Reasoning Step
+    -> Model Router API
+      -> Policy Engine
+        -> Provider Adapter
+          -> gpt-5.5 / claude-sonnet-4-7 / gemini-3.1-pro / Llama 4 Scout
+      -> Audit Event
+  -> Agentforce Action / Response
+```
+
+The router is not there to be clever. It is there to make decisions repeatable.
+
+## Decision Matrix: Which Model for Which Task?
+
+This is the decision matrix I would start with. It is not universal. It is a baseline for enterprise Salesforce workloads where support, sales ops, claims, onboarding, and knowledge workflows are common.
+
+| Task Type | Recommended Model | Why | Avoid When | Agentforce Pattern |
+|---|---:|---|---|---|
+| Case intent classification | `gpt-5.5-mini` or `claude-haiku-4-7` | Low cost, low latency, good enough for narrow labels | High-risk regulatory classification without review | Pre-routing step before topic escalation |
+| Long customer email summarization | `claude-sonnet-4-7` | Strong synthesis and tone control | Ultra-low latency chat where summary can be approximate | Custom reasoning step |
+| Complex policy reasoning | `claude-opus-4-8`, `gpt-5.5`, or `o3` | Better for multi-constraint reasoning | High-volume background jobs with thin margins | Escalated reasoning chain |
+| Contract clause extraction | `gpt-5.5` or `gemini-3.1-pro` | Structured extraction with schema validation | Sensitive contracts without approved data path | Async document pipeline |
+| Knowledge-grounded answer | Agentforce + Data 360 Retriever API + `claude-sonnet-4-7` or `gpt-5.5` | Good balance of retrieval and answer generation | When answer must be deterministic | Grounded response generation |
+| Image/document triage | `gemini-3.1-flash` or `gemini-3.1-pro` | Fast multimodal handling | Legal-grade extraction without human review | Intake automation |
+| PII-heavy internal notes | Llama 4 Scout local or Salesforce-native governed flow | Keeps data boundary tighter | When top-tier reasoning is required | Private action path |
+| Executive summary generation | `claude-opus-4-8` or `gpt-5.5` | Higher quality final language | Mass-generated notifications | Final response polish step |
+| Tool selection / API planning | `gpt-5.5` or `o3` | Strong planning and decomposition | Simple field updates | Agent orchestration planner |
+| Bulk enrichment | `gemini-3.1-flash`, `gpt-5.5-mini`, or `claude-haiku-4-7` | Cost-efficient high-volume tasks | High consequence decisions | Batch async worker |
+
+Here’s the principle: use premium models where mistakes are expensive, not where prompts are fancy.
+
+
+![Agentforce model routing policy with bad and good code](/images/blog/agentforce-multi-model-routing-picking-the-right-llm-per-tas/image-1.png)
+
+
+## A Practical TypeScript Router
+
+For most teams, I’d host the router outside Salesforce on Heroku, MuleSoft, or an internal platform service. Agentforce can call it through an external service, MuleSoft API-to-MCP, or a custom action. If the enterprise has standardized on MCP, `@salesforce/mcp` and the Agentforce DX tooling make this cleaner.
+
+Here is a simplified TypeScript router. This is not production-complete, but the shape is what matters.
+
+```typescript
+type TaskType =
+  | "case_classification"
+  | "customer_email_summary"
+  | "policy_reasoning"
+  | "contract_extraction"
+  | "grounded_answer"
+  | "document_triage"
+  | "pii_internal_notes"
+  | "executive_summary"
+  | "tool_planning"
+  | "bulk_enrichment";
+
+type DataBoundary = "public" | "internal" | "restricted" | "regulated";
+
+type Provider = "openai" | "anthropic" | "google" | "local";
+
+type RoutingRequest = {
+  orgId: string;
+  userId: string;
+  taskType: TaskType;
+  dataBoundary: DataBoundary;
+  riskScore: number; // 0-100
+  latencySlaMs: number;
+  maxCostUsd?: number;
+  requiresGrounding: boolean;
+  payloadTokenEstimate: number;
+};
+
+type RoutingDecision = {
+  provider: Provider;
+  model: string;
+  reason: string;
+  fallbackModels: Array<{ provider: Provider; model: string }>;
+  policyVersion: string;
+  allowExternalProvider: boolean;
+};
+
+const POLICY_VERSION = "2026-07-06.agentforce-routing.v1";
+
+export function routeModel(req: RoutingRequest): RoutingDecision {
+  if (req.dataBoundary === "regulated" && req.riskScore >= 80) {
+    return {
+      provider: "local",
+      model: "llama-4-scout",
+      reason: "Regulated high-risk data must stay inside approved private boundary.",
+      fallbackModels: [],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: false
+    };
+  }
+
+  if (req.taskType === "case_classification" && req.latencySlaMs <= 1200) {
+    return {
+      provider: "openai",
+      model: "gpt-5.5-mini",
+      reason: "Fast low-cost classification under tight console latency SLA.",
+      fallbackModels: [{ provider: "anthropic", model: "claude-haiku-4-7" }],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: true
+    };
+  }
+
+  if (req.taskType === "customer_email_summary") {
+    return {
+      provider: "anthropic",
+      model: "claude-sonnet-4-7",
+      reason: "Strong synthesis and customer-service tone control.",
+      fallbackModels: [{ provider: "openai", model: "gpt-5.5" }],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: true
+    };
+  }
+
+  if (req.taskType === "policy_reasoning" && req.riskScore >= 60) {
+    return {
+      provider: "anthropic",
+      model: "claude-opus-4-8",
+      reason: "High-complexity reasoning with multiple policy constraints.",
+      fallbackModels: [
+        { provider: "openai", model: "o3" },
+        { provider: "openai", model: "gpt-5.5" }
+      ],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: true
+    };
+  }
+
+  if (req.taskType === "document_triage" && req.latencySlaMs <= 2000) {
+    return {
+      provider: "google",
+      model: "gemini-3.1-flash",
+      reason: "Fast document triage path with acceptable quality/cost ratio.",
+      fallbackModels: [{ provider: "google", model: "gemini-3.1-pro" }],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: true
+    };
+  }
+
+  if (req.taskType === "executive_summary") {
+    return {
+      provider: "openai",
+      model: "gpt-5.5",
+      reason: "High-quality final answer generation for executive-facing output.",
+      fallbackModels: [{ provider: "anthropic", model: "claude-sonnet-4-7" }],
+      policyVersion: POLICY_VERSION,
+      allowExternalProvider: true
+    };
+  }
+
+  return {
+    provider: "anthropic",
+    model: "claude-sonnet-4-7",
+    reason: "Default balanced reasoning model for general Agentforce tasks.",
+    fallbackModels: [{ provider: "openai", model: "gpt-5.5" }],
+    policyVersion: POLICY_VERSION,
+    allowExternalProvider: true
+  };
+}
+```
+
+A few things I’d add before this goes anywhere near production:
+
+- Org-level allowlists for providers.
+- Country or region restrictions.
+- Token and cost budgets per business unit.
+- Prompt template versioning.
+- Redaction before routing.
+- Structured response schemas.
+- Circuit breakers when providers degrade.
+- Audit events tied to `UserId`, `OrgId`, task type, and policy version.
+
+The router should not just return a model. It should return the reason.
+
+That reason is gold during security review.
+
+## Provider Adapter Example
+
+Once the router decides, provider adapters keep the rest of the system clean. The Agentforce action should not care whether the answer came from Anthropic, OpenAI, Google, or a local model.
+
+Here is a simplified adapter layer using current 2026 model IDs and API conventions.
+
+```typescript
+type ModelCallInput = {
+  provider: Provider;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  jsonMode?: boolean;
+};
+
+type ModelCallResult = {
+  text: string;
+  provider: Provider;
+  model: string;
+  latencyMs: number;
+};
+
+export async function callSelectedModel(input: ModelCallInput): Promise<ModelCallResult> {
+  const started = Date.now();
+
+  if (input.provider === "anthropic") {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version": "2026-01-01"
+      },
+      body: JSON.stringify({
+        model: input.model, // claude-sonnet-4-7, claude-opus-4-8, claude-haiku-4-7
+        max_tokens: 1200,
+        system: input.systemPrompt,
+        messages: [{ role: "user", content: input.userPrompt }]
+      })
+    });
+
+    const body = await response.json();
+
+    return {
+      text: body.content?.[0]?.text ?? "",
+      provider: input.provider,
+      model: input.model,
+      latencyMs: Date.now() - started
+    };
+  }
+
+  if (input.provider === "openai") {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${process.env.OPENAI_API_KEY!}`
+      },
+      body: JSON.stringify({
+        model: input.model, // gpt-5.5, gpt-5.5-mini, o3
+        input: [
+          { role: "system", content: input.systemPrompt },
+          { role: "user", content: input.userPrompt }
+        ]
+      })
+    });
+
+    const body = await response.json();
+
+    return {
+      text: body.output_text ?? "",
+      provider: input.provider,
+      model: input.model,
+      latencyMs: Date.now() - started
+    };
+  }
+
+  if (input.provider === "google") {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${input.model}:generateContent?key=${process.env.GOOGLE_AI_API_KEY!}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: `${input.systemPrompt}\n\n${input.userPrompt}` }
+              ]
+            }
+          ]
+        })
+      }
+    );
+
+    const body = await response.json();
+
+    return {
+      text: body.candidates?.[0]?.content?.parts?.[0]?.text ?? "",
+      provider: input.provider,
+      model: input.model,
+      latencyMs: Date.now() - started
+    };
+  }
+
+  const response = await fetch("http://llama4-scout.internal/v1/chat/completions", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      model: "llama-4-scout",
+      messages: [
+        { role: "system", content: input.systemPrompt },
+        { role: "user", content: input.userPrompt }
+      ]
+    })
+  });
+
+  const body = await response.json();
+
+  return {
+    text: body.choices?.[0]?.message?.content ?? "",
+    provider: "local",
+    model: "llama-4-scout",
+    latencyMs: Date.now() - started
+  };
+}
+```
+
+Notice what I’m not doing: no provider-specific logic inside Agentforce topics. No hardcoded `gpt-5.5` inside every action. No “someone pasted a model name into a prompt template and now nobody knows why cost doubled.”
+
+## Calling the Router from Salesforce
+
+For Salesforce-side integration, I prefer a thin Apex boundary. Apex should collect approved context, call the router, and write back audit metadata. It should not become the model orchestration engine.
+
+In Salesforce API v64.0, I still explicitly use user-mode query patterns. I do not rely on future defaults, and I do not use removed patterns like `WITH SECURITY_ENFORCED`.
+
+```apex
+public with sharing class AgentModelRoutingService {
+    public class RoutingInput {
+        @InvocableVariable(required=true)
+        public Id caseId;
+
+        @InvocableVariable(required=true)
+        public String taskType;
+
+        @InvocableVariable(required=true)
+        public Integer riskScore;
+
+        @InvocableVariable(required=true)
+        public String dataBoundary;
+    }
+
+    public class RoutingOutput {
+        @InvocableVariable
+        public String model;
+
+        @InvocableVariable
+        public String provider;
+
+        @InvocableVariable
+        public String reason;
+
+        @InvocableVariable
+        public String generatedText;
+    }
+
+    @InvocableMethod(label='Route Agentforce Task to Best Model')
+    public static List<RoutingOutput> routeTask(List<RoutingInput> inputs) {
+        List<RoutingOutput> outputs = new List<RoutingOutput>();
+
+        Set<Id> caseIds = new Set<Id>();
+        for (RoutingInput input : inputs) {
+            caseIds.add(input.caseId);
+        }
+
+        Map<Id, Case> casesById = new Map<Id, Case>([
+            SELECT Id, CaseNumber, Subject, Description, Priority, Status
+            FROM Case
+            WHERE Id IN :caseIds
+            WITH USER_MODE
+        ]);
+
+        for (RoutingInput input : inputs) {
+            Case c = casesById.get(input.caseId);
+
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:ModelRouter/v1/agentforce/route-and-run');
+            req.setMethod('POST');
+            req.setHeader('Content-Type', 'application/json');
+            req.setTimeout(10000);
+
+            Map<String, Object> body = new Map<String, Object>{
+                'orgId' => UserInfo.getOrganizationId(),
+                'userId' => UserInfo.getUserId(),
+                'taskType' => input.taskType,
+                'riskScore' => input.riskScore,
+                'dataBoundary' => input.dataBoundary,
+                'latencySlaMs' => 2500,
+                'requiresGrounding' => true,
+                'payloadTokenEstimate' => 900,
+                'context' => new Map<String, Object>{
+                    'caseNumber' => c.CaseNumber,
+                    'subject' => c.Subject,
+                    'description' => c.Description,
+                    'priority' => c.Priority,
+                    'status' => c.Status
+                }
+            };
+
+            req.setBody(JSON.serialize(body));
+
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+
+            if (res.getStatusCode() >= 300) {
+                throw new CalloutException('Model router failed: ' + res.getBody());
+            }
+
+            Map<String, Object> parsed =
+                (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+
+            RoutingOutput output = new RoutingOutput();
+            output.provider = (String) parsed.get('provider');
+            output.model = (String) parsed.get('model');
+            output.reason = (String) parsed.get('reason');
+            output.generatedText = (String) parsed.get('text');
+            outputs.add(output);
+        }
+
+        return outputs;
+    }
+}
+```
+
+This class can sit behind an Agentforce custom action. In the new Agentforce Builder, I’d wire this through Agent Script and AiAuthoringBundle metadata so the reasoning step is source-controlled, reviewed, and promoted through CI/CD like the rest of the implementation.
+
+The main rule: Salesforce sends only the context the task needs.
+
+Not the whole Case.
+Not the full Contact.
+Not the last 200 emails because “the model might need it.”
+
+Minimum necessary context is an architecture decision.
+
+## Real Enterprise Example: Claims Triage at Scale
+
+A pattern like this came up for me in a large service operation design — think insurance-style claims and support case triage across regions.
+
+The business problem was familiar:
+
+- Agents were receiving thousands of new cases daily.
+- Case descriptions were messy.
+- Some claims needed normal summarization.
+- Some needed regulatory handling.
+- Some included medical or financial details.
+- Executives wanted daily rollups.
+- Service reps wanted sub-3-second assistance in console.
+- Legal wanted auditability.
+
+A single-model design looked simple in the demo. It failed in architecture review.
+
+Why?
+
+Because the same model path was being used for:
+
+- Low-risk classification.
+- High-risk eligibility explanation.
+- PII-heavy internal notes.
+- Executive summaries.
+- Document triage.
+- Knowledge-grounded answers.
+
+That is lazy architecture.
+
+The better design used routing:
+
+| Scenario | Routing Decision |
+|---|---|
+| New case category prediction | `gpt-5.5-mini` with strict label schema |
+| Rep-facing case summary | `claude-sonnet-4-7` with grounded case context |
+| Regulated medical note analysis | Llama 4 Scout in private boundary, or approved Salesforce-native governed path |
+| Complex coverage reasoning | `claude-opus-4-8` with policy references |
+| Document image triage | `gemini-3.1-flash` first, `gemini-3.1-pro` fallback |
+| Executive daily summary | `gpt-5.5` after aggregation, not per case |
+
+The cost reduction did not come from “using cheaper models everywhere.” It came from not using expensive models where the task did not deserve them.
+
+The governance win came from routing metadata. Every AI-generated summary carried fields like:
+
+- `Model_Provider__c`
+- `Model_Name__c`
+- `Routing_Policy_Version__c`
+- `Grounding_Source__c`
+- `Prompt_Template_Version__c`
+- `Fallback_Used__c`
+- `Latency_Ms__c`
+
+That made internal audit conversations much easier.
+
+## Scale: 1K, 100K, 10M
+
+Architecture decisions look different when volume changes. Multi-model routing is no exception.
+
+### At 1K Tasks per Month
+
+At 1K monthly tasks, simplicity wins.
+
+I would use:
+
+- Agentforce 2.0 custom reasoning step.
+- One router endpoint.
+- Two or three model choices.
+- Basic audit logging in Salesforce.
+- Manual cost review monthly.
+
+At this scale, the biggest risk is over-engineering. You do not need a complex policy engine. A TypeScript function with tests may be enough.
+
+### At 100K Tasks per Month
+
+At 100K monthly tasks, cost and observability become real.
+
+I would add:
+
+- Async processing for non-console tasks.
+- Queue-based retries.
+- Provider health checks.
+- Cost budgets per task type.
+- Prompt/version registry.
+- Redaction service before model calls.
+- Dashboards by provider/model/task type.
+- Fallback metrics.
+
+This is where model selection starts to produce measurable savings. If 70% of your tasks are classification and enrichment, pushing those to `gpt-5.5-mini`, `claude-haiku-4-7`, or `gemini-3.1-flash` can matter.
+
+### At 10M Tasks per Month
+
+At 10M monthly tasks, multi-model routing becomes platform engineering.
+
+I would not let every team call models directly.
+
+I’d design:
+
+- Central AI gateway.
+- Org/business-unit policy controls.
+- Dedicated rate limit management.
+- Regional data routing.
+- Contractual provider quotas.
+- Cached responses for repeatable tasks.
+- Streaming for synchronous UX.
+- Batch inference for background enrichment.
+- Full audit pipeline outside core transaction limits.
+- Human review queues for high-risk outputs.
+- Kill switches per model/provider/task.
+
+At this scale, Salesforce governor limits are not the only limits that matter. Provider rate limits, token budgets, network latency, observability cardinality, and compliance boundaries become first-class design constraints.
+
+
+![Scaling Agentforce routing across 1K 100K and 10M tasks](/images/blog/agentforce-multi-model-routing-picking-the-right-llm-per-tas/image-2.png)
+
+
+## Grounding Before Routing vs Routing Before Grounding
+
+One design decision I spend time on: should the agent retrieve context first, then route, or route first, then retrieve?
+
+My answer: it depends on the task.
+
+For lightweight classification, route first. Do not retrieve five knowledge articles just to classify a case subject.
+
+For grounded answers, retrieve first enough metadata to understand risk and domain, then route. If Data 360 Retriever API says the answer touches regulated policy documents, the router should know that before choosing the model.
+
+For complex reasoning, I like a two-stage path:
+
+1. Cheap classifier determines task type, risk, and required sources.
+2. Router selects the stronger model for final reasoning.
+
+This avoids burning premium model tokens on every request.
+
+A practical pattern:
+
+```text
+Stage 1: classify request
+  Model: gpt-5.5-mini or claude-haiku-4-7
+
+Stage 2: retrieve context
+  Source: Data 360 Retriever API, Salesforce records, Unified Catalog metadata
+
+Stage 3: route final reasoning
+  Model: claude-sonnet-4-7, gpt-5.5, claude-opus-4-8, o3, or local Llama 4 Scout
+
+Stage 4: validate response
+  Schema check, citation check, policy check
+
+Stage 5: write audit
+  Salesforce + observability platform
+```
+
+The mistake I see teams make is treating grounding as a giant context dump. Retrieval should narrow the problem, not flood the model.
+
+## Agentforce 2.0 Orchestration Pattern
+
+Agentforce 2.0 changes the conversation because multi-agent orchestration and custom reasoning steps are now real architecture tools.
+
+I would separate agents by responsibility:
+
+- **Triage Agent** — classifies and prioritizes.
+- **Knowledge Agent** — retrieves and grounds.
+- **Reasoning Agent** — applies policy and business rules.
+- **Action Agent** — updates Salesforce or invokes APIs.
+- **Review Agent** — validates output and flags risk.
+
+But I would still centralize model routing.
+
+Otherwise every agent becomes its own mini AI platform. That is where chaos starts.
+
+Using Agent Script, the concept would be:
+
+```text
+agent ClaimsTriageAgent {
+  topic "New Claim Intake" {
+    step classify_intent
+    step call_model_router
+    step retrieve_policy_context
+    step generate_summary
+    step create_review_task when risk_score > 75
+  }
+}
+```
+
+I’m keeping this as pseudo-Agent Script here because the exact syntax will vary by implementation, but the source-control point matters: agent behavior should be reviewable.
+
+The old click-heavy way of building agents does not scale for enterprise governance. Agentforce Builder GA with Agent Script and AiAuthoringBundle metadata is the direction I’d lean into now.
+
+## Governance: The Part Everyone Delays
+
+Multi-model routing without governance is just expensive chaos with more vendors.
+
+The governance model needs to answer:
+
+- Which providers are allowed for each data classification?
+- Which models are approved for customer-facing text?
+- Which models can process regulated data?
+- What prompts were used?
+- What grounding sources were used?
+- Who initiated the request?
+- Was the output reviewed by a human?
+- Did the router use fallback?
+- What was the latency and approximate cost?
+
+I like storing audit metadata in Salesforce when it is operationally useful, but I avoid turning Salesforce into the full telemetry warehouse at large scale.
+
+At high volume, send detailed telemetry to a log/observability platform and keep summarized fields in Salesforce.
+
+A simple custom object can work at smaller scale:
+
+```apex
+public with sharing class AiAuditWriter {
+    public static void writeAudit(
+        Id relatedRecordId,
+        String provider,
+        String model,
+        String taskType,
+        String policyVersion,
+        Integer latencyMs,
+        Boolean fallbackUsed
+    ) {
+        AI_Model_Audit__c audit = new AI_Model_Audit__c(
+            Related_Record_Id__c = String.valueOf(relatedRecordId),
+            Provider__c = provider,
+            Model_Name__c = model,
+            Task_Type__c = taskType,
+            Policy_Version__c = policyVersion,
+            Latency_Ms__c = latencyMs,
+            Fallback_Used__c = fallbackUsed
+        );
+
+        Database.insert(audit, AccessLevel.USER_MODE);
+    }
+}
+```
+
+For sensitive environments, I would also log a hash of the prompt/template version instead of raw prompt text. Raw prompt logging can accidentally become a data leakage problem.
+
+## Failure Modes I Design For
+
+Provider APIs fail. Models drift. Latency spikes. Token costs creep. Security teams change policy. Users paste sensitive data into fields they should not.
+
+So I design the router assuming failure.
+
+### Failure Mode 1: Premium Model Overuse
+
+Everything gets routed to `claude-opus-4-8` or `gpt-5.5` because nobody wants to be blamed for lower quality.
+
+Fix: enforce cost budgets and require task-specific justification for premium models.
+
+### Failure Mode 2: Silent Fallback
+
+The primary model fails, fallback runs, and nobody knows.
+
+Fix: always return `fallbackUsed`, `fallbackReason`, and `originalModel`.
+
+### Failure Mode 3: Data Boundary Violation
+
+Restricted data gets sent to an external provider by accident.
+
+Fix: classify data before routing. Deny by default for regulated paths.
+
+### Failure Mode 4: Prompt Sprawl
+
+Every team creates its own prompt for the same task.
+
+Fix: prompt template registry with versions, owners, and approvals.
+
+### Failure Mode 5: Salesforce Transaction Coupling
+
+A synchronous case save waits on an LLM call and fails the user transaction.
+
+Fix: keep console-assist synchronous only when necessary. Use Platform Events, async Apex, or external queues for non-blocking work.
+
+## Where LWC Native State Fits
+
+For rep-facing experiences, LWC native state management in Summer ’26 makes it easier to build responsive AI assistance panels without overcomplicating client state.
+
+A service console component might show:
+
+- Current task.
+- Selected model.
+- Confidence or review flag.
+- Streaming summary.
+- Fallback warning.
+- “Send to human review” action.
+
+I would not expose the model choice as a toy dropdown to end users. But I would expose enough transparency for trust:
+
+> “Generated using approved policy reasoning model. Grounded on Claims Policy v12. Human review required.”
+
+That is better UX than pretending AI output is magic.
+
+## My Opinionated Routing Rules
+
+If I had to reduce this to a few rules:
+
+1. **Never use one model for everything.**
+2. **Never let every team invent routing.**
+3. **Never send more context than required.**
+4. **Never skip audit metadata.**
+5. **Never treat fallback as invisible.**
+6. **Never optimize only for benchmark quality. Optimize for task risk.**
+
+The best model is not the most capable model. The best model is the model that fits the task with acceptable risk, latency, cost, and governance.
+
+That is the whole point of Agentforce multi-model routing.
+
+## TL;DR
+
+- Multi-model routing lets Agentforce 2.0 choose `gpt-5.5`, `claude-sonnet-4-7`, `gemini-3.1-pro`, Llama 4 Scout, or other models based on task, risk, cost, and latency.
+- Centralize routing policy outside individual agent actions, and always log model, provider, policy version, grounding source, and fallback status.
+- At enterprise scale, model routing becomes platform architecture: quotas, data boundaries, observability, audit, and failure handling matter as much as prompt quality.
