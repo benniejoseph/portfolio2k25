@@ -3,7 +3,7 @@ title: "Designing a Multi-Cloud Salesforce Architecture: Sales + Service + Exper
 excerpt: "A practitioner blueprint for Salesforce multi cloud architecture with Sales, Service, Experience, Data 360, and CTA-style tradeoffs."
 date: "2026-06-25"
 tags: ["Salesforce", "Architecture", "Multi-Cloud", "CTA"]
-keyword: "salesforce multi cloud architecture sales service experience data 360 cta"
+keyword: "salesforce multi cloud architecture sales service experience data 360"
 featured: false
 coverImage: /images/blog/designing-a-multi-cloud-salesforce-architecture-sales-servic/cover.png
 ---
@@ -15,9 +15,9 @@ Sales Cloud wants pipeline speed. Service Cloud wants entitlement accuracy. Expe
 
 Here’s the unpopular take: the hard part is not connecting Sales, Service, Experience, and Data 360. The hard part is deciding which cloud owns which business truth.
 
-I’m studying CTA-level architecture concepts deeply, and multi-cloud design sits right in the middle of the domains I keep revisiting: System Design, Data Lifecycle, Integration, and Identity/Access. I’m not writing this as a certified CTA. I’m writing this as someone who has been in enterprise Salesforce projects long enough to know that most failures come from unclear ownership, not missing features.
+System Design, Data Lifecycle, Integration, and Identity/Access. I’m writing this as someone who has been in enterprise Salesforce projects long enough to know that most failures come from unclear ownership, not missing features.
 
-This is my practitioner blueprint for designing a **salesforce multi cloud architecture sales service experience data 360 cta** style solution in 2026, using Salesforce API v64.0, Agentforce 2.0, Data 360, Experience Cloud, and modern governance patterns.
+This is my practitioner blueprint for designing a **salesforce multi cloud architecture sales service experience data 360** style solution in 2026, using Salesforce API v64.0, Agentforce 2.0, Data 360, Experience Cloud, and modern governance patterns.
 
 ## The real architecture question
 
@@ -698,7 +698,7 @@ It is about making explicit decisions:
 - Governance owns change.
 - Agentforce 2.0 consumes approved capabilities, not raw chaos.
 
-That is the architecture mindset I keep coming back to while studying CTA-level domains. The platform keeps evolving — Salesforce API v64.0, GraphQL CRUD, Conditional Composite API, Data 360 federation, Agentforce 2.0, MCP tooling, LWC native state — but the fundamentals do not change.
+That is the architecture mindset. The platform keeps evolving — Salesforce API v64.0, GraphQL CRUD, Conditional Composite API, Data 360 federation, Agentforce 2.0, MCP tooling, LWC native state — but the fundamentals do not change.
 
 Define ownership. Design for scale. Govern the boundaries.
 
