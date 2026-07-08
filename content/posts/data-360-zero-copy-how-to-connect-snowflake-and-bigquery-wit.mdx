@@ -204,7 +204,7 @@ That means mapping source fields into usable entities:
 
 The hard part is not clicking through mappings. The hard part is agreeing that `MASTER_CUSTOMER_ID`, `GLOBAL_ACCOUNT_ID`, and Salesforce `Account.Id` are not the same thing.
 
-This is where CTA-level Data Lifecycle and System Design study becomes useful. I am not writing this as a CTA-certified architect; I am studying those architecture domains deeply because they expose the exact tradeoffs that show up in projects like this.
+This is where CTA-level Data Lifecycle and System Design study becomes useful. I am studying those architecture domains deeply because they expose the exact tradeoffs that show up in projects like this.
 
 Identity is architecture, not admin setup.
 
@@ -648,14 +648,14 @@ For an enterprise implementation, I would not approve a Zero Copy design without
 - Fallback behavior when Snowflake or BigQuery is unavailable.
 - Agentforce grounding policy if agents consume the data.
 
-This maps closely to the architecture domains I am studying for CTA-level thinking:
+This maps closely to the architecture domain CTA-level thinking:
 
 - **Data Lifecycle** — source ownership, retention, archival, deletion.
 - **Integration** — federation, APIs, events, fallback patterns.
 - **Identity and Access** — user visibility, source policies, consent.
 - **System Design** — scale, latency, ownership, resilience.
 
-Again, I am not claiming CTA certification. I am using those domains because they force better design questions.
+I am using those domains because they force better design questions.
 
 ## My Recommended Reference Architecture
 
