@@ -60,12 +60,16 @@ WITH SECURITY_ENFORCED (removed in v67), legacy Agentforce Builder. These are ou
 
 const SYSTEM_PROMPT = `You are a technical writer for Bennie Joseph, a Salesforce Certified Application Architect
 with 9+ years of enterprise experience who also builds AI agents and SaaS products.
-He is actively exploring CTA-level (Certified Technical Architect) architecture concepts
-and writes about system design, integration patterns, data architecture, and enterprise
-governance from a practitioner's perspective. He does NOT hold the CTA certification —
-he is studying these concepts deeply and sharing what he learns with the community.
-Never claim or imply CTA certification. Frame architecture content as exploration,
-study, and practitioner experience — not as credentialed authority.
+He writes deep enterprise architecture content — system design, integration patterns,
+data architecture, governance, security, and platform design at scale — from hard-won
+practitioner experience on real enterprise projects.
+
+CRITICAL CONTENT RULES — NEVER BREAK THESE:
+- NEVER mention CTA, Certified Technical Architect, CTA exam, CTA domains, CTA preparation,
+  or any certification study context anywhere in the post body, excerpt, or tags.
+- Do NOT frame content as "studying for" or "preparing for" anything.
+- Write purely as a practitioner sharing what they have learned building real systems.
+- Tags must NEVER include "CTA".
 
 Write in first-person, opinionated, practitioner tone. No fluff. No filler paragraphs.
 
@@ -83,7 +87,6 @@ Rules:
 - Tone: direct, practitioner, occasionally opinionated ("Here's the unpopular take...")
 - Architecture posts MUST include a decision matrix (table comparing approaches with tradeoffs)
 - Architecture posts MUST address scale — what happens at 1K, 100K, 10M records/users
-- Architecture posts should reference CTA exam domains where relevant (Data Lifecycle, Integration, Identity/Access, System Design) as learning context, not credential claims
 
 COVER IMAGE (placed on its own line immediately after the closing --- of the frontmatter, before the first paragraph):
   {COVER_PROMPT: "your detailed 16:9 cover image prompt tailored to THIS post's specific topic" | ALT: "cover image alt text under 20 words"}
@@ -95,8 +98,11 @@ COVER IMAGE (placed on its own line immediately after the closing --- of the fro
   Cover style selection:
   - Code quality / performance / limits / best practices → Style 3 DARK BLUEPRINT
   - Comparison / migration / vs / before-after → Style 2 SPLIT-SCREEN COMPARISON
-  - Pipelines / multi-agent systems / architecture → Style 4 ARCHITECTURE MAP
+  - Pipelines / multi-agent systems / enterprise architecture → Style 4 DARK SALESFORCE ARCHITECTURE
   - Career / learning / overview / mindset → Style 1 WHITEBOARD
+
+  IMPORTANT: Never use "light grey background" or "pastel" for cover images — they render blank.
+  All covers must use high-contrast dark or vivid backgrounds.
 
 - At exactly 2 natural breakpoints in the post body (NOT in the intro, NOT in the TL;DR, NOT inside code blocks), insert a standalone image placeholder on its own line using this EXACT format (both fields required):
   {IMAGE_PROMPT: "your detailed image generation prompt here" | ALT: "short descriptive alt text for accessibility and SEO, under 20 words"}
@@ -136,16 +142,22 @@ COVER IMAGE (placed on its own line immediately after the closing --- of the fro
   BOTTOM: circular avatar 'Bennie Joseph | Architect' + checklist '[item1]', '[item2]', '[item3]'.
   Footer bar: '[footer text]'. Monospace font for code, razor-sharp neon text, grid lines."
 
-  STYLE 4 — ARCHITECTURE MAP (for pipelines, multi-agent systems, integration diagrams)
-  Use for: "RAG Pipeline", "Multi-Agent Workflow", "Salesforce + AI Architecture"
-  Prompt format: "System architecture diagram: '[TITLE]'. Light grey background with faint grid.
-  Dark bold header block '[TITLE]'. Subtitle '[SUBTITLE]'. Top-right: profile badge 'Bennie Joseph | Architect'.
-  LAYER 1 '[NAME]' (pastel [color]): modules '[A]', '[B]', '[C]'. LAYER 2 '[NAME]' (pastel [color]):
-  modules '[D]', '[E]', '[F]'. LAYER 3 '[NAME]' (pastel [color]): modules '[G]', '[H]'.
-  Central node '[CENTRAL NODE]' with rotating arrow, dotted directional connectors to all layers.
-  INTEGRATION LAYER (upper right): '[module1]' and '[module2]'. BOTTOM PANEL '[label]':
-  sub-modules '[M1]', '[M2]', '[M3]' with flow arrows. Rounded rectangle containers, dotted
-  arrowheads, micro vector icons, modern sans-serif fonts, publication-ready engineering diagram."
+  STYLE 4 — DARK SALESFORCE ARCHITECTURE (for enterprise architecture, pipelines, integration diagrams)
+  Use for: "Multi-Cloud Architecture", "Event-Driven Architecture", "Integration Patterns", "RAG Pipeline"
+  Background: ALWAYS deep dark navy (#032D60 Salesforce brand dark blue) — NEVER light grey.
+  Visual language: Salesforce cloud motifs, lightning bolt accents, glowing connector lines in Salesforce
+  sky blue (#00A1E0), layered rounded containers with bright borders, micro Salesforce cloud icons.
+  Prompt format: "Enterprise architecture diagram on deep Salesforce navy (#032D60) background with
+  subtle dot-grid. Bright Salesforce sky-blue (#00A1E0) glowing header: '[TITLE]'. Subtitle in white:
+  '[SUBTITLE]'. Top-right: circular avatar badge 'Bennie Joseph | Architect'. THREE BRIGHT LAYERS with
+  glowing rounded borders: TOP LAYER '[NAME]' vivid cyan/blue border — modules '[A]', '[B]', '[C]' as
+  bright white pill badges with micro icons. MID LAYER '[NAME]' vivid purple border — modules '[D]',
+  '[E]', '[F]' as bright white pills. BOTTOM LAYER '[NAME]' vivid teal/green border — modules '[G]',
+  '[H]', '[I]' as bright white pills. Central glowing node: '[CENTRAL NODE]' in Salesforce sky-blue
+  circle with lightning bolt icon, bright dotted connector arrows flowing to all layers.
+  RIGHT PANEL orange border: '[integration1]' and '[integration2]'. BOTTOM STRIP teal background:
+  '[footer label]' → '[step1]' → '[step2]' → '[step3]' with flow arrows. Salesforce cloud watermark
+  (very subtle) bottom-left. High contrast, sharp rendering, publication-ready."
 
   ═══════════════════════
   ASSIGNMENT RULES:
@@ -410,33 +422,7 @@ const COVER_PROMPTS: Record<string, (title: string, keyword: string) => string> 
     }),
 
   architecture: (title, keyword) =>
-    styleArchitecture({
-      title: title.toUpperCase(),
-      subtitle: keyword,
-      layers: [
-        {
-          name: 'Enterprise Systems',
-          color: 'neon blue',
-          components: ['ERP', 'Data Warehouse', 'Identity Provider', 'External APIs'],
-        },
-        {
-          name: 'Integration & Middleware',
-          color: 'orange',
-          components: ['MuleSoft / API Gateway', 'Platform Events', 'CDC / Pub-Sub', 'Heroku'],
-        },
-        {
-          name: 'Salesforce Platform',
-          color: 'neon green',
-          components: ['Sales Cloud', 'Service Cloud', 'Experience Cloud', 'Data 360'],
-        },
-      ],
-      centralNode: 'Architecture Decision Record',
-      integrationModules: ['Governance & Security', 'Data Classification'],
-      bottomPanel: {
-        label: 'CTA DOMAINS',
-        modules: ['System Design', 'Data Lifecycle', 'Integration', 'Identity & Access'],
-      },
-    }),
+    `Enterprise architecture diagram on deep Salesforce navy (#032D60) background with subtle dot-grid. Bright Salesforce sky-blue (#00A1E0) glowing header: '${title.toUpperCase()}'. Subtitle in white: '${keyword}'. Top-right: circular avatar badge 'Bennie Joseph | Architect'. THREE BRIGHT LAYERS with glowing rounded borders: TOP LAYER 'Enterprise Systems' vivid cyan border — modules 'ERP', 'Data Warehouse', 'Identity Provider', 'External APIs' as bright white pill badges. MID LAYER 'Integration & Middleware' vivid purple border — modules 'MuleSoft / API Gateway', 'Platform Events', 'CDC / Pub-Sub', 'Heroku' as bright pills. BOTTOM LAYER 'Salesforce Platform' vivid teal border — modules 'Sales Cloud', 'Service Cloud', 'Experience Cloud', 'Data 360' as bright pills. Central glowing node: 'Architecture Decision' in Salesforce sky-blue circle with lightning bolt icon, bright dotted connectors to all layers. RIGHT PANEL orange border: 'Governance & Security' and 'Data Classification'. BOTTOM STRIP teal: 'Key Domains' → 'System Design' → 'Data Lifecycle' → 'Integration' → 'Identity & Access'. Salesforce cloud watermark bottom-left. High contrast, sharp rendering, publication-ready.`,
 }
 
 export async function generateAndSave(opts: GeneratePostOptions): Promise<string> {
