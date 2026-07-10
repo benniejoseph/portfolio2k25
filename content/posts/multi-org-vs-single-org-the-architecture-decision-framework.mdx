@@ -1,0 +1,786 @@
+---
+title: "Multi-Org vs Single-Org: The Architecture Decision Framework"
+excerpt: "A practical Salesforce multi org single org architecture decision framework for scale, governance, integrations, data, and operating model tradeoffs."
+date: "2026-07-10"
+tags: ["Salesforce", "Architecture", "Multi-Org"]
+keyword: "salesforce multi org single org architecture decision framework"
+featured: false
+coverImage: /images/blog/multi-org-vs-single-org-the-architecture-decision-framework/cover.png
+---
+
+
+Most org strategy debates start with the wrong question.
+
+People ask: “Should we use one Salesforce org or multiple orgs?”
+
+That sounds architectural, but it is incomplete. The better question is:
+
+**Where does the enterprise need consistency, and where does it need separation?**
+
+That one question changes the discussion. A single-org strategy is not automatically simpler. A multi-org strategy is not automatically more scalable. Both can become expensive, political, and brittle if the decision is made from the wrong axis.
+
+I have seen single-org programs collapse under regional exceptions, record visibility workarounds, and release contention. I have also seen multi-org landscapes turn into duplicated data models, five versions of the same customer, inconsistent automation, and integration debt nobody wanted to own.
+
+Here’s the unpopular take: **org count is not the architecture. Org boundaries are a consequence of architecture.**
+
+This is the salesforce multi org single org architecture decision framework I use when the decision actually matters.
+
+## First, define what an org boundary really means
+
+A Salesforce org boundary is not just a deployment boundary.
+
+It is a boundary across:
+
+- Data ownership
+- Metadata lifecycle
+- Security and sharing
+- Automation behavior
+- Integration contracts
+- Release governance
+- Identity and access
+- Reporting consistency
+- AI grounding and agent action scope
+- Operational support model
+
+That means “one org” and “many orgs” are not just technical patterns. They are operating models.
+
+A single-org architecture centralizes platform behavior. You get one data model, one identity plane, one automation landscape, one reporting layer, and one release train. That is powerful when the business is aligned. It is painful when the business is fragmented.
+
+A multi-org architecture decentralizes platform behavior. You get isolation, autonomy, and lower blast radius. You also inherit cross-org identity, duplicated metadata, master data synchronization, integration routing, data reconciliation, and governance overhead.
+
+Neither model is free.
+
+## The decision starts with business coupling
+
+Before I care about objects, licenses, flows, Apex, or integrations, I want to understand business coupling.
+
+I ask five blunt questions:
+
+1. Do business units sell to the same customers?
+2. Do users collaborate across regions or brands?
+3. Do processes require shared state across units?
+4. Do executives need real-time global reporting?
+5. Do regulatory or contractual constraints require hard separation?
+
+If the same customer, account team, opportunity process, and support lifecycle are shared across business units, a single-org model usually wins.
+
+If brands operate independently, have separate data residency requirements, separate legal constraints, separate customer definitions, and separate release priorities, multi-org becomes more defensible.
+
+The mistake is using org strategy to solve politics. If two regions cannot agree on lead status values, creating two orgs may reduce conflict today, but it creates long-term data and integration problems tomorrow.
+
+Sometimes that tradeoff is worth it. But call it what it is.
+
+## Single-org architecture: what it optimizes for
+
+A single-org model optimizes for enterprise consistency.
+
+It works well when you need:
+
+- One global customer view
+- Shared Account, Contact, Lead, Opportunity, Case, and Asset models
+- Cross-region collaboration
+- Centralized consent and preference management
+- Unified reporting
+- Shared Agentforce 2.0 actions and topics
+- Common security model
+- Consistent release governance
+- Easier Data 360 federation and grounding patterns
+
+The biggest benefit is semantic consistency.
+
+When “Customer” means the same thing globally, reporting becomes less political. Integrations become cleaner. AI grounding becomes safer because agents are operating on a consistent enterprise vocabulary.
+
+In a single org, I can expose one curated service layer through Salesforce API v64.0, GraphQL API, Named Query API, MuleSoft, or Salesforce MCP tools. I can centralize permissioning, logging, and integration contracts. I can define data products once and reuse them.
+
+But single orgs fail when architects underestimate complexity inside the org.
+
+At enterprise scale, the issue is rarely “Can Salesforce support the number of records?” Salesforce can handle very large data volumes if modeled correctly. The issue is whether the implementation team can handle:
+
+- Sharing recalculation complexity
+- Automation collisions
+- Record lock contention
+- Deployment sequencing
+- Package boundaries
+- Regression testing
+- Permission set sprawl
+- Multi-region release windows
+- Conflicting data retention rules
+
+A single org with weak governance becomes a shared landfill.
+
+## Multi-org architecture: what it optimizes for
+
+A multi-org model optimizes for isolation and autonomy.
+
+It works well when you need:
+
+- Legal entity separation
+- Data residency boundaries
+- M&A coexistence
+- Franchise or subsidiary autonomy
+- Strong production isolation
+- Different commercial models
+- Separate release cadences
+- Regional compliance boundaries
+- Different identity providers or access models
+- Distinct lifecycle ownership
+
+The strongest argument for multi-org is blast radius control.
+
+If one business unit has aggressive automation releases every week, and another operates in a tightly controlled regulated environment, forcing both into one release train can be expensive and risky.
+
+Multi-org can also be the pragmatic answer during acquisition. I worked on a manufacturing program where the parent company acquired three regional distributors. Each had different quote-to-cash processes, different ERP backends, and different customer hierarchies. A forced single-org migration would have taken years and blocked commercial integration.
+
+The better architecture was a hub-and-spoke pattern:
+
+- Each acquired business kept its Salesforce org initially
+- MuleSoft normalized account and order APIs
+- Data 360 created a federated customer and transaction layer
+- A central analytics workspace handled executive reporting
+- Shared identity standards were introduced before metadata consolidation
+- Consolidation was phased only where process convergence was real
+
+That was not architectural laziness. It was sequencing.
+
+The mistake would have been pretending the businesses were already integrated when they were not.
+
+## Decision matrix: single-org vs multi-org vs hybrid
+
+Architecture decisions need tradeoffs in writing. If the tradeoffs are not explicit, the decision will be relitigated every quarter.
+
+Here is the matrix I use.
+
+| Decision area | Single-org | Multi-org | Hybrid / hub-and-spoke | My default position |
+|---|---|---|---|---|
+| Customer master | Strong fit when customer definitions are shared | Risk of duplicate customer truth | Central master with local extensions | Use single semantic master even if execution is multi-org |
+| Security model | Centralized but can become complex | Isolated and easier locally | Shared identity, local authorization | Centralize identity; localize only where required |
+| Reporting | Best for real-time operational reporting | Requires consolidation layer | Data 360 / warehouse federation | Do not promise global reporting without a data architecture |
+| Release governance | One release train, higher coordination | Local autonomy, duplicated controls | Platform standards plus local release trains | Match release model to business coupling |
+| Integration | Simpler internal reuse | More endpoints and routing | API-led integration with canonical events | Multi-org requires serious integration ownership |
+| AI and agents | Easier grounding and action governance | Fragmented context and action scope | Shared agent policies, local actions | Agentforce 2.0 needs clear data boundaries |
+| Data residency | Harder if strict separation is required | Strong fit | Regional orgs with shared metadata standards | Legal requirements beat elegance |
+| M&A | Can be slow if forced immediately | Strong fit for transition | Temporary multi-org with convergence roadmap | Do not confuse temporary coexistence with target architecture |
+| Cost | Fewer duplicated platform assets | Higher integration and admin overhead | Medium but governance-heavy | Compare total operating cost, not license line items |
+| Scale | Works with disciplined data and sharing design | Scales organizationally but adds sync complexity | Scales if contracts are stable | Scale the operating model, not just the database |
+
+My bias: **choose single-org when the business is genuinely coupled; choose multi-org when separation is structurally required; choose hybrid when the enterprise is transitioning.**
+
+Hybrid is not a compromise word. It needs a defined pattern.
+
+A bad hybrid means every team does whatever it wants.
+
+A good hybrid means clear ownership:
+
+- Global identity standard
+- Canonical customer and product model
+- Shared integration contracts
+- Data 360 strategy for enterprise reporting and grounding
+- Local org autonomy only where justified
+- Explicit convergence or coexistence roadmap
+
+
+![Single-org multi-org hybrid architecture tradeoff matrix](/images/blog/multi-org-vs-single-org-the-architecture-decision-framework/image-1.png)
+
+
+## The scale test: 1K, 100K, and 10M
+
+I do not trust org strategy until it has been tested against scale.
+
+Not theoretical scale. Operational scale.
+
+### At 1K records or users
+
+At 1K records, almost any architecture looks fine.
+
+A single org feels clean. Sharing rules are manageable. Automations run fast. Reports load. Data quality issues are visible enough for admins to fix manually.
+
+A multi-org model also feels manageable. Sync jobs are small. Duplicate accounts are annoying but not existential. Teams can reconcile data manually when needed.
+
+This is the danger zone. Small scale hides bad architecture.
+
+At 1K, the right questions are not technical limits. The right questions are:
+
+- Are we creating avoidable duplication?
+- Are teams already asking for conflicting definitions?
+- Are integration contracts documented?
+- Do we know who owns customer identity?
+- Are we designing for business convergence or permanent separation?
+
+### At 100K records or users
+
+At 100K, the architecture starts telling the truth.
+
+In a single org, sharing model decisions matter. Role hierarchy depth matters. Ownership skew matters. Automation order matters. Record-triggered automation needs discipline. Data model shortcuts start showing up in reporting and performance.
+
+In a multi-org model, synchronization becomes real. You need deterministic external IDs. You need conflict resolution. You need idempotent integrations. You need consistent error handling and observability.
+
+At this point, “we’ll just sync it” is not an architecture.
+
+For example, if Account exists in five orgs, which org owns:
+
+- Legal name?
+- Tax identifier?
+- Billing address?
+- Credit status?
+- Contracting entity?
+- Consent preferences?
+- Global parent relationship?
+
+If the answer is “it depends,” then the architecture needs a master data decision before it needs another integration flow.
+
+### At 10M records or users
+
+At 10M, org strategy becomes data architecture, security architecture, and operations architecture.
+
+In a single org, you must design for:
+
+- Large data volume ownership models
+- Selective queries
+- Skinny or indexed access patterns where appropriate
+- Async processing
+- Archival and retention
+- Sharing recalculation control
+- Platform event and queue usage
+- Batch and integration windows
+- Observability across automation
+
+In a multi-org landscape, you must design for:
+
+- Cross-org deduplication
+- Event replay and recovery
+- Global identity correlation
+- API consumption patterns
+- Enterprise search
+- Reporting latency
+- Data residency controls
+- Cross-org user access
+- Agent action boundaries
+- Integration versioning
+
+The 10M question is simple: **can the business still answer basic questions without a war room?**
+
+Questions like:
+
+- Who is this customer?
+- Which products do they own?
+- Are they allowed to be contacted?
+- Which region owns the relationship?
+- What open cases exist?
+- Which contract terms apply?
+- Which agent can take action on this record?
+
+If those answers require five org admins, two integration engineers, and a spreadsheet, the org strategy is not working.
+
+## Data architecture is usually the deciding factor
+
+When single-org vs multi-org debates get stuck, I move the conversation to data.
+
+Data has fewer opinions than org charts.
+
+The major data questions are:
+
+1. What is the system of record for each domain?
+2. Which data must be globally consistent?
+3. Which data can be locally extended?
+4. What is the latency requirement?
+5. What is the retention requirement?
+6. What is the residency requirement?
+7. What data can AI agents use for grounding?
+8. What actions can agents take against that data?
+
+Data 360 changes the conversation because federation, Zero Copy patterns with Snowflake or BigQuery, Federated Grounding, native vector search, Unified Catalog, and Retriever API give architects more options than “copy everything into one org.”
+
+But federation does not remove ownership.
+
+A federated mess is still a mess.
+
+If five orgs define Account differently, Data 360 can help unify access and grounding, but it cannot magically resolve business semantics. You still need canonical definitions, matching rules, stewardship, and accountability.
+
+Here is the pattern I prefer in complex enterprises:
+
+- Salesforce orgs own operational process data
+- ERP owns financial truth
+- MDM or governed Data 360 model owns enterprise customer identity
+- Data 360 provides unified access, segmentation, and AI grounding
+- MuleSoft APIs enforce canonical contracts
+- Salesforce events publish meaningful state changes
+- Local orgs extend data only where business-specific
+
+The key is separating **operational ownership** from **enterprise meaning**.
+
+## Integration architecture: single-org hides it, multi-org exposes it
+
+Single-org programs often underestimate integration because internal object relationships feel easy.
+
+Need Account to Case? Lookup.
+
+Need Opportunity to Quote? Standard relationship or managed package.
+
+Need service process to reference installed products? Add relationships and automation.
+
+That simplicity is real, and it is one of the strongest arguments for single org.
+
+But single-org does not eliminate integration. It just changes the boundary. You still integrate with ERP, billing, fulfillment, identity, data platforms, consent systems, document services, and AI services.
+
+Multi-org makes integration unavoidable earlier.
+
+That can be good if the enterprise has mature API governance. It can be disastrous if every org builds point-to-point sync.
+
+For multi-org, I want to see:
+
+- Canonical API contracts
+- Event-driven propagation where state changes matter
+- Idempotency keys
+- Replay strategy
+- Dead-letter queues
+- Correlation IDs
+- Data ownership matrix
+- Versioned payloads
+- Observability dashboards
+- Integration runbooks
+
+If a team says, “We’ll use middleware,” I ask who owns the semantic contract. Middleware transports decisions. It does not make them.
+
+## A practical scoring model I use
+
+I like lightweight scoring because it reduces emotional debates.
+
+This is not a replacement for architecture judgment. It is a way to make assumptions visible.
+
+Here is a simplified Apex example of how I have implemented an org strategy assessment inside a Salesforce advisory workspace. Architects and platform owners scored business units against coupling and separation factors. The results did not make the decision automatically, but they forced better conversations.
+
+```apex
+public with sharing class OrgStrategyAssessmentService {
+    public class AssessmentInput {
+        @AuraEnabled public Integer sharedCustomerScore;
+        @AuraEnabled public Integer sharedProcessScore;
+        @AuraEnabled public Integer crossRegionCollaborationScore;
+        @AuraEnabled public Integer globalReportingScore;
+        @AuraEnabled public Integer dataResidencySeparationScore;
+        @AuraEnabled public Integer legalEntitySeparationScore;
+        @AuraEnabled public Integer releaseAutonomyScore;
+        @AuraEnabled public Integer acquisitionTransitionScore;
+    }
+
+    public class AssessmentResult {
+        @AuraEnabled public String recommendation;
+        @AuraEnabled public Integer singleOrgScore;
+        @AuraEnabled public Integer multiOrgScore;
+        @AuraEnabled public List<String> reasons = new List<String>();
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static AssessmentResult assess(AssessmentInput input) {
+        validateScore(input.sharedCustomerScore, 'sharedCustomerScore');
+        validateScore(input.sharedProcessScore, 'sharedProcessScore');
+        validateScore(input.crossRegionCollaborationScore, 'crossRegionCollaborationScore');
+        validateScore(input.globalReportingScore, 'globalReportingScore');
+        validateScore(input.dataResidencySeparationScore, 'dataResidencySeparationScore');
+        validateScore(input.legalEntitySeparationScore, 'legalEntitySeparationScore');
+        validateScore(input.releaseAutonomyScore, 'releaseAutonomyScore');
+        validateScore(input.acquisitionTransitionScore, 'acquisitionTransitionScore');
+
+        Integer singleOrgScore =
+            (input.sharedCustomerScore * 3) +
+            (input.sharedProcessScore * 3) +
+            (input.crossRegionCollaborationScore * 2) +
+            (input.globalReportingScore * 2);
+
+        Integer multiOrgScore =
+            (input.dataResidencySeparationScore * 3) +
+            (input.legalEntitySeparationScore * 3) +
+            (input.releaseAutonomyScore * 2) +
+            (input.acquisitionTransitionScore * 2);
+
+        AssessmentResult result = new AssessmentResult();
+        result.singleOrgScore = singleOrgScore;
+        result.multiOrgScore = multiOrgScore;
+
+        if (singleOrgScore >= multiOrgScore + 8) {
+            result.recommendation = 'Single Org';
+            result.reasons.add('Business coupling is materially stronger than separation pressure.');
+            result.reasons.add('Prioritize shared data model, security governance, and release discipline.');
+        } else if (multiOrgScore >= singleOrgScore + 8) {
+            result.recommendation = 'Multi Org';
+            result.reasons.add('Separation pressure is materially stronger than process coupling.');
+            result.reasons.add('Prioritize canonical APIs, identity correlation, and data ownership contracts.');
+        } else {
+            result.recommendation = 'Hybrid';
+            result.reasons.add('Coupling and separation pressures are both significant.');
+            result.reasons.add('Use a hub-and-spoke model with explicit shared services and local autonomy.');
+        }
+
+        return result;
+    }
+
+    public static List<Account> getReferenceAccounts(Set<Id> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return new List<Account>();
+        }
+
+        return [
+            SELECT Id, Name, Industry, Global_Customer_Id__c, OwnerId
+            FROM Account
+            WHERE Id IN :accountIds
+            WITH USER_MODE
+        ];
+    }
+
+    private static void validateScore(Integer score, String fieldName) {
+        if (score == null || score < 0 || score > 5) {
+            throw new AuraHandledException(fieldName + ' must be between 0 and 5.');
+        }
+    }
+}
+```
+
+The important part is not the math. The important part is weighting.
+
+Shared customers and shared processes are strong single-org signals. Data residency, legal separation, and release autonomy are strong multi-org signals. Acquisition transition often points to hybrid because the current state and target state are different.
+
+I have used this kind of model with executives because it makes tradeoffs visible without drowning them in implementation details.
+
+## Governance is the cost most teams forget
+
+Single-org governance and multi-org governance are different animals.
+
+In a single org, governance focuses on controlled change inside a shared environment:
+
+- Metadata ownership
+- Package boundaries
+- Naming standards
+- Automation standards
+- Data model stewardship
+- Release calendar
+- Regression testing
+- Security review
+- Permission set lifecycle
+- Monitoring and incident response
+
+In multi-org, governance focuses on consistency across autonomous environments:
+
+- Reference architecture
+- Global data standards
+- API contracts
+- Identity standards
+- Cross-org reporting model
+- Integration versioning
+- Environment inventory
+- License and feature management
+- Shared DevOps standards
+- Exception management
+
+The governance question is not “Can we govern it?”
+
+The question is: **which governance model does the organization have the maturity to operate?**
+
+A centralized company with strong platform ownership may thrive in a single-org model.
+
+A federated company with independent business units may resist single-org governance so hard that the architecture becomes theoretical. In that case, multi-org with enforceable shared standards may be more realistic.
+
+Architecture that ignores operating model usually fails slowly, then suddenly.
+
+
+![Org strategy scoring model with bad and good decision code](/images/blog/multi-org-vs-single-org-the-architecture-decision-framework/image-2.png)
+
+
+## Security and sharing can make or break single-org
+
+Single-org sounds elegant until the sharing model becomes a maze.
+
+I look carefully at:
+
+- Private vs public read/write defaults
+- Role hierarchy complexity
+- Territory Management requirements
+- Account ownership skew
+- Criteria-based sharing volume
+- Restriction rules
+- External user access
+- Community or Experience Cloud scale
+- Delegated administration
+- Compliance-driven visibility constraints
+
+If every region needs to hide data from every other region, every brand needs separate access, and every legal entity requires different retention behavior, a single org may still be possible, but it will be costly.
+
+The anti-pattern is using the sharing model to simulate org isolation.
+
+If users in Business Unit A must never see Business Unit B data, and the rule has regulatory consequences, I want to know why we are forcing both into the same org. There may be a good reason. But “we want one org because it sounds simpler” is not good enough.
+
+With Salesforce API v64.0, I still explicitly design service layers around user-mode access where user context matters. I do not rely on accidental system-mode behavior in enterprise data access paths. The direction of the platform is clear: user-mode operations and explicit sharing are becoming the safer default pattern.
+
+## Agentforce 2.0 changes the org boundary conversation
+
+Agentforce 2.0 adds another dimension: agent scope.
+
+With multi-agent orchestration and Atlas Reasoning Engine v2, the architecture question is not just where records live. It is where agents are allowed to reason and act.
+
+In a single org, agents can benefit from consistent metadata, centralized actions, and shared data grounding. That reduces duplicated agent configuration and policy drift.
+
+But the risk is blast radius. If an agent action is poorly governed in a single org, it may affect more business processes.
+
+In a multi-org landscape, local agents can be constrained to local data and local process actions. That is safer for autonomy and compliance, but harder for global customer service scenarios.
+
+For enterprise AI, I care about:
+
+- Grounding source ownership
+- Prompt and topic governance
+- Action permissions
+- Audit trails
+- Human escalation paths
+- Cross-org identity
+- Data residency
+- Agent observability
+- Testing across business scenarios
+
+Data 360 Federated Grounding and Retriever API help, but they do not remove the need for org strategy. If an agent needs to answer, “What is the customer’s global entitlement status?” then the answer must come from a trusted global data product, not whatever org the agent happens to run in.
+
+## DevOps and release management are architecture concerns
+
+One of the biggest single-org risks is release contention.
+
+Everyone shares the same metadata namespace. Everyone wants to deploy. Everyone has urgent regulatory changes. Everyone believes their process is special.
+
+A mature single-org program needs:
+
+- Modular packaging strategy
+- Clear domain ownership
+- Scratch org or sandbox strategy
+- Automated regression testing
+- Static code analysis
+- Deployment gates
+- Metadata conflict management
+- Release train discipline
+- Emergency change process
+
+With LWC native state management GA in Summer ’26, frontend state patterns are cleaner, but that does not eliminate release governance. Shared component libraries still require ownership, versioning, and compatibility discipline.
+
+Multi-org DevOps has different pain:
+
+- Duplicated pipelines
+- Inconsistent branching models
+- Package version drift
+- Environment inventory gaps
+- Repeated security controls
+- Multiple release calendars
+- Cross-org dependency tracking
+
+The Salesforce CLI credential security overhaul matters here because older pipelines that assumed credentials appeared in command output need remediation. In multi-org landscapes, that breaking change is not a small detail. Multiply one insecure or brittle pipeline by twenty orgs and you have an operational risk.
+
+My advice: if you choose multi-org, standardize DevOps early. If you choose single-org, modularize early.
+
+## Real-world example: global services company
+
+A global professional services company I worked with had a classic org strategy problem.
+
+They had:
+
+- North America sales in one Salesforce org
+- EMEA sales in another
+- APAC service operations in a third
+- A separate managed package-heavy org for partner onboarding
+- Three ERP backends
+- Duplicate accounts across regions
+- No global customer identifier
+- Executives asking for global pipeline and service profitability
+- Regional leaders demanding release autonomy
+
+The first instinct from leadership was “move everything into one org.”
+
+That would have created a huge migration program before the business had resolved customer identity, process standardization, or ERP alignment.
+
+We took a staged architecture approach.
+
+Phase 1 focused on control:
+
+- Defined global customer identity and matching rules
+- Created canonical Account and Engagement data contracts
+- Introduced MuleSoft APIs for customer, contract, and project data
+- Established platform architecture standards
+- Built cross-org reporting through Data 360
+- Standardized identity and access policies
+- Created a shared integration observability model
+
+Phase 2 focused on convergence:
+
+- Merged sales processes where global account collaboration was required
+- Left local service operations in regional orgs where regulatory constraints applied
+- Created shared component and metadata standards
+- Introduced common DevOps controls
+- Defined which orgs were strategic and which were transitional
+
+The final target was not pure single-org or pure multi-org. It was a hybrid model:
+
+- One strategic global sales org
+- Regional service orgs where data residency and operational autonomy mattered
+- Data 360 as the enterprise customer and analytics layer
+- MuleSoft as the API contract layer
+- Shared identity, security, and DevOps standards
+- Explicit retirement plan for two legacy orgs
+
+That architecture worked because it reflected the business reality. The business was globally coupled for sales and account management, but regionally separated for parts of service delivery.
+
+Trying to force one model everywhere would have failed.
+
+## The framework I use in architecture workshops
+
+When I run this as a workshop, I structure it around six domains.
+
+### 1. Business operating model
+
+I map:
+
+- Business units
+- Regions
+- Brands
+- Legal entities
+- Shared customers
+- Shared products
+- Shared processes
+- Decision rights
+
+If the business is not aligned, the org will not magically align it.
+
+### 2. Data ownership
+
+I define:
+
+- Customer master
+- Product master
+- Contract master
+- Transaction ownership
+- Consent ownership
+- Local extension points
+- Retention rules
+- Data residency boundaries
+
+This is where most hidden complexity appears.
+
+### 3. Process coupling
+
+I look at whether processes cross boundaries:
+
+- Lead to opportunity
+- Quote to cash
+- Case to field service
+- Partner onboarding
+- Entitlement management
+- Contract renewal
+- Customer success
+- Complaint handling
+
+Cross-boundary process is a strong single-org signal unless separation requirements override it.
+
+### 4. Security and compliance
+
+I document:
+
+- Visibility rules
+- Regulatory constraints
+- Audit requirements
+- Encryption requirements
+- Delegated admin needs
+- External access
+- Segregation of duties
+- Incident response ownership
+
+Hard compliance separation can justify multi-org even when single-org would be cleaner technically.
+
+### 5. Integration and data movement
+
+I define:
+
+- Systems of record
+- API contracts
+- Event model
+- Sync latency
+- Error recovery
+- Replay strategy
+- Idempotency
+- Observability
+
+Multi-org without integration maturity is just distributed inconsistency.
+
+### 6. Platform operating model
+
+I assess:
+
+- Admin ownership
+- DevOps maturity
+- Release governance
+- Testing capability
+- Architecture review process
+- Support model
+- Funding model
+- Roadmap ownership
+
+An architecture the organization cannot operate is not the right architecture.
+
+## Common anti-patterns
+
+I see these repeatedly.
+
+### Anti-pattern 1: one org because “best practice”
+
+There is no universal best practice. There is only fit-for-purpose architecture.
+
+Single-org is powerful when business coupling is real. It is dangerous when separation requirements are ignored.
+
+### Anti-pattern 2: many orgs because teams cannot agree
+
+Multi-org can be valid. But using org boundaries to avoid governance creates long-term integration debt.
+
+If the only reason for separate orgs is political disagreement, fix the decision model before multiplying platforms.
+
+### Anti-pattern 3: reporting as an afterthought
+
+Executives will ask for global reporting.
+
+If you choose multi-org, design the reporting architecture on day one. Do not wait until each org has created its own definitions.
+
+### Anti-pattern 4: no exit strategy for transitional orgs
+
+M&A often requires temporary multi-org. That is fine.
+
+But temporary orgs need dates, conditions, and retirement criteria. Otherwise, “temporary” becomes permanent.
+
+### Anti-pattern 5: local AI agents with no global policy
+
+Agentforce 2.0 makes local productivity easier. It also makes governance drift easier.
+
+If agents can take action, you need policy, auditability, and data grounding standards across the landscape.
+
+## My practical recommendation
+
+Do not start with org count.
+
+Start with the architecture forces:
+
+- Business coupling
+- Data ownership
+- Legal separation
+- Security model
+- Process consistency
+- Release autonomy
+- Integration maturity
+- Reporting needs
+- AI and agent scope
+- Operating model maturity
+
+Then choose the org model.
+
+If coupling is high and separation pressure is low, use a single org and invest heavily in modular architecture, sharing design, release governance, and data lifecycle management.
+
+If separation pressure is high and coupling is low, use multi-org and invest heavily in API contracts, identity correlation, Data 360, observability, and governance standards.
+
+If both are high, use hybrid. But define the hub, spokes, shared services, ownership model, and convergence roadmap. Do not let hybrid become a polite word for chaos.
+
+The decision is not permanent, but it is expensive to reverse. A bad single-org decision creates internal complexity. A bad multi-org decision creates distributed complexity.
+
+Pick the complexity you are willing to govern.
+
+## TL;DR
+
+- Single-org optimizes for consistency; multi-org optimizes for separation. Hybrid only works with explicit shared services and ownership.
+- At 10M-scale, org strategy becomes data, security, integration, AI, and operating model architecture.
+- Do not choose org count first. Score business coupling and separation pressure, then design the boundaries.
