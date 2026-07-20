@@ -1,0 +1,856 @@
+---
+title: "Master Data Management on Salesforce: Golden Record Patterns That Scale"
+excerpt: "Salesforce master data management MDM golden record duplicate architecture patterns for scalable identity, survivorship, and governance."
+date: "2026-07-20"
+tags: ["Salesforce", "Architecture", "MDM", "Data"]
+keyword: "salesforce master data management mdm golden record duplicate architecture"
+featured: false
+coverImage: /images/blog/master-data-management-on-salesforce-golden-record-patterns-/cover.png
+---
+
+
+Most Salesforce duplicate problems are not duplicate problems.
+
+They are identity architecture problems wearing a duplicate rule costume.
+
+I have seen teams spend months tuning Salesforce Matching Rules, only to discover the real issue was that nobody agreed whether a customer was an Account, a billing entity, a ship-to location, a legal entity, a household, a portal user, or a buying committee. Salesforce can enforce a duplicate rule. It cannot magically define enterprise identity for you.
+
+That is the hard part of **salesforce master data management mdm golden record duplicate architecture**: the golden record is not a field merge. It is a governance contract implemented through data model, integration, matching, survivorship, security, monitoring, and operating discipline.
+
+Here is how I design it when Salesforce has to participate in enterprise MDM at scale.
+
+## The Golden Record Is Not Always a Salesforce Record
+
+Here’s the unpopular take: the golden record should not automatically live in Salesforce.
+
+Salesforce is often the best system of engagement. It may or may not be the best system of truth.
+
+In enterprise programs, I usually separate three concepts:
+
+1. **Operational record**  
+   The record users work with in Sales Cloud, Service Cloud, Experience Cloud, Agentforce, or industry clouds.
+
+2. **Golden record**  
+   The mastered representation of the entity after matching, survivorship, lineage, governance, and stewardship.
+
+3. **Reference identity**  
+   The durable identifier that connects Salesforce, ERP, billing, marketing automation, warehouse, Data 360, partner systems, and historical archives.
+
+If those three are collapsed into one Salesforce `Account.Id`, the architecture eventually cracks.
+
+Salesforce IDs are excellent platform identifiers. They are not enterprise identifiers. They change across orgs, sandboxes, migrations, consolidations, and acquisitions. If you are building MDM seriously, you need a durable enterprise key such as:
+
+- `MDM_Party_Id__c`
+- `Enterprise_Customer_Id__c`
+- `Global_Legal_Entity_Id__c`
+- `Household_Id__c`
+- `ERP_Customer_Number__c`
+- `External_Identity_Graph_Id__c`
+
+The exact name does not matter. The rule does.
+
+Salesforce owns the experience. MDM owns the identity contract.
+
+## The Core Question: What Are You Mastering?
+
+Before I touch duplicate rules, I ask one brutal question:
+
+> What entity are we actually mastering?
+
+For B2B, an `Account` can represent:
+
+- Legal entity
+- Global ultimate parent
+- Regional subsidiary
+- Billing customer
+- Ship-to location
+- Sold-to customer
+- Prospect
+- Partner
+- Distributor
+- Competitor
+- Site
+- Buying group
+
+Those are not the same thing.
+
+For B2C, a `Contact` or `Person Account` can represent:
+
+- Individual human
+- Household member
+- Loyalty profile
+- Portal user
+- Policyholder
+- Patient
+- Subscriber
+- Authorized representative
+
+Again, not the same thing.
+
+In one manufacturing program I worked on, Salesforce had 8.7 million Accounts after years of acquisitions and regional rollouts. The business kept saying, “We have duplicate Accounts.” That was partially true. The deeper issue was that the org used the same object for global legal entities, local branches, ship-to locations, distributors, and prospects.
+
+The fix was not “better fuzzy matching.” The fix was a party model:
+
+- `Account` represented operational customer-facing records.
+- `Account_Role__c` classified usage: legal entity, sold-to, ship-to, partner, prospect.
+- `MDM_Party_Id__c` connected records to the enterprise party identity.
+- ERP customer numbers stayed source-specific, not global.
+- Parent-child hierarchy was separated from duplicate identity.
+- Merge was allowed only for same entity type and compatible source lineage.
+
+That one distinction cut false-positive merges more than any matching algorithm did.
+
+## Pattern 1: Salesforce-Native MDM
+
+This pattern keeps the golden record inside Salesforce. It uses native objects, custom metadata, duplicate rules, matching rules, Flow, Apex, Platform Events, and stewardship queues.
+
+I use this when Salesforce is the dominant customer platform and the rest of the enterprise landscape is relatively simple.
+
+Typical architecture:
+
+- `Account` or `Contact` contains golden attributes.
+- External IDs connect to ERP, marketing, billing, and support systems.
+- Duplicate Rules block or alert at creation time.
+- Apex/Flow creates match candidates asynchronously.
+- Data stewards review ambiguous matches.
+- Platform Events publish identity changes.
+- MuleSoft or direct APIs synchronize downstream systems.
+- Data 360 can enrich and segment, but not necessarily master.
+
+This pattern works well when:
+
+- There are fewer than a few million customer records.
+- Source systems are limited and controlled.
+- Salesforce is the operational center of gravity.
+- Data stewardship happens inside Salesforce.
+- Matching complexity is moderate.
+
+The danger is turning Salesforce into an accidental enterprise MDM platform without funding the governance. If nobody owns survivorship, lineage, and remediation, the org becomes a nicer-looking duplicate factory.
+
+## Pattern 2: External MDM Hub With Salesforce as Participant
+
+This is the classic enterprise model.
+
+An external MDM hub owns the golden record and identity resolution. Salesforce consumes mastered data and publishes operational changes back to the hub.
+
+Typical architecture:
+
+- MDM hub owns enterprise party identity.
+- Salesforce stores `MDM_Party_Id__c`.
+- Salesforce users can create operational records, but records remain “unmastered” until matched.
+- MDM hub returns match decisions, survivorship updates, and hierarchy changes.
+- Salesforce publishes record changes through Platform Events or Change Data Capture.
+- Integration layer handles transformation, retry, and source precedence.
+
+I use this pattern when the enterprise has:
+
+- SAP, Oracle, mainframe, claims, policy, billing, warehouse, and regional CRM systems.
+- Multiple Salesforce orgs.
+- Regulatory or audit requirements.
+- Global data governance teams.
+- Sophisticated survivorship rules.
+- Tens of millions of customer or party records.
+
+Salesforce should not pretend to be the only source of truth in this landscape. It should be a disciplined participant.
+
+## Pattern 3: Hybrid Golden Record With Salesforce Operational Mastering
+
+This is the pattern I see most often now.
+
+The enterprise MDM hub or Data 360-backed identity layer owns identity resolution across systems, but Salesforce owns operational attributes needed for sales, service, and partner workflows.
+
+For example:
+
+- MDM hub masters legal name, tax ID, global hierarchy, status, and enterprise identifiers.
+- Salesforce masters owner, territory, lifecycle stage, sales segment, account plan, service entitlement, and relationship contacts.
+- ERP masters payment terms, credit status, invoice account, and billing address.
+- Marketing platform masters consent interaction history.
+- Data 360 federates behavioral, transactional, and engagement data for analytics, segmentation, grounding, and activation.
+
+This is usually the most realistic enterprise architecture because not all attributes have the same source of truth.
+
+The golden record becomes a composed view, not a single table.
+
+## Decision Matrix: Picking the Right MDM Pattern
+
+| Pattern | Best Fit | Strengths | Weaknesses | My Recommendation |
+|---|---|---|---|---|
+| Salesforce-native MDM | Salesforce-led businesses with limited source systems | Fast to implement, familiar UI, native security, lower integration overhead | Can become brittle at enterprise scale, limited advanced identity graph capability | Good for controlled mid-market or single-cloud enterprise domains |
+| External MDM hub | Large enterprises with many systems of record | Strong governance, survivorship, lineage, hierarchy, cross-system mastering | Higher cost, slower delivery, more integration complexity | Best for global enterprises with ERP-heavy landscapes |
+| Hybrid operational mastering | Enterprises where Salesforce owns engagement but not all truth | Pragmatic, scalable, respects source ownership, avoids false centralization | Requires clear attribute-level ownership and strong integration design | My default for complex Salesforce programs |
+| Data 360-assisted identity | Organizations needing federation, activation, segmentation, and AI grounding | Strong for unification, Zero Copy federation, native vector search, Retriever API, Federated Grounding | Should not be treated as a replacement for data governance | Excellent as a data plane around MDM, not a governance shortcut |
+| Manual duplicate cleanup only | Small orgs with low volume and simple operations | Cheap, quick, user-friendly | Does not scale, repeats forever, no lineage | Acceptable only as a temporary containment tactic |
+
+
+![Salesforce MDM pattern decision matrix](/images/blog/master-data-management-on-salesforce-golden-record-patterns-/image-1.png)
+
+
+## The Duplicate Architecture I Actually Trust
+
+A scalable duplicate architecture has five layers.
+
+### 1. Blocking Keys
+
+Blocking keys reduce the search space.
+
+You do not fuzzy match every new Account against 10 million Accounts. That is how batch jobs die and APIs time out.
+
+A blocking key is a normalized deterministic fingerprint used to find likely candidates quickly.
+
+Examples:
+
+- Normalized company name + postal code
+- Email domain + country
+- Tax ID
+- Phone E.164 format
+- First letter of name + ZIP prefix + country
+- Website root domain
+- Person email hash
+- Government identifier hash
+
+For B2B, I often use multiple blocking keys because one key is never enough:
+
+- `NAME_POSTAL_COUNTRY`
+- `DOMAIN_COUNTRY`
+- `TAX_ID_COUNTRY`
+- `PHONE_COUNTRY`
+- `ERP_CUSTOMER_SOURCE`
+
+The candidate generation job uses blocking keys. The scoring engine decides whether records match.
+
+### 2. Match Scoring
+
+Matching should be explainable.
+
+I do not like black-box matching for operational merge decisions unless there is a review process. Data stewards need to understand why two records were matched.
+
+A practical score may include:
+
+- Exact tax ID match: +80
+- Exact ERP customer number and source: +90
+- Same website root domain: +35
+- Same normalized name: +35
+- Similar normalized name: +20
+- Same billing postal code: +15
+- Same country: +10
+- Conflicting country: -40
+- Conflicting entity type: hard reject
+- Different source lineage with incompatible roles: hard reject
+
+The score does not have to be mathematically perfect. It has to be consistent, explainable, and tuned with real false-positive and false-negative samples.
+
+### 3. Survivorship Rules
+
+Survivorship answers: when records conflict, which value wins?
+
+Examples:
+
+| Attribute | Winning Source |
+|---|---|
+| Legal name | MDM hub or ERP |
+| Billing address | ERP |
+| Shipping address | Logistics or ERP |
+| Sales owner | Salesforce |
+| Segment | Salesforce or Data 360 calculation |
+| Tax ID | ERP or compliance system |
+| Email opt-in | Consent platform |
+| Service entitlement | Contract system |
+| Website | Salesforce unless verified by enrichment provider |
+
+If survivorship is not attribute-level, it is too vague.
+
+“ERP wins” is not enough. ERP may win billing address, but Salesforce may win account owner and territory. Marketing may win consent. Service may win entitlement. Legal may win compliance status.
+
+### 4. Stewardship Queue
+
+Not every match should auto-merge.
+
+I normally classify candidates:
+
+- **Auto-link**: very high confidence, no conflicts.
+- **Auto-merge**: high confidence and same entity type, safe fields only.
+- **Review required**: medium confidence or material conflicts.
+- **Reject**: incompatible entity types, conflicting legal identifiers, impossible geography.
+- **Monitor**: weak signal, insufficient data.
+
+In Salesforce, this usually becomes a custom object like `MDM_Match_Candidate__c`, assigned to a data steward queue with score, explanation, source fields, and recommended action.
+
+### 5. Event-Driven Propagation
+
+MDM decisions must propagate.
+
+When an Account gets a new `MDM_Party_Id__c`, when two records are merged, or when survivorship updates a legal name, downstream systems need to know.
+
+I prefer event-driven propagation:
+
+- Salesforce Platform Events for identity changes.
+- Change Data Capture for record-level changes.
+- MuleSoft for orchestration and policy enforcement.
+- Conditional Composite API when downstream updates need dependency-aware API reduction.
+- GraphQL API for read-heavy composed views where the client needs related records efficiently.
+- Data 360 for federation, segmentation, activation, and AI grounding.
+
+Batch sync still has a place. But if golden record changes only move nightly, users will create duplicates during the gap.
+
+## Apex Example: Candidate Generation Without Melting the Org
+
+This is a simplified version of a pattern I have used in production. The goal is not to merge records inside a trigger. The goal is to generate explainable match candidates safely.
+
+The trigger or ingestion process computes blocking keys. An async service then finds candidates and creates review records.
+
+```apex
+public with sharing class MdmAccountMatchService {
+    public class IncomingAccount {
+        public Id accountId;
+        public String normalizedName;
+        public String websiteDomain;
+        public String billingPostalCode;
+        public String billingCountry;
+        public String taxIdHash;
+        public String entityType;
+    }
+
+    public static void createCandidates(List<IncomingAccount> incomingAccounts) {
+        if (incomingAccounts == null || incomingAccounts.isEmpty()) {
+            return;
+        }
+
+        Set<String> domains = new Set<String>();
+        Set<String> postalCountries = new Set<String>();
+        Set<String> taxHashes = new Set<String>();
+
+        Map<Id, IncomingAccount> incomingById = new Map<Id, IncomingAccount>();
+
+        for (IncomingAccount incoming : incomingAccounts) {
+            if (incoming.accountId == null) continue;
+
+            incomingById.put(incoming.accountId, incoming);
+
+            if (String.isNotBlank(incoming.websiteDomain)) {
+                domains.add(incoming.websiteDomain.toLowerCase());
+            }
+
+            if (String.isNotBlank(incoming.billingPostalCode) &&
+                String.isNotBlank(incoming.billingCountry)) {
+                postalCountries.add(
+                    incoming.billingPostalCode.left(5).toUpperCase() +
+                    '|' +
+                    incoming.billingCountry.toUpperCase()
+                );
+            }
+
+            if (String.isNotBlank(incoming.taxIdHash)) {
+                taxHashes.add(incoming.taxIdHash);
+            }
+        }
+
+        if (incomingById.isEmpty()) {
+            return;
+        }
+
+        List<Account> possibleMatches = [
+            SELECT Id,
+                   Name,
+                   Normalized_Name__c,
+                   Website_Domain__c,
+                   BillingPostalCode,
+                   BillingCountry,
+                   Tax_Id_Hash__c,
+                   Entity_Type__c,
+                   MDM_Party_Id__c
+            FROM Account
+            WHERE Id NOT IN :incomingById.keySet()
+            AND (
+                Website_Domain__c IN :domains
+                OR Postal_Country_Block__c IN :postalCountries
+                OR Tax_Id_Hash__c IN :taxHashes
+            )
+            WITH USER_MODE
+            LIMIT 50000
+        ];
+
+        List<MDM_Match_Candidate__c> candidates = new List<MDM_Match_Candidate__c>();
+
+        for (IncomingAccount incoming : incomingById.values()) {
+            for (Account existing : possibleMatches) {
+                Integer score = scoreCandidate(incoming, existing);
+
+                if (score < 60) {
+                    continue;
+                }
+
+                String recommendedAction = score >= 95 ? 'Auto Link' :
+                                           score >= 80 ? 'Steward Review' :
+                                                         'Monitor';
+
+                candidates.add(new MDM_Match_Candidate__c(
+                    Incoming_Account__c = incoming.accountId,
+                    Candidate_Account__c = existing.Id,
+                    Match_Score__c = score,
+                    Recommended_Action__c = recommendedAction,
+                    Explanation__c = explain(incoming, existing, score)
+                ));
+            }
+        }
+
+        if (!candidates.isEmpty()) {
+            Database.insert(candidates, false, AccessLevel.USER_MODE);
+        }
+    }
+
+    private static Integer scoreCandidate(IncomingAccount incoming, Account existing) {
+        if (String.isNotBlank(incoming.entityType) &&
+            String.isNotBlank(existing.Entity_Type__c) &&
+            incoming.entityType != existing.Entity_Type__c) {
+            return 0;
+        }
+
+        Integer score = 0;
+
+        if (String.isNotBlank(incoming.taxIdHash) &&
+            incoming.taxIdHash == existing.Tax_Id_Hash__c) {
+            score += 80;
+        }
+
+        if (String.isNotBlank(incoming.websiteDomain) &&
+            incoming.websiteDomain.equalsIgnoreCase(existing.Website_Domain__c)) {
+            score += 35;
+        }
+
+        if (String.isNotBlank(incoming.normalizedName) &&
+            incoming.normalizedName == existing.Normalized_Name__c) {
+            score += 35;
+        }
+
+        if (String.isNotBlank(incoming.billingPostalCode) &&
+            String.isNotBlank(existing.BillingPostalCode) &&
+            incoming.billingPostalCode.left(5) == existing.BillingPostalCode.left(5)) {
+            score += 15;
+        }
+
+        if (String.isNotBlank(incoming.billingCountry) &&
+            incoming.billingCountry == existing.BillingCountry) {
+            score += 10;
+        }
+
+        if (String.isNotBlank(incoming.billingCountry) &&
+            String.isNotBlank(existing.BillingCountry) &&
+            incoming.billingCountry != existing.BillingCountry) {
+            score -= 40;
+        }
+
+        return Math.max(score, 0);
+    }
+
+    private static String explain(IncomingAccount incoming, Account existing, Integer score) {
+        List<String> reasons = new List<String>();
+
+        if (incoming.taxIdHash == existing.Tax_Id_Hash__c) {
+            reasons.add('Tax identifier hash matched');
+        }
+        if (incoming.websiteDomain == existing.Website_Domain__c) {
+            reasons.add('Website domain matched');
+        }
+        if (incoming.normalizedName == existing.Normalized_Name__c) {
+            reasons.add('Normalized name matched');
+        }
+
+        return 'Score=' + score + '; ' + String.join(reasons, '; ');
+    }
+}
+```
+
+A few things are intentional here.
+
+First, matching is not inside a trigger loop. Second, the query uses blocking keys. Third, it uses `WITH USER_MODE`, which is the direction Salesforce security has moved toward in the v64.0 and forward API model. Fourth, the service creates candidates instead of blindly merging records.
+
+Blind merge automation is how you destroy trust.
+
+## Real Enterprise Example: The 31% Duplicate Account Problem
+
+One enterprise project that shaped my MDM opinions was a global B2B manufacturer with Salesforce, SAP, regional ERPs, partner portals, marketing automation, and a warehouse estate.
+
+The symptoms were familiar:
+
+- Sales reps complained about duplicate Accounts.
+- Service agents opened cases against the wrong customer.
+- Partner portal users saw inconsistent account hierarchies.
+- Marketing campaigns over-counted account penetration.
+- Revenue reporting disagreed between Salesforce and ERP.
+- Integration jobs created new Accounts when they could not find a match.
+- Regional teams resisted global cleanup because local fields were “correct.”
+
+Initial profiling showed about 12 million Account-like records across platforms. Roughly 31% had at least one potential duplicate signal. But only a subset were true duplicates.
+
+The first proposed solution was aggressive Salesforce merging. I pushed back hard.
+
+We sampled 500 candidate clusters. The findings were messy:
+
+- Some “duplicates” were actually ship-to locations.
+- Some were legal subsidiaries under the same global parent.
+- Some were distributors and end customers with similar names.
+- Some had the same website but different billing entities.
+- Some had the same tax ID because the source data was wrong.
+- Some were true duplicates created by regional integrations.
+- Some were acquired companies with historical ERP identifiers that could not be collapsed.
+
+The architecture we implemented had four big moves:
+
+1. **Entity type became mandatory**  
+   No mastering without knowing whether the record was legal entity, sold-to, ship-to, distributor, partner, or prospect.
+
+2. **MDM identity was externalized**  
+   Salesforce stored `MDM_Party_Id__c`, but the enterprise identity hub owned party resolution.
+
+3. **Salesforce retained operational ownership**  
+   Sales owner, account plan, segment override, relationship contacts, and service routing stayed Salesforce-owned.
+
+4. **Stewardship moved into Salesforce**  
+   Data stewards did not want another UI. We gave them queues, candidate records, merge recommendations, field-level comparison, and audit trails inside Salesforce.
+
+The outcome was not “zero duplicates.” That is a fantasy metric.
+
+The real outcome was:
+
+- New duplicate creation dropped materially because integrations had better lookup contracts.
+- Steward review volume became manageable because blocking keys reduced noise.
+- Merge decisions became auditable.
+- Sales users stopped losing local operational context during global cleanup.
+- ERP and Salesforce stopped fighting over the same fields.
+- Executives finally had a stable customer hierarchy for reporting.
+
+That is what good MDM feels like. Less drama. More trust.
+
+
+![Duplicate candidate generation at Salesforce scale](/images/blog/master-data-management-on-salesforce-golden-record-patterns-/image-2.png)
+
+
+## What Happens at 1K, 100K, and 10M Records
+
+MDM patterns that work at 1,000 records can fail spectacularly at 10 million.
+
+### At 1K Records
+
+At this size, you can survive with:
+
+- Native Duplicate Rules.
+- Matching Rules.
+- Admin review.
+- Manual merge.
+- Simple required fields.
+- Basic validation rules.
+- Reports for suspected duplicates.
+
+This is fine. Do not over-engineer.
+
+But even at 1K records, define the enterprise identifier early. It is cheap now and expensive later.
+
+Minimum viable fields:
+
+- `MDM_Party_Id__c`
+- `Source_System__c`
+- `Source_Record_Id__c`
+- `Entity_Type__c`
+- `Golden_Record_Status__c`
+- `Last_Mastered_Date__c`
+
+### At 100K Records
+
+At this size, manual cleanup starts breaking down.
+
+You need:
+
+- Async candidate generation.
+- Blocking keys.
+- Stewardship queue.
+- Field-level survivorship.
+- Event-driven outbound sync.
+- Integration lookup contracts.
+- Duplicate dashboards.
+- Data quality SLAs.
+- Batch-safe Apex and API design.
+
+You also need to stop relying on name matching.
+
+Company names are dirty. People abbreviate. Legal suffixes differ. Local languages matter. Punctuation lies. Websites change. Addresses are inconsistent. Phone numbers get reused. Email domains can be shared by holding companies or agencies.
+
+At 100K records, MDM becomes an operating model, not a cleanup project.
+
+### At 10M Records
+
+At 10 million records, the architecture must be partitioned and observable.
+
+You need:
+
+- Multiple blocking strategies.
+- Indexed External IDs.
+- Selective SOQL.
+- Async processing with retries.
+- Platform Event-based propagation.
+- Bulk API and Composite API discipline.
+- Archive strategy for obsolete candidates.
+- Steward workload management.
+- Data lineage retention.
+- Operational dashboards for match latency, merge volume, false positives, and rejected candidates.
+- Data 360 federation for analytical and activation use cases without copying everything into Salesforce.
+- Strict ownership boundaries between Salesforce, ERP, MDM hub, warehouse, consent platform, and identity graph.
+
+At this scale, I avoid synchronous matching on save unless the rule is deterministic and indexed, such as exact external ID or exact tax ID.
+
+For fuzzy or probabilistic matching, I prefer:
+
+1. Let the record be created as provisional.
+2. Assign `Golden_Record_Status__c = 'Pending Match'`.
+3. Publish an identity resolution event.
+4. Generate candidates asynchronously.
+5. Auto-link only when confidence is extremely high.
+6. Send ambiguous candidates to stewardship.
+7. Propagate mastered identity back to Salesforce and downstream systems.
+
+The user experience matters here. Reps and agents need to know when a record is pending identity resolution. Hiding that state creates mistrust.
+
+## Attribute Ownership Is the Heart of Survivorship
+
+I always build an attribute ownership matrix before designing merge rules.
+
+Example:
+
+| Attribute | Salesforce | ERP | MDM Hub | Consent Platform | Data 360 | Rule |
+|---|---:|---:|---:|---:|---:|---|
+| Legal Name | Read | Contribute | Master | None | Read | MDM wins |
+| Billing Address | Read | Master | Contribute | None | Read | ERP wins |
+| Shipping Address | Contribute | Master | Contribute | None | Read | ERP wins unless unverified |
+| Account Owner | Master | None | None | None | Read | Salesforce wins |
+| Global Hierarchy | Read | Contribute | Master | None | Read | MDM wins |
+| Email Consent | Read | None | None | Master | Read | Consent platform wins |
+| Segment | Master | Contribute | Contribute | None | Contribute | Salesforce wins with governed override |
+| Propensity Score | Read | None | None | None | Master | Data 360 wins |
+| Tax Identifier | Read | Master | Master | None | None | ERP/MDM governed |
+
+This matrix prevents political arguments later. When a field changes, the integration does not need to guess which system wins.
+
+## Salesforce Data Model Recommendations
+
+For Salesforce MDM, I normally add these fields or equivalent custom metadata-driven structures.
+
+### On Account or Contact
+
+- `MDM_Party_Id__c`
+- `Golden_Record_Status__c`
+- `Entity_Type__c`
+- `Source_System__c`
+- `Source_Record_Id__c`
+- `Mastering_Source__c`
+- `Last_Mastered_Date__c`
+- `Data_Quality_Score__c`
+- `Normalized_Name__c`
+- `Website_Domain__c`
+- `Postal_Country_Block__c`
+- `Tax_Id_Hash__c`
+- `Do_Not_Merge__c`
+- `Merge_Protection_Reason__c`
+
+### Custom Objects
+
+- `MDM_Source_Cross_Reference__c`
+- `MDM_Match_Candidate__c`
+- `MDM_Survivorship_Rule__c`
+- `MDM_Field_Lineage__c`
+- `MDM_Merge_Audit__c`
+- `MDM_Data_Quality_Issue__c`
+
+### Custom Metadata
+
+- Match rule configuration.
+- Source system priority.
+- Attribute survivorship rules.
+- Entity type compatibility rules.
+- Auto-link thresholds.
+- Steward queue routing.
+
+Hardcoding survivorship logic inside Apex is a maintenance trap. Apex can execute rules, but rules should be configurable where possible.
+
+## Integration Contracts: Where Most MDM Designs Fail
+
+The most common failure I see is vague integration behavior.
+
+Bad contract:
+
+> “Send customer updates to Salesforce.”
+
+Good contract:
+
+> “When ERP creates or updates a sold-to customer, it sends `Source_System`, `Source_Record_Id`, `Entity_Type`, `ERP_Customer_Number`, normalized address, tax identifier hash, and operation type. Salesforce attempts deterministic lookup by source cross-reference. If not found, it creates a provisional Account with `Golden_Record_Status__c = Pending Match` and publishes `CustomerIdentityResolutionRequested__e`.”
+
+That level of specificity matters.
+
+For inbound APIs, I prefer idempotent upsert contracts:
+
+- Source system must send durable source ID.
+- Salesforce stores source cross-reference.
+- Integration never searches by name alone.
+- Integration must declare entity type.
+- Integration must declare operation intent: create, update, deactivate, link, unlink.
+- Salesforce returns both `Account.Id` and `MDM_Party_Id__c` if available.
+- Errors distinguish validation, authorization, duplicate candidate, and stewardship-required states.
+
+With Salesforce API v64.0, I also look closely at GraphQL API for read-heavy client use cases and Conditional Composite API where dependent operations would otherwise burn unnecessary API calls. Neither replaces MDM, but both can reduce integration friction.
+
+## AI and Agentforce: Useful, But Not the Master
+
+Agentforce 2.0 and Atlas Reasoning Engine v2 are useful around MDM, especially for stewardship workflows.
+
+I would use an agent to:
+
+- Summarize why two records might match.
+- Explain conflicting fields.
+- Draft steward recommendations.
+- Retrieve lineage from Data 360 or external systems.
+- Help users find the correct Account before creating a new one.
+- Generate remediation tasks.
+- Answer “why did this field change?” using audit records.
+
+I would not let an AI agent silently merge enterprise customer records.
+
+That is not because I am anti-AI. I build AI agents. It is because MDM merge decisions have financial, operational, legal, and trust consequences.
+
+A good AI-assisted MDM design has guardrails:
+
+- Agent recommends; governed service executes.
+- High-risk merges require human approval.
+- Every recommendation includes evidence.
+- Actions are logged.
+- Security runs in user context where appropriate.
+- Sensitive fields are masked or excluded.
+- Deterministic identifiers override language-model guesses.
+
+Use AI to reduce steward workload. Do not use it to bypass governance.
+
+## Security and Governance Considerations
+
+MDM data is sensitive because it connects identities across systems.
+
+I usually design controls around:
+
+- Field-level security for identifiers.
+- Shield encryption where required.
+- Audit history for mastered fields.
+- Restriction rules for regional visibility.
+- Record sharing aligned to operational use, not raw master data access.
+- Data retention rules for rejected match candidates.
+- Consent-aware activation.
+- PII minimization in events.
+- Hashing for tax IDs or sensitive identifiers.
+- Named Credentials for integration endpoints.
+- Platform Event payload discipline.
+
+The security model must distinguish between:
+
+- Who can view operational records.
+- Who can view mastered identifiers.
+- Who can approve merges.
+- Who can override survivorship.
+- Who can see cross-system lineage.
+- Which integrations can update mastered fields.
+
+If everyone can override MDM fields, you do not have MDM. You have decorative metadata.
+
+## Metrics That Tell You Whether MDM Is Working
+
+Do not measure only duplicate count.
+
+A falling duplicate count can mean users stopped entering data, duplicate detection is missing matches, or merge rules are too aggressive.
+
+I prefer a balanced scorecard:
+
+- Duplicate candidate creation rate.
+- Confirmed duplicate rate.
+- False positive rate.
+- False negative sample rate.
+- Average stewardship age.
+- Auto-link percentage.
+- Manual override percentage.
+- Records pending mastering.
+- Records without enterprise ID.
+- Merge rollback incidents.
+- Integration-created duplicates.
+- Identity resolution latency.
+- Field survivorship conflict rate.
+- Downstream sync failure rate.
+
+For executives, I simplify this into:
+
+- Can we identify the customer?
+- Can we trust the hierarchy?
+- Can users find the right record?
+- Can systems agree on identity?
+- Can we prove why a value won?
+
+That is the real MDM dashboard.
+
+## My Default Reference Architecture
+
+When I design Salesforce MDM now, my default looks like this:
+
+1. **Salesforce as engagement and operational workflow**
+   - Users create and update operational customer data.
+   - Records can be provisional.
+   - Stewardship happens in Salesforce.
+
+2. **Enterprise MDM or identity service as mastering authority**
+   - Owns durable party identity.
+   - Resolves cross-system duplicates.
+   - Maintains hierarchy and lineage.
+
+3. **Data 360 as federation, enrichment, and activation layer**
+   - Federates warehouse data through Zero Copy where appropriate.
+   - Supports segmentation, activation, native vector search, Retriever API, and Federated Grounding.
+   - Does not replace survivorship governance.
+
+4. **MuleSoft or integration layer as policy enforcement**
+   - Handles source contracts.
+   - Performs transformation and retries.
+   - Publishes and subscribes to events.
+   - Prevents point-to-point chaos.
+
+5. **Salesforce automation as operational guardrail**
+   - Duplicate Rules for immediate prevention.
+   - Apex for candidate generation and controlled execution.
+   - Flow for steward UX and routing.
+   - Platform Events for propagation.
+   - Reports and dashboards for monitoring.
+
+This architecture scales because it does not force one platform to do every job.
+
+## Final Advice: Do Not Start With Merge Rules
+
+If I had to summarize years of MDM pain into one sentence:
+
+> Start with identity, not duplicates.
+
+Before you configure another duplicate rule, answer these questions:
+
+- What entity are we mastering?
+- What is the durable enterprise identifier?
+- Which system owns each attribute?
+- Which records are allowed to merge?
+- Which matches require steward review?
+- How do downstream systems learn about identity changes?
+- How do users know a record is provisional?
+- How do we audit survivorship decisions?
+- What happens when the AI recommendation is wrong?
+- What happens at 10 million records?
+
+If those questions are unanswered, duplicate rules will only make the mess look more official.
+
+Salesforce can absolutely participate in a serious MDM architecture. It can even own golden records in the right context. But the design has to respect scale, source ownership, survivorship, and operational reality.
+
+The golden record is not a button.
+
+It is a system.
+
+## TL;DR
+
+- Golden records scale when Salesforce IDs, enterprise identity, and operational records are treated as separate concepts.
+- Use blocking keys, explainable scoring, survivorship rules, stewardship queues, and event-driven propagation.
+- At enterprise scale, hybrid MDM usually beats forcing Salesforce or an external hub to own every attribute.
