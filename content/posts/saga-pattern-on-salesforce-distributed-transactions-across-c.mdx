@@ -1,0 +1,961 @@
+---
+title: "Saga Pattern on Salesforce: Distributed Transactions Across Clouds"
+excerpt: "A practitioner guide to Salesforce saga pattern distributed transactions integration architecture across ERP, OMS, billing, and service clouds."
+date: "2026-07-27"
+tags: ["Salesforce", "Architecture", "Integration", "Patterns"]
+keyword: "salesforce saga pattern distributed transactions integration architecture"
+featured: false
+coverImage: /images/blog/saga-pattern-on-salesforce-distributed-transactions-across-c/cover.png
+---
+
+
+Distributed transactions are where clean architecture diagrams go to die.
+
+The business says: “When the customer places an order, reserve inventory, authorize payment, create the ERP order, start fulfillment, update Salesforce, and notify service.”
+
+The architect hears: “Run one transaction across six systems owned by four teams, two vendors, and one legacy batch process that still thinks XML is a lifestyle.”
+
+Here’s the unpopular take: if your Salesforce integration architecture depends on distributed ACID transactions, you have already lost. Salesforce is not going to hold a database transaction open while SAP, a payment gateway, an OMS, a warehouse platform, and a tax engine all decide whether they feel cooperative today.
+
+The right pattern is usually a **saga**: a long-running business transaction broken into local transactions, each with a durable state transition and a compensating action.
+
+In Salesforce terms, the saga pattern is how I design enterprise processes where:
+
+- Salesforce owns the customer or order interaction.
+- External systems own fulfillment, payment, billing, inventory, provisioning, or compliance.
+- Failure is normal, not exceptional.
+- “Rollback” means business compensation, not database rollback.
+- Observability matters as much as happy-path automation.
+
+This post is my practitioner view of **salesforce saga pattern distributed transactions integration architecture**: what works, what breaks, when Salesforce should orchestrate, when MuleSoft should orchestrate, and how to make the pattern survive at 1K, 100K, and 10M transaction volumes.
+
+## The Core Problem: Salesforce Transactions Are Local, Business Transactions Are Not
+
+Salesforce gives you strong transactional behavior inside one platform transaction.
+
+If an Apex transaction inserts an `Order__c`, creates three `Order_Line__c` records, and updates an `Account`, Salesforce can commit or roll back that local work as one unit.
+
+But the moment you call out to an external system, you leave that boundary.
+
+You cannot guarantee this:
+
+1. Insert Salesforce order.
+2. Reserve inventory in ERP.
+3. Authorize payment.
+4. Create shipment.
+5. Create invoice.
+6. Commit everything atomically.
+
+If step 4 fails after step 2 and step 3 succeeded, Salesforce cannot magically roll back the ERP reservation or payment authorization. You need business-level compensation:
+
+- Release inventory.
+- Void authorization.
+- Cancel ERP order.
+- Reopen Salesforce order.
+- Notify operations.
+- Retry if failure is transient.
+- Escalate if compensation fails.
+
+That is the saga pattern.
+
+A saga is not just “retry logic.” Retry is a tactic. Saga is a transaction architecture.
+
+## What a Saga Looks Like on Salesforce
+
+A saga has three concepts:
+
+### 1. Local Transaction
+
+Each participating system commits its own local transaction.
+
+Example:
+
+- Salesforce creates `Order__c`.
+- ERP reserves stock.
+- Payment provider authorizes card.
+- Warehouse creates fulfillment request.
+
+Each local transaction must be independently valid.
+
+### 2. Durable Saga State
+
+The saga coordinator stores where the business transaction is.
+
+Example:
+
+- `CREATED`
+- `INVENTORY_RESERVED`
+- `PAYMENT_AUTHORIZED`
+- `ERP_ORDER_CREATED`
+- `FULFILLMENT_REQUESTED`
+- `COMPLETED`
+- `COMPENSATING`
+- `COMPENSATED`
+- `FAILED_MANUAL_REVIEW`
+
+This state cannot live only in memory, only in logs, or only in an async job chain. It needs to be durable and queryable.
+
+On Salesforce, I usually model this with a custom saga object for business-critical processes:
+
+- `Saga__c`
+- `SagaStep__c`
+- `CorrelationId__c`
+- `CurrentStep__c`
+- `Status__c`
+- `AttemptCount__c`
+- `LastError__c`
+- `NextRetryAt__c`
+- `CompensationStatus__c`
+
+For high-volume use cases, I may move detailed step history to an external operational store and keep only the current business-facing status in Salesforce.
+
+### 3. Compensating Transaction
+
+Each successful step needs an undo action.
+
+Not a database rollback. A business undo.
+
+| Forward action | Compensating action |
+|---|---|
+| Reserve inventory | Release inventory |
+| Authorize payment | Void authorization |
+| Create ERP order | Cancel ERP order |
+| Create subscription | Terminate pending subscription |
+| Provision user | Deactivate provisioned access |
+| Create shipment | Cancel shipment if not dispatched |
+
+The compensation must also be idempotent. If you send “release inventory” twice, the ERP should not release twice or error in a way that breaks the saga.
+
+## Real Enterprise Example: Quote-to-Cash Across Salesforce, ERP, Payment, and Fulfillment
+
+I worked on a B2B quote-to-cash program where Salesforce was the front door for sales and service, but not the system of record for everything.
+
+The landscape looked like this:
+
+- Salesforce Sales Cloud captured account, quote, contract, and order intent.
+- Commerce handled customer self-service orders.
+- ERP owned pricing finalization, credit checks, inventory, and invoice creation.
+- A payment gateway handled card authorization for some regions.
+- A warehouse management platform owned pick-pack-ship.
+- Service Cloud needed visibility when orders stalled.
+
+The original design tried to make the process feel synchronous.
+
+Salesforce submitted an order and waited for downstream responses. The first version looked fine in demos. Then production traffic exposed the truth:
+
+- ERP occasionally took 30–90 seconds for inventory allocation.
+- Payment authorization succeeded, but ERP order creation failed.
+- Warehouse APIs accepted requests but sent failure callbacks later.
+- Users clicked submit twice when the UI looked frozen.
+- Salesforce had orders in “Submitted” status with no reliable explanation.
+- Operations used spreadsheets to reconcile stuck transactions.
+
+The fix was not “increase timeout.”
+
+The fix was to model order submission as a saga.
+
+We introduced:
+
+- A Salesforce `OrderSaga__c` record per submitted order.
+- A correlation ID passed through every system.
+- Platform Events for state changes.
+- MuleSoft APIs for ERP and warehouse interactions.
+- Idempotency keys for every downstream command.
+- Compensation steps for inventory, payment, and ERP cancellation.
+- A Service Console “saga timeline” component for operations.
+- Automated retry for transient failures.
+- Manual review queues only for irrecoverable business exceptions.
+
+That changed the operating model. Instead of pretending every order was synchronous, we made the process explicit, observable, and recoverable.
+
+
+![Salesforce saga anatomy showing durable state and compensation](/images/blog/saga-pattern-on-salesforce-distributed-transactions-across-c/image-1.png)
+
+
+## Orchestration vs Choreography
+
+There are two common saga styles.
+
+### Orchestrated Saga
+
+A central coordinator decides the next step.
+
+Example:
+
+1. Salesforce creates saga.
+2. Coordinator sends `ReserveInventory`.
+3. ERP replies `InventoryReserved`.
+4. Coordinator sends `AuthorizePayment`.
+5. Payment replies `PaymentAuthorized`.
+6. Coordinator sends `CreateFulfillment`.
+7. Coordinator marks saga complete.
+
+This is easier to reason about. It gives you one place to inspect the process.
+
+### Choreographed Saga
+
+Services react to events without a central coordinator.
+
+Example:
+
+1. Salesforce publishes `OrderSubmitted`.
+2. ERP listens and reserves inventory.
+3. ERP publishes `InventoryReserved`.
+4. Payment service listens and authorizes payment.
+5. Payment publishes `PaymentAuthorized`.
+6. Fulfillment listens and creates shipment.
+
+This reduces central coupling but can become hard to debug when the process grows.
+
+My rule: **use orchestration for business-critical cross-cloud transactions where operations needs accountability. Use choreography for simpler event propagation where ordering and compensation are less complex.**
+
+For quote-to-cash, provisioning, claims, lending, onboarding, renewals, and fulfillment, I prefer orchestration.
+
+For analytics fan-out, notifications, search indexing, and cache refresh, choreography is usually fine.
+
+## Decision Matrix: Where Should the Saga Coordinator Live?
+
+Architecture posts that say “it depends” without a decision matrix are wasting your time. Here is how I make the call.
+
+| Coordinator option | Best fit | Strengths | Weaknesses | My recommendation |
+|---|---|---|---|---|
+| Salesforce Apex + Platform Events | Salesforce-centric process with moderate volume and strong CRM visibility needs | Simple ownership, native data visibility, easy console experience | Apex callout limits, async limits, harder for very high throughput | Good for 1K–50K business transactions/day if carefully designed |
+| MuleSoft orchestration | Multi-system enterprise integration where Salesforce is one participant | API-led design, retries, policies, transformation, centralized integration control | Additional platform ownership, licensing, needs integration discipline | My default for complex ERP/OMS/payment sagas |
+| External workflow engine | Very high-volume or long-running sagas across many domains | Strong state machine, timers, replay, high throughput | Another runtime, more DevOps, less native Salesforce visibility | Best for 100K–10M+ saga instances with complex branching |
+| Event choreography with Platform Events / event mesh | Loosely coupled processes with simple compensation | Scales fan-out well, low central dependency | Harder traceability, emergent behavior, compensation gets messy | Use for simple flows, not core revenue transactions |
+| Salesforce Flow as coordinator | Admin-owned low-complexity internal process | Fast to build, declarative visibility | Weak for complex retry, compensation, versioning, high-volume integration | Fine for internal workflows, not serious distributed transactions |
+| Agentforce 2.0 operational assistant | Human-in-the-loop exception analysis and remediation guidance | Can summarize saga history, propose next action, route work | Should not be source of transactional truth | Useful as an operations layer, not the saga engine |
+
+Here’s the unpopular take: **Salesforce can coordinate sagas, but that does not mean it always should.**
+
+If the business process is CRM-led and the volume is reasonable, Salesforce as coordinator is practical. If the process is enterprise-led and Salesforce is just one participant, put orchestration in MuleSoft or a dedicated workflow runtime and expose the state back to Salesforce.
+
+## Salesforce Building Blocks for Saga Architecture
+
+A production-grade Salesforce saga usually uses a combination of these.
+
+### Custom Objects for Saga State
+
+Use custom objects when business users need visibility.
+
+Example objects:
+
+- `Saga__c`
+- `SagaStep__c`
+- `SagaError__c`
+
+Fields I typically include:
+
+- `CorrelationId__c`
+- `BusinessKey__c`
+- `Status__c`
+- `CurrentStep__c`
+- `RetryCount__c`
+- `NextRetryAt__c`
+- `LastErrorCode__c`
+- `LastErrorMessage__c`
+- `CompensationRequired__c`
+- `CompensationStatus__c`
+- `ExternalReference__c`
+
+Do not store massive payloads forever in Salesforce. Store payload hashes, references, and operational summaries. Put large request/response payloads in an integration log store or object storage with retention policies.
+
+### Platform Events for State Transitions
+
+Platform Events are useful when Salesforce needs to notify external systems or internal subscribers that a saga moved forward.
+
+Example events:
+
+- `OrderSagaStarted__e`
+- `OrderSagaStepCompleted__e`
+- `OrderSagaCompensationRequested__e`
+- `OrderSagaFailed__e`
+
+Be careful with event triggers. Bulk behavior matters. Do not write event triggers that query and update one record at a time.
+
+### Queueable Apex for Controlled Async Work
+
+Queueable Apex is useful for callouts, retries, and step execution.
+
+But do not build a fragile “chain 37 Queueables and hope nothing breaks” design. Persist the state first. Then enqueue work. The Queueable should be a worker, not the only memory of the process.
+
+### Named Credentials and External Credentials
+
+Use Named Credentials for downstream APIs. Do not put tokens in custom metadata, custom settings, or Apex.
+
+For enterprise integration, I prefer having Salesforce call MuleSoft APIs through Named Credentials rather than directly calling every downstream platform.
+
+### Conditional Composite API and GraphQL API
+
+Salesforce API v64.0 gives teams better options for reducing integration chatter. Conditional Composite API can reduce API call volume in integration-heavy flows. The GraphQL API with full CRUD support is useful when external orchestrators need structured access to Salesforce data without building chatty REST sequences.
+
+But do not confuse API efficiency with transactionality. Composite calls help within Salesforce API boundaries. They do not make ERP and payment part of one atomic commit.
+
+### Agentforce 2.0 for Exception Operations
+
+Agentforce 2.0 with Atlas Reasoning Engine v2 is relevant, but not as the transaction coordinator.
+
+I would not let an AI agent decide the authoritative state of an order saga. I would use Agentforce for:
+
+- Summarizing saga history for support agents.
+- Explaining why an order is stuck.
+- Suggesting next actions based on approved runbooks.
+- Drafting customer communication.
+- Opening remediation tasks.
+- Invoking safe, permissioned actions when a human approves.
+
+The saga state machine remains deterministic. The agent helps humans operate it.
+
+## A Practical Apex Saga Worker
+
+This is a simplified pattern I have used in Salesforce-led sagas. In larger programs, I would push more orchestration into MuleSoft or an external workflow engine, but the Apex shape is still useful.
+
+The key ideas:
+
+- Persist saga state.
+- Use a correlation ID.
+- Make downstream commands idempotent.
+- Advance one step at a time.
+- Mark compensation explicitly.
+- Use user-mode data access where business permissions matter.
+- Avoid pretending callouts are part of the Salesforce database transaction.
+
+```apex
+public with sharing class OrderSagaWorker implements Queueable, Database.AllowsCallouts {
+    private final Id sagaId;
+
+    public OrderSagaWorker(Id sagaId) {
+        this.sagaId = sagaId;
+    }
+
+    public void execute(QueueableContext context) {
+        Saga__c saga = [
+            SELECT Id,
+                   Name,
+                   Status__c,
+                   CurrentStep__c,
+                   CorrelationId__c,
+                   Order__c,
+                   RetryCount__c,
+                   LastErrorMessage__c
+            FROM Saga__c
+            WHERE Id = :sagaId
+            WITH USER_MODE
+            LIMIT 1
+        ];
+
+        if (saga.Status__c == 'COMPLETED' || saga.Status__c == 'COMPENSATED') {
+            return;
+        }
+
+        try {
+            if (saga.CurrentStep__c == 'START') {
+                moveToNextStep(saga, 'RESERVE_INVENTORY');
+                System.enqueueJob(new OrderSagaWorker(saga.Id));
+                return;
+            }
+
+            if (saga.CurrentStep__c == 'RESERVE_INVENTORY') {
+                callIntegrationApi(
+                    'callout:Order_Integration_API/inventory/reservations',
+                    saga.CorrelationId__c,
+                    buildInventoryReservationPayload(saga.Order__c)
+                );
+
+                moveToNextStep(saga, 'AUTHORIZE_PAYMENT');
+                System.enqueueJob(new OrderSagaWorker(saga.Id));
+                return;
+            }
+
+            if (saga.CurrentStep__c == 'AUTHORIZE_PAYMENT') {
+                callIntegrationApi(
+                    'callout:Order_Integration_API/payments/authorizations',
+                    saga.CorrelationId__c,
+                    buildPaymentAuthorizationPayload(saga.Order__c)
+                );
+
+                moveToNextStep(saga, 'CREATE_ERP_ORDER');
+                System.enqueueJob(new OrderSagaWorker(saga.Id));
+                return;
+            }
+
+            if (saga.CurrentStep__c == 'CREATE_ERP_ORDER') {
+                callIntegrationApi(
+                    'callout:Order_Integration_API/erp/orders',
+                    saga.CorrelationId__c,
+                    buildErpOrderPayload(saga.Order__c)
+                );
+
+                saga.Status__c = 'COMPLETED';
+                saga.CurrentStep__c = 'DONE';
+                update as user saga;
+                publishSagaEvent(saga.Id, 'COMPLETED');
+                return;
+            }
+        } catch (Exception ex) {
+            saga.Status__c = 'COMPENSATING';
+            saga.LastErrorMessage__c = ex.getMessage().left(255);
+            saga.RetryCount__c = (saga.RetryCount__c == null) ? 1 : saga.RetryCount__c + 1;
+            update as user saga;
+
+            publishSagaEvent(saga.Id, 'COMPENSATION_REQUIRED');
+            System.enqueueJob(new OrderSagaCompensationWorker(saga.Id));
+        }
+    }
+
+    private static void moveToNextStep(Saga__c saga, String nextStep) {
+        saga.Status__c = 'IN_PROGRESS';
+        saga.CurrentStep__c = nextStep;
+        update as user saga;
+        publishSagaEvent(saga.Id, 'STEP_' + nextStep);
+    }
+
+    private static void callIntegrationApi(String endpoint, String correlationId, String body) {
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(endpoint);
+        request.setMethod('POST');
+        request.setHeader('Content-Type', 'application/json');
+
+        // Idempotency is non-negotiable. The downstream API must treat this as repeat-safe.
+        request.setHeader('Idempotency-Key', correlationId + ':' + endpoint);
+        request.setHeader('X-Correlation-Id', correlationId);
+        request.setTimeout(10000);
+        request.setBody(body);
+
+        HttpResponse response = new Http().send(request);
+
+        if (response.getStatusCode() >= 500) {
+            throw new SagaTransientException('Downstream transient failure: ' + response.getBody());
+        }
+
+        if (response.getStatusCode() >= 400) {
+            throw new SagaBusinessException('Downstream business failure: ' + response.getBody());
+        }
+    }
+
+    private static void publishSagaEvent(Id sagaId, String eventType) {
+        OrderSagaStatus__e evt = new OrderSagaStatus__e(
+            SagaId__c = String.valueOf(sagaId),
+            EventType__c = eventType
+        );
+
+        EventBus.publish(evt);
+    }
+
+    private static String buildInventoryReservationPayload(Id orderId) {
+        return JSON.serialize(new Map<String, Object>{
+            'orderId' => String.valueOf(orderId),
+            'reservationMode' => 'HARD_RESERVE'
+        });
+    }
+
+    private static String buildPaymentAuthorizationPayload(Id orderId) {
+        return JSON.serialize(new Map<String, Object>{
+            'orderId' => String.valueOf(orderId),
+            'authorizationType' => 'PRE_AUTH'
+        });
+    }
+
+    private static String buildErpOrderPayload(Id orderId) {
+        return JSON.serialize(new Map<String, Object>{
+            'orderId' => String.valueOf(orderId),
+            'sourceSystem' => 'SALESFORCE'
+        });
+    }
+
+    public class SagaTransientException extends Exception {}
+    public class SagaBusinessException extends Exception {}
+}
+```
+
+And a compensation worker:
+
+```apex
+public with sharing class OrderSagaCompensationWorker implements Queueable, Database.AllowsCallouts {
+    private final Id sagaId;
+
+    public OrderSagaCompensationWorker(Id sagaId) {
+        this.sagaId = sagaId;
+    }
+
+    public void execute(QueueableContext context) {
+        Saga__c saga = [
+            SELECT Id,
+                   Status__c,
+                   CurrentStep__c,
+                   CorrelationId__c,
+                   Order__c,
+                   CompensationStatus__c
+            FROM Saga__c
+            WHERE Id = :sagaId
+            WITH USER_MODE
+            LIMIT 1
+        ];
+
+        try {
+            if (saga.CurrentStep__c == 'CREATE_ERP_ORDER') {
+                compensate(
+                    'callout:Order_Integration_API/payments/voids',
+                    saga.CorrelationId__c,
+                    saga.Order__c
+                );
+                compensate(
+                    'callout:Order_Integration_API/inventory/releases',
+                    saga.CorrelationId__c,
+                    saga.Order__c
+                );
+            } else if (saga.CurrentStep__c == 'AUTHORIZE_PAYMENT') {
+                compensate(
+                    'callout:Order_Integration_API/inventory/releases',
+                    saga.CorrelationId__c,
+                    saga.Order__c
+                );
+            }
+
+            saga.Status__c = 'COMPENSATED';
+            saga.CompensationStatus__c = 'COMPLETED';
+            update as user saga;
+
+            EventBus.publish(new OrderSagaStatus__e(
+                SagaId__c = String.valueOf(saga.Id),
+                EventType__c = 'COMPENSATED'
+            ));
+        } catch (Exception ex) {
+            saga.Status__c = 'FAILED_MANUAL_REVIEW';
+            saga.CompensationStatus__c = 'FAILED';
+            update as user saga;
+
+            EventBus.publish(new OrderSagaStatus__e(
+                SagaId__c = String.valueOf(saga.Id),
+                EventType__c = 'MANUAL_REVIEW_REQUIRED'
+            ));
+        }
+    }
+
+    private static void compensate(String endpoint, String correlationId, Id orderId) {
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(endpoint);
+        request.setMethod('POST');
+        request.setHeader('Content-Type', 'application/json');
+        request.setHeader('X-Correlation-Id', correlationId);
+
+        // Separate idempotency key for compensation command.
+        request.setHeader('Idempotency-Key', correlationId + ':COMPENSATE:' + endpoint);
+
+        request.setBody(JSON.serialize(new Map<String, Object>{
+            'orderId' => String.valueOf(orderId),
+            'reason' => 'SAGA_COMPENSATION'
+        }));
+
+        HttpResponse response = new Http().send(request);
+
+        if (response.getStatusCode() >= 400) {
+            throw new CompensationException(response.getBody());
+        }
+    }
+
+    public class CompensationException extends Exception {}
+}
+```
+
+This is not a full framework. It is a pattern skeleton.
+
+In a real implementation, I would add:
+
+- Step configuration metadata.
+- Retry policies by error category.
+- Exponential backoff.
+- Dead-letter handling.
+- Observability dashboards.
+- External log correlation.
+- Payload hashing.
+- Duplicate command detection.
+- Platform Event replay strategy.
+- Runbook links for manual review.
+
+## Idempotency Is Not Optional
+
+If a saga retries a command, the receiving system must know whether it already processed that command.
+
+Without idempotency, retry logic creates duplicate orders, duplicate reservations, duplicate shipments, and duplicate customer emails.
+
+I usually define an idempotency key like this:
+
+```text
+{businessProcess}:{businessKey}:{stepName}:{stepVersion}
+```
+
+Example:
+
+```text
+ORDER_SUBMISSION:801xx000003D9aA:RESERVE_INVENTORY:v1
+```
+
+Then every downstream command includes:
+
+- `Idempotency-Key`
+- `X-Correlation-Id`
+- Business key
+- Step name
+- Step version
+
+The receiving API stores the idempotency key and response. If it receives the same command again, it returns the same result instead of performing the action twice.
+
+This is one of the areas where enterprise teams get lazy. They say, “The API is usually fast,” or “The user will not click twice.” That is not architecture. That is hope.
+
+## Handling Failure Types
+
+Not all failures deserve the same response.
+
+### Transient Technical Failure
+
+Examples:
+
+- HTTP 503
+- Network timeout
+- Temporary authentication issue
+- Downstream queue unavailable
+
+Response:
+
+- Retry with backoff.
+- Do not compensate immediately.
+- Keep saga `IN_PROGRESS` or `RETRY_WAITING`.
+
+### Permanent Business Failure
+
+Examples:
+
+- Credit check failed.
+- Product discontinued.
+- Invalid shipping country.
+- Inventory unavailable.
+
+Response:
+
+- Stop forward progress.
+- Start compensation if prior steps succeeded.
+- Mark business status clearly.
+- Notify user or operations.
+
+### Unknown Outcome
+
+This is the nasty one.
+
+Example: Salesforce calls payment authorization. The request times out. Did payment authorize or not?
+
+Response:
+
+- Do not blindly retry if the downstream system is not idempotent.
+- Query by correlation ID first.
+- Reconcile before deciding retry or compensation.
+- Escalate if the external system cannot answer.
+
+Unknown outcome handling is where mature saga designs separate themselves from toy examples.
+
+
+![Saga failure handling with retry, compensation, and reconciliation paths](/images/blog/saga-pattern-on-salesforce-distributed-transactions-across-c/image-2.png)
+
+
+## Designing the Saga State Model
+
+Do not make saga state too clever.
+
+I prefer a simple parent-child model.
+
+### `Saga__c`
+
+Represents the overall business transaction.
+
+Important fields:
+
+| Field | Purpose |
+|---|---|
+| `CorrelationId__c` | Cross-system trace key |
+| `BusinessKey__c` | Order number, case number, subscription ID |
+| `Status__c` | Overall state |
+| `CurrentStep__c` | Current forward or compensation step |
+| `RetryCount__c` | Retry tracking |
+| `NextRetryAt__c` | Scheduled retry time |
+| `StartedAt__c` | Process start |
+| `CompletedAt__c` | Process end |
+| `LastErrorCode__c` | Machine-readable error |
+| `LastErrorMessage__c` | Human-readable summary |
+
+### `SagaStep__c`
+
+Represents each action taken.
+
+Important fields:
+
+| Field | Purpose |
+|---|---|
+| `Saga__c` | Parent |
+| `StepName__c` | Step identifier |
+| `Direction__c` | Forward or compensation |
+| `Status__c` | Pending, completed, failed |
+| `AttemptCount__c` | Step retries |
+| `RequestHash__c` | Payload hash |
+| `ResponseCode__c` | Downstream response |
+| `ExternalReference__c` | ERP/payment/warehouse reference |
+| `StartedAt__c` | Step start |
+| `FinishedAt__c` | Step finish |
+
+At small scale, storing step records in Salesforce is fine. At large scale, be careful. Step history can explode fast.
+
+If you process 100,000 orders per day, with 8 steps per order, and each step produces forward and compensation-related logs, you can easily create millions of records per week. Not all of that belongs in core CRM storage.
+
+## Scale: What Changes at 1K, 100K, and 10M
+
+Saga architecture is not one-size-fits-all. The design that works for 1,000 transactions per day can collapse at 10 million.
+
+### At 1K Saga Instances
+
+At this scale, Salesforce can often coordinate the process.
+
+Typical design:
+
+- `Saga__c` and `SagaStep__c` in Salesforce.
+- Queueable Apex for step execution.
+- Platform Events for notifications.
+- Named Credentials to MuleSoft or downstream APIs.
+- Service Console visibility.
+- Basic retry and manual review queue.
+
+Risks are manageable:
+
+- Async limits.
+- Callout limits.
+- Record locking if many steps update the same parent.
+- Admin reporting over operational data.
+
+At 1K, optimize for clarity and supportability.
+
+### At 100K Saga Instances
+
+At this scale, you need more discipline.
+
+I would start moving orchestration pressure out of Salesforce unless Salesforce is unquestionably the process owner.
+
+Design changes:
+
+- MuleSoft or external workflow engine coordinates most steps.
+- Salesforce stores business-facing status, not every low-level event.
+- Detailed logs move to an external observability store.
+- Platform Events are bulkified and partitioned by business domain.
+- Retry scheduling is externalized or carefully throttled.
+- Step payloads are referenced, not stored.
+- Dashboards aggregate from logs, not only CRM objects.
+
+Risks become serious:
+
+- Platform Event subscriber backlogs.
+- Async Apex saturation.
+- Storage growth.
+- Hot parent record updates.
+- API call volume.
+- Operational reporting slowing transactional objects.
+
+At 100K, optimize for throughput and operational control.
+
+### At 10M Saga Instances
+
+At 10M, Salesforce should usually not be the detailed saga log.
+
+Salesforce may still be the engagement and visibility layer, but the coordinator and event history should live in infrastructure designed for this volume.
+
+Design changes:
+
+- External workflow engine or event streaming platform owns saga execution.
+- Salesforce receives state projections.
+- Data 360 can provide unified analytical and operational visibility without copying every raw event into core CRM.
+- Zero Copy federation helps when transaction history lives in Snowflake or BigQuery.
+- Native vector search and Retriever API can support support-agent knowledge retrieval over unstructured runbooks and incident notes, but not replace deterministic saga state.
+- Salesforce APIs expose customer/order context to the orchestrator.
+- GraphQL API and Conditional Composite API reduce read/write chatter.
+- Replay, partitioning, retention, and archival are first-class design topics.
+
+Risks at this scale:
+
+- Duplicate command storms.
+- Backpressure propagation.
+- Replay ordering issues.
+- Retention cost.
+- Cross-region latency.
+- Compliance requirements.
+- Operational dashboards lying because projections lag.
+
+At 10M, optimize for resilience, partitioning, and eventual consistency transparency.
+
+## Security and Governance
+
+Distributed transactions are also distributed security problems.
+
+A saga touches multiple systems, so governance needs to be explicit.
+
+### Permission Model
+
+Salesforce users should not automatically inherit permission to execute downstream actions just because a button exists.
+
+For example:
+
+- A sales rep may submit an order.
+- Only the integration principal may call ERP.
+- Only finance-approved flows may void payment.
+- Only operations may force compensation.
+
+In Apex, use user-mode queries and DML where the business action depends on user permissions. For system-owned integration state, use explicit service layers and audit every privileged action.
+
+Salesforce API v64.0 supports modern security patterns, and teams should already be moving toward user-mode data access conventions. Looking ahead to v67.0, SOQL, DML, and Database methods defaulting toward user mode makes explicit security design even more important. Do not rely on accidental system context.
+
+### Auditability
+
+For each saga, you need to answer:
+
+- Who initiated it?
+- What system executed each step?
+- What payload version was used?
+- What external references were created?
+- What failed?
+- What was retried?
+- What was compensated?
+- Who approved manual remediation?
+
+If you cannot answer those questions, your saga design is incomplete.
+
+### Data Minimization
+
+Do not dump full payment payloads, tax payloads, health data, or regulated data into Salesforce saga logs “for debugging.”
+
+Store:
+
+- Correlation IDs.
+- External references.
+- Error summaries.
+- Payload hashes.
+- Redacted snippets.
+- Links to secured logs.
+
+The saga log is an operational control plane, not a data lake.
+
+## User Experience: Show the Truth
+
+A bad saga design hides uncertainty from users.
+
+A good saga design communicates state honestly.
+
+For an order process, statuses should not be fake:
+
+- `Submitted`
+- `Inventory Check Pending`
+- `Payment Authorized`
+- `Fulfillment Pending`
+- `Delayed - ERP Retry`
+- `Action Required`
+- `Cancelled and Reversed`
+- `Completed`
+
+In LWC, I like showing a saga timeline instead of a single mystery status. With LWC native state management GA in Summer ’26, building reactive timeline components is cleaner than the old pattern of wiring state through too many component layers.
+
+The UX rule is simple: if the backend is eventually consistent, the UI should not pretend it is instantly consistent.
+
+## Observability: Correlation ID or It Did Not Happen
+
+Every system must carry the same correlation ID.
+
+I want to see that ID in:
+
+- Salesforce saga records.
+- Platform Events.
+- MuleSoft logs.
+- ERP request logs.
+- Payment gateway metadata.
+- Warehouse API logs.
+- Monitoring dashboards.
+- Customer support timeline.
+
+A saga without correlation is a distributed guessing game.
+
+For high-value processes, I also want:
+
+- Step duration metrics.
+- Failure rates by step.
+- Retry counts by system.
+- Compensation success rate.
+- Manual review aging.
+- Duplicate command detection.
+- Backlog depth.
+- SLA breach alerts.
+
+Operations teams should not need a developer to tell them why 400 orders are stuck.
+
+## Common Mistakes I See
+
+### Mistake 1: Treating Saga as Just Async Apex
+
+Async Apex is an execution mechanism. It is not the architecture.
+
+If the state only exists in queued jobs, you do not have a recoverable saga.
+
+### Mistake 2: No Compensating Actions
+
+Teams design the happy path and call it done.
+
+Then payment succeeds, ERP fails, and everyone asks who owns cleanup.
+
+Define compensation during design, not after the first incident.
+
+### Mistake 3: Retrying Non-Idempotent APIs
+
+This is how duplicate orders happen.
+
+If downstream APIs do not support idempotency, fix that contract before adding retries.
+
+### Mistake 4: Storing Everything in Salesforce
+
+Salesforce is not your infinite integration log store.
+
+Keep business state in Salesforce. Store high-volume technical telemetry in the right operational platform.
+
+### Mistake 5: No Manual Review Path
+
+Some failures cannot be automated safely.
+
+A good saga architecture includes manual review as a designed state, not an embarrassing exception.
+
+## My Reference Architecture
+
+For serious enterprise Salesforce saga architecture, my default pattern looks like this:
+
+1. Salesforce captures the business intent.
+2. Salesforce creates a durable saga record with a correlation ID.
+3. Salesforce publishes a start event or calls an orchestration API.
+4. MuleSoft or a workflow engine coordinates downstream systems.
+5. Each command uses idempotency keys.
+6. Each system returns durable state and external references.
+7. Salesforce receives state projections through events or APIs.
+8. Service users see a timeline, not a black box.
+9. Compensation is triggered by policy, not panic.
+10. Agentforce 2.0 assists operations with summaries and guided remediation, but deterministic services own state changes.
+
+That architecture is boring in the best way. It accepts that distributed systems fail and gives the business a controlled way to recover.
+
+## Final Thought
+
+The saga pattern is not about making distributed transactions perfect.
+
+It is about making them honest.
+
+Salesforce is often the place where users expect the truth: sales wants to know if the order is accepted, service wants to know why fulfillment stalled, finance wants to know whether payment was voided, and operations wants to know what needs intervention.
+
+If your architecture cannot explain the current state of a cross-cloud transaction, it is not enterprise-ready.
+
+Do not chase fake atomicity. Design for durable state, idempotent commands, explicit compensation, and operational visibility.
+
+That is how distributed transactions survive real enterprise Salesforce landscapes.
+
+## TL;DR
+
+- Salesforce cannot own atomic transactions across ERP, payment, OMS, and fulfillment; use sagas with durable state and compensation.
+- Put orchestration in Salesforce only when the process is CRM-led and volume is moderate; use MuleSoft or external workflow engines for complex/high-scale flows.
+- Idempotency, correlation IDs, failure classification, and manual review paths are not optional in production saga architecture.
