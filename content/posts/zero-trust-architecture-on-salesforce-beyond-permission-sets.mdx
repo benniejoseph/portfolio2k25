@@ -1,0 +1,589 @@
+---
+title: "Zero Trust Architecture on Salesforce: Beyond Permission Sets"
+excerpt: "Build Salesforce zero trust architecture with identity, data access, API controls, Agentforce guardrails, and audit patterns that survive real scale."
+date: "2026-08-05"
+tags: ["Salesforce", "Architecture", "Security", "Identity"]
+keyword: "salesforce zero trust architecture security identity access cta"
+featured: false
+coverImage: /images/blog/zero-trust-architecture-on-salesforce-beyond-permission-sets/cover.png
+---
+
+
+Permission sets are not a security architecture.
+
+They are an entitlement mechanism. A useful one. A necessary one. But if the security model stops there, the org is still operating on a mostly static trust assumption: “This user was granted access, so this request is probably okay.”
+
+That assumption breaks down fast in enterprise Salesforce.
+
+A sales operations analyst legitimately needs account export access during quarter-end planning. That does not mean they should export strategic customer records from an unmanaged device at 2:00 AM over an unfamiliar network. A service integration legitimately needs API access. That does not mean one long-lived integration user should be able to mutate every object in the org because nobody wanted to maintain scoped principals. An Agentforce action legitimately needs to update a case. That does not mean an agent should execute every Apex invocable action available in the org without policy checks.
+
+Zero trust on Salesforce is not “deny everything.” It is “trust nothing by default, verify continuously, authorize narrowly, and audit every meaningful decision.”
+
+Here’s the unpopular take: most Salesforce security designs I review are still role-based access control designs with modern identity paint on top. They have SSO, MFA, permission set groups, maybe Shield Event Monitoring, and a nice diagram. But the runtime authorization layer is thin. The system does not consistently ask, “Should this specific actor perform this specific action on this specific record through this specific channel under this specific context?”
+
+That is where a real Salesforce zero trust architecture begins.
+
+## The baseline: permission sets are necessary, not sufficient
+
+I still use permission sets heavily. I prefer permission set groups over profile sprawl. I keep profiles boring. I separate object permissions from application permissions. I avoid “god mode” permission sets with twenty unrelated capabilities bundled together.
+
+But permission sets answer a limited question:
+
+> Has this user been statically granted this capability?
+
+Zero trust asks more questions:
+
+- Is the user strongly authenticated right now?
+- Is the device managed or trusted?
+- Is the network context acceptable for this action?
+- Is this request coming from UI, API, mobile, integration, MCP, or an agent?
+- Is the record sensitive based on current data classification?
+- Is this transaction anomalous compared with normal behavior?
+- Is the integration principal scoped to exactly the API contract it needs?
+- Is the action safe to delegate to Agentforce 2.0?
+- Can I explain later why the platform allowed or blocked the request?
+
+A permission set cannot answer all of that. It should not try to.
+
+The architecture needs multiple enforcement points.
+
+## My reference architecture for zero trust on Salesforce
+
+When I design this for enterprise Salesforce, I split the model into five layers.
+
+### 1. Identity assurance
+
+This is the front door:
+
+- SSO through the enterprise identity provider
+- MFA enforced centrally
+- Conditional access based on device posture and network
+- Session policies in Salesforce
+- High-assurance session requirements for privileged actions
+- Just-in-time provisioning with clean attribute mapping
+- Automated deprovisioning tied to HR source of truth
+
+The mistake I see: teams treat SSO as the finish line. SSO is only the identity assertion. It says, “The identity provider believes this user is Bennie.” It does not automatically mean, “Bennie can export regulated customer data from this device right now.”
+
+### 2. Entitlement baseline
+
+This is where Salesforce-native access still matters:
+
+- Profiles kept minimal
+- Permission sets for capabilities
+- Permission set groups for job functions
+- Muting permission sets where needed
+- Role hierarchy only where record ownership inheritance is actually required
+- Sharing rules for broad record access
+- Restriction rules for narrowing access
+- Scoping rules to improve list and lookup relevance
+- Field-level security aligned to data classification
+
+This layer answers: “What could this user ever do under normal conditions?”
+
+### 3. Runtime policy enforcement
+
+This is the layer many orgs are missing.
+
+Runtime policy answers: “Should this request be allowed right now?”
+
+Enforcement points include:
+
+- Transaction Security Policies
+- Apex service guards
+- Flow entry criteria and custom permission checks
+- External API gateway policies
+- Connected App policies
+- Named Credentials and External Credentials with scoped principals
+- Agentforce action allowlists
+- Platform events for policy decisions
+- Event Monitoring for detection and response
+
+This is where context becomes security.
+
+### 4. Data protection
+
+Zero trust also assumes access will sometimes be misconfigured, credentials will sometimes be compromised, and users will sometimes make bad decisions.
+
+Data controls matter:
+
+- Shield Platform Encryption where justified
+- Data classification metadata
+- Field audit trail for regulated objects
+- Deterministic masking in lower environments
+- Retention policies
+- Data 360 governance for harmonized customer data
+- Zero Copy federation controls for Snowflake and BigQuery access paths
+- Native vector search governance when records are used for grounding
+
+If sensitive data is copied into five downstream systems, your Salesforce permission model is not the whole security boundary anymore.
+
+### 5. Observability and response
+
+A zero trust design without logs is mostly theater.
+
+I want:
+
+- Event Monitoring enabled for meaningful users and integrations
+- Login, API, report export, and URI event analytics
+- Transaction Security events routed into the enterprise SIEM
+- Policy decision logs for custom enforcement
+- Integration correlation IDs
+- Agentforce conversation and action audit trails
+- Alert tuning that catches real abuse without flooding the SOC
+
+If nobody can reconstruct what happened, the architecture is not finished.
+
+## Decision matrix: where to enforce zero trust controls
+
+No single Salesforce feature should carry the entire security model. I usually make enforcement decisions like this.
+
+| Enforcement approach | Best for | Strengths | Weaknesses | My default use |
+|---|---|---|---|---|
+| Permission sets and permission set groups | Baseline user capabilities | Native, auditable, admin-manageable | Static; weak on context | Always use as the first gate |
+| Restriction rules | Narrowing record visibility | Strong for row-level reduction | Can surprise users if poorly documented | Use for sensitive object segmentation |
+| Transaction Security Policies | Blocking risky runtime behavior | Event-driven, strong for exports and sessions | Not a replacement for application logic | Use for report export, API anomaly, session controls |
+| Apex policy guards | Complex business-context authorization | Precise, testable, reusable | Requires disciplined engineering | Use for sensitive custom actions |
+| API gateway / MuleSoft policy | External integrations | Centralized, protocol-level protection | Cannot see every Salesforce data nuance | Use for north-south API traffic |
+| Connected App policies | OAuth and client control | Strong client-level governance | Often underconfigured | Use for every external app |
+| Agentforce action allowlists | Agentic execution boundaries | Prevents over-capable agents | Requires action inventory discipline | Mandatory for Agentforce 2.0 |
+| Shield Platform Encryption | Data-at-rest protection | Reduces blast radius | Search/reporting tradeoffs need design | Use selectively for classified fields |
+| SIEM detection | Investigation and response | Cross-platform visibility | Reactive if not paired with prevention | Always integrate for high-risk orgs |
+
+The pattern is simple: baseline access in Salesforce, context checks at runtime, protocol controls at the edge, and observability across all of it.
+
+
+![Permission sets versus runtime authorization checks](/images/blog/zero-trust-architecture-on-salesforce-beyond-permission-sets/image-1.png)
+
+
+## Real enterprise example: account export risk
+
+On one enterprise program, the security gap was not object access. The permission model looked clean on paper.
+
+Sales users had access to accounts. Regional operations users had report access. Finance users had broader visibility. Executives had elevated access. Nothing looked obviously wrong.
+
+The problem showed up in exports.
+
+A regional operations team needed to export account and opportunity data for quarterly planning. That was legitimate. But the same permission allowed a user to export strategic account data from outside the corporate network using a personal device. The user was not malicious. They were trying to work while traveling. But the data classification policy did not care about intent.
+
+The fix was not “remove export access from everyone.” That would have broken the business.
+
+We implemented layered controls:
+
+1. Permission set group remained the baseline for export eligibility.
+2. Transaction Security blocked high-volume exports from low-trust sessions.
+3. Sensitive account segments were narrowed using restriction rules.
+4. Apex guarded custom export actions with region and device-context checks.
+5. Report export events went to the SIEM with user, network, and record category context.
+6. Exceptions required time-bound access through the identity governance workflow.
+
+That changed the security model from “can this user export?” to “can this user export this data right now under this context?”
+
+That is the difference.
+
+## A practical Apex policy guard
+
+I do not put all zero trust logic in Apex. That would be a bad architecture. But for sensitive custom actions, I want an explicit policy guard that is version-controlled, tested, and reused.
+
+Below is a simplified pattern I use for high-risk account export actions. The important part is not the exact custom object names. The important part is the separation:
+
+- Business records are read using `WITH USER_MODE`.
+- Policy telemetry is read in a controlled system context because users should not need direct access to internal security signals.
+- The decision is logged.
+- The controller fails closed.
+
+```apex
+public inherited sharing class AccountExportController {
+    @AuraEnabled
+    public static ExportDecision requestExport(Id accountId) {
+        ExportDecision decision = ZeroTrustAccountPolicy.evaluateExport(accountId);
+
+        if (!decision.allowed) {
+            ZeroTrustAudit.logDecision(
+                'Account.Export',
+                accountId,
+                decision.allowed,
+                decision.reason
+            );
+            throw new AuraHandledException(decision.reason);
+        }
+
+        Account accountToExport = [
+            SELECT Id, Name, Region__c, Risk_Tier__c, AnnualRevenue
+            FROM Account
+            WHERE Id = :accountId
+            WITH USER_MODE
+            LIMIT 1
+        ];
+
+        ZeroTrustAudit.logDecision(
+            'Account.Export',
+            accountId,
+            true,
+            'Export allowed'
+        );
+
+        return new ExportDecision(true, 'Export allowed', accountToExport.Id);
+    }
+
+    public class ExportDecision {
+        @AuraEnabled public Boolean allowed;
+        @AuraEnabled public String reason;
+        @AuraEnabled public Id recordId;
+
+        public ExportDecision(Boolean allowed, String reason, Id recordId) {
+            this.allowed = allowed;
+            this.reason = reason;
+            this.recordId = recordId;
+        }
+    }
+}
+
+public without sharing class ZeroTrustAccountPolicy {
+    public static AccountExportController.ExportDecision evaluateExport(Id accountId) {
+        User userRecord = [
+            SELECT Id, Region__c, Export_Clearance__c
+            FROM User
+            WHERE Id = :UserInfo.getUserId()
+            WITH USER_MODE
+            LIMIT 1
+        ];
+
+        Account accountRecord = [
+            SELECT Id, Region__c, Risk_Tier__c
+            FROM Account
+            WHERE Id = :accountId
+            WITH USER_MODE
+            LIMIT 1
+        ];
+
+        Integer baselineAssignments = [
+            SELECT count()
+            FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId()
+            AND PermissionSet.Name = 'Account_Export_Approved'
+        ];
+
+        if (baselineAssignments == 0) {
+            return deny(accountId, 'Missing baseline export permission');
+        }
+
+        if (accountRecord.Region__c != userRecord.Region__c) {
+            return deny(accountId, 'Cross-region export requires elevated approval');
+        }
+
+        if (accountRecord.Risk_Tier__c == 'Strategic'
+            && userRecord.Export_Clearance__c != 'Strategic') {
+            return deny(accountId, 'Strategic account export clearance required');
+        }
+
+        ZT_ContextSignal__c signal = latestContextSignal();
+
+        if (signal == null) {
+            return deny(accountId, 'No trusted session context found');
+        }
+
+        if (signal.DeviceTrust__c != 'Managed') {
+            return deny(accountId, 'Managed device required for this export');
+        }
+
+        if (signal.NetworkZone__c == 'Unknown'
+            && accountRecord.Risk_Tier__c != 'Standard') {
+            return deny(accountId, 'Trusted network required for sensitive exports');
+        }
+
+        if (signal.AuthStrength__c != 'HighAssurance') {
+            return deny(accountId, 'High-assurance session required');
+        }
+
+        return new AccountExportController.ExportDecision(
+            true,
+            'Export allowed',
+            accountId
+        );
+    }
+
+    private static AccountExportController.ExportDecision deny(Id recordId, String reason) {
+        return new AccountExportController.ExportDecision(false, reason, recordId);
+    }
+
+    private static ZT_ContextSignal__c latestContextSignal() {
+        Map<String, Object> binds = new Map<String, Object>{
+            'userId' => UserInfo.getUserId(),
+            'nowValue' => System.now()
+        };
+
+        List<ZT_ContextSignal__c> signals = Database.queryWithBinds(
+            'SELECT Id, DeviceTrust__c, NetworkZone__c, AuthStrength__c, ExpiresAt__c ' +
+            'FROM ZT_ContextSignal__c ' +
+            'WHERE User__c = :userId ' +
+            'AND ExpiresAt__c > :nowValue ' +
+            'ORDER BY CreatedDate DESC ' +
+            'LIMIT 1',
+            binds,
+            AccessLevel.SYSTEM_MODE
+        );
+
+        return signals.isEmpty() ? null : signals[0];
+    }
+}
+
+public without sharing class ZeroTrustAudit {
+    public static void logDecision(
+        String actionName,
+        Id targetRecordId,
+        Boolean allowed,
+        String reason
+    ) {
+        ZT_PolicyDecision__c audit = new ZT_PolicyDecision__c(
+            Actor__c = UserInfo.getUserId(),
+            Action__c = actionName,
+            TargetRecordId__c = String.valueOf(targetRecordId),
+            Allowed__c = allowed,
+            Reason__c = reason,
+            DecisionTime__c = System.now()
+        );
+
+        Database.insert(audit, AccessLevel.SYSTEM_MODE);
+    }
+}
+```
+
+A few notes on this pattern.
+
+First, I do not trust the browser to tell me whether the device is managed. The context signal should come from a trusted identity, endpoint, or access layer and be written through a controlled integration path. LWC native state management in Summer ’26 is useful for UI consistency, not security authority.
+
+Second, I explicitly use user-mode access for business data. Salesforce API v64.0 supports modern user-mode enforcement patterns, and I code explicit access modes because assumptions age badly. With the next API behavior moving more defaults toward user mode, explicitness still helps reviewers understand intent.
+
+Third, I log denies and allows. Denies tell you where the business process is too restrictive. Allows tell you what actually happened when legal, audit, or security asks six months later.
+
+## Zero trust for APIs and integrations
+
+The biggest Salesforce security hole in many enterprises is not the UI. It is integrations.
+
+I have seen “integration users” with broad object permissions, View All Data, Modify All Data, and OAuth clients nobody has reviewed in years. That is not an integration strategy. That is a breach waiting for a timestamp.
+
+For zero trust API architecture, I use these rules:
+
+- One integration principal per system boundary, not one shared integration user.
+- OAuth scopes match the contract.
+- Connected Apps have explicit policies.
+- Refresh token behavior is reviewed.
+- IP relaxation is not casually enabled.
+- Named Credentials and External Credentials are used instead of secrets in code.
+- MuleSoft policies enforce traffic, schema, threat protection, and rate controls.
+- Conditional Composite API is used where it reduces unnecessary API chatter.
+- GraphQL API access is governed like any other API surface, especially now that full CRUD support is GA.
+- Salesforce MCP tools are treated as privileged automation surfaces, not developer toys.
+
+Salesforce Headless 360 changes the operating model. With 4000+ APIs, 220+ CLI commands, and 60+ MCP tools, the browser is no longer the primary security perimeter. That is good for automation and AI-assisted delivery. It also means identity, OAuth governance, tool permissions, and audit trails matter more than ever.
+
+If an MCP server can inspect metadata, generate code, run CLI commands, or call org APIs, I want it governed like a production integration. That means scoped credentials, environment separation, session logging, and approval for high-risk tools.
+
+## Zero trust for Agentforce 2.0
+
+Agentforce 2.0 makes this conversation more urgent.
+
+An agent is not just a chatbot. It can reason, select actions, call APIs, use grounding, and coordinate with other agents through multi-agent orchestration. Atlas Reasoning Engine v2 improves planning and reasoning, but better reasoning does not remove the need for hard authorization boundaries.
+
+My pattern for Agentforce is:
+
+1. Separate agent identity from human identity.
+2. Scope every action.
+3. Treat grounding sources as data access surfaces.
+4. Validate inputs before actions execute.
+5. Re-check authorization inside Apex or API endpoints.
+6. Log agent reasoning outputs separately from system-of-record changes.
+7. Use custom reasoning steps only where policy owners understand the implications.
+8. Keep high-risk actions behind deterministic controls, not prompt instructions.
+
+Prompt instructions are not access control.
+
+If an agent can update a refund, close a case, create an order, or retrieve regulated data, the enforcement point must be outside the model. I do not care whether the model is extremely capable. The model should not be the policy decision point for regulated actions.
+
+With Agentforce Builder GA and Agent Script `.agent` files, I like that agent definitions can move through source control. But source control only helps if teams review action scope, tool permissions, grounding sources, and policy checks with the same seriousness they review Apex.
+
+
+![Agentforce action authorization guardrails](/images/blog/zero-trust-architecture-on-salesforce-beyond-permission-sets/image-2.png)
+
+
+## What happens at scale: 1K, 100K, 10M
+
+Zero trust controls that work in a small org can collapse under enterprise volume. I design differently depending on scale.
+
+### At 1K users or records
+
+At this size, you can get away with simpler administration:
+
+- Permission set groups are manageable manually.
+- A few Transaction Security Policies cover major risks.
+- Report export monitoring is straightforward.
+- Exceptions can be reviewed case by case.
+- Context signal storage volume is low.
+- Audit logs are searchable without sophisticated aggregation.
+
+The main risk at this stage is overengineering. Do not build a custom policy engine if standard controls solve the problem.
+
+### At 100K users or records
+
+This is where entropy starts winning.
+
+- Permission set assignments need automation.
+- Identity attributes must be authoritative.
+- Manual exception handling becomes inconsistent.
+- Sharing recalculation and record visibility need performance review.
+- Event Monitoring volume requires filtering and routing.
+- Policy decisions need consistent schema and retention.
+- Integration principals multiply.
+- Sandbox masking becomes mandatory, not optional.
+
+At this scale, I introduce a formal policy model. Not necessarily a massive external policy engine, but at least a documented structure for action, actor, resource, context, decision, and reason.
+
+I also start measuring:
+
+- Deny rate by policy
+- Export attempts by channel
+- Sensitive record access by role
+- API calls by connected app
+- Agent action invocation rate
+- Failed high-assurance session requirements
+- Dormant permission set assignments
+
+Security architecture becomes operational architecture.
+
+### At 10M records, events, or external identities
+
+At this level, naive designs break.
+
+If you have millions of customer records, partner users, IoT events, claims, cases, or financial transactions, zero trust must be engineered for volume.
+
+Key design changes:
+
+- Do not evaluate complex policy logic row-by-row in synchronous transactions.
+- Precompute coarse-grained eligibility where possible.
+- Use restriction rules and sharing architecture carefully to avoid excessive recalculation.
+- Push protocol-level checks to the API edge.
+- Use event-driven detection for patterns that do not need inline blocking.
+- Partition audit data by time and policy type.
+- Stream high-value events to the SIEM instead of treating Salesforce as the only analytics store.
+- Use Data 360 federation and governance deliberately when data does not need to be copied.
+- Avoid broad agent grounding over massive unclassified corpora.
+- Use Retriever API and native vector search with explicit data boundaries for unstructured data.
+
+At 10M scale, “check everything synchronously every time” is not architecture. It is latency with a security label.
+
+You need tiers:
+
+- **Inline deny** for high-risk actions that must not proceed.
+- **Inline step-up** for actions that need stronger assurance.
+- **Async detect** for suspicious but non-critical behavior.
+- **Batch review** for entitlement drift and dormant access.
+- **Preventive design** for data that should never be exposed through that channel in the first place.
+
+## The policy model I use
+
+I like a simple vocabulary because it forces clear thinking.
+
+Every sensitive decision has:
+
+- **Actor**: user, integration principal, agent, guest user, external identity
+- **Action**: view, export, update, approve, refund, delete, invoke tool
+- **Resource**: object, record, field, file, report, API endpoint, grounding source
+- **Context**: device, network, session strength, channel, time, geography, risk score
+- **Decision**: allow, deny, step-up, route for approval, allow with masking
+- **Reason**: human-readable explanation
+- **Evidence**: policy version, signal IDs, event IDs, request correlation ID
+
+If a team cannot fill this out for a sensitive process, they do not have an authorization design yet.
+
+They have vibes.
+
+## Governance: the part nobody wants to own
+
+Zero trust on Salesforce crosses teams:
+
+- Salesforce platform owners
+- Identity team
+- Security architecture
+- SOC
+- Integration team
+- Data governance
+- Legal and compliance
+- Business process owners
+- AI and agent teams
+
+If ownership is fuzzy, the design rots.
+
+I recommend a lightweight governance model:
+
+| Area | Owner | Review frequency | Evidence |
+|---|---|---:|---|
+| Permission set groups | Salesforce platform team | Monthly | Assignment diff and dormant access report |
+| Identity attributes | IAM team | Monthly | Source-to-Salesforce mapping report |
+| Connected Apps | Security + platform | Quarterly | OAuth scope and token policy review |
+| Integration principals | Integration team | Quarterly | Principal-to-system ownership matrix |
+| Transaction Security Policies | Security operations | Monthly | Alert quality and block review |
+| Agentforce actions | AI platform owner + business owner | Every release | Action inventory and policy test results |
+| Sensitive fields | Data governance | Quarterly | Classification and encryption decision log |
+| Audit events | SOC | Continuous | SIEM dashboards and incident runbooks |
+
+Security designs fail when they depend on heroic memory. I want boring evidence.
+
+## Common anti-patterns I remove quickly
+
+### “One integration user for everything”
+
+This is the classic enterprise shortcut. It makes troubleshooting easy and incident response miserable.
+
+If one credential can touch everything, every downstream system inherits that blast radius.
+
+### “Admins are exempt”
+
+Admins need emergency access, but not invisible access. Privileged users should have stronger session requirements, tighter monitoring, and preferably separate admin identities.
+
+### “The agent has the same access as the user, so we are safe”
+
+Not enough. Agentic execution changes the risk because the system can chain actions, call tools, and operate faster than a human. User-context access helps, but action-level controls still matter.
+
+### “We log everything”
+
+No, you probably store everything. Logging is only useful when events are normalized, routed, retained, monitored, and connected to response procedures.
+
+### “We will fix security after go-live”
+
+You will not. You will be handling production defects, adoption issues, and executive requests. Security architecture must be designed into the release path.
+
+## My rollout sequence
+
+I do not recommend boiling the ocean. My usual sequence is:
+
+1. Identify top ten sensitive actions.
+2. Map actor, action, resource, context, and current enforcement.
+3. Fix identity assurance gaps first.
+4. Clean up permission set groups and obvious over-permissioning.
+5. Add Transaction Security for exports, API anomalies, and session risks.
+6. Add Apex guards for sensitive custom actions.
+7. Lock down Connected Apps and integration principals.
+8. Review Agentforce actions and grounding sources.
+9. Route audit events to the SIEM.
+10. Implement a quarterly access and policy review rhythm.
+
+Start with the actions that create the largest blast radius: export, delete, approve, refund, merge, mass update, API write, agent action execution, file download, and privileged metadata operations.
+
+The goal is not theoretical purity. The goal is reducing real enterprise risk without making the business unusable.
+
+## Final thought
+
+Salesforce gives us strong building blocks: identity integration, permission sets, sharing, restriction rules, Transaction Security, Shield, Event Monitoring, user-mode data access, Connected App policies, Agentforce governance hooks, Data 360 controls, APIs, CLI, and MCP tooling.
+
+But building blocks are not architecture.
+
+Zero trust is the connective tissue between those controls. It is the discipline of verifying identity, narrowing entitlement, evaluating context, protecting data, constraining automation, and preserving evidence.
+
+If the only question your org can answer is “does the user have the permission set?”, the architecture is not done.
+
+## TL;DR
+
+- Permission sets are baseline entitlements, not complete zero trust authorization.
+- Real Salesforce zero trust combines identity signals, runtime policy, user-mode data access, API controls, Agentforce guardrails, and audit evidence.
+- At enterprise scale, separate inline blocking, step-up auth, async detection, and governance reviews instead of forcing every control into one layer.
