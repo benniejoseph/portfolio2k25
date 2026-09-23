@@ -19,6 +19,11 @@ const personSchema = {
   image: absoluteUrl('/images/profile.webp'),
   email: `mailto:${siteConfig.author.email}`,
   jobTitle: siteConfig.author.title,
+  worksFor: {
+    '@type': 'Organization',
+    name: 'Salesforce',
+    url: 'https://www.salesforce.com/',
+  },
   description: siteConfig.description,
   address: {
     '@type': 'PostalAddress',
@@ -31,7 +36,8 @@ const personSchema = {
   ],
   knowsAbout: [
     'Salesforce', 'Agentforce', 'Apex', 'Lightning Web Components',
-    'AI Agents', 'Salesforce Integration', 'nCino', 'SaaS',
+    'AI Agents', 'Salesforce Integration', 'Customer Success',
+    'Customer Adoption', 'Value Realization', 'nCino', 'SaaS',
   ],
   hasCredential: [
     'Salesforce Certified Application Architect',
@@ -76,7 +82,7 @@ export default function Home() {
 
       <SignalCanvas />
       <SystemNavigator />
-      <main className="relative z-10 lg:pl-14">
+      <main className="relative z-10">
         <ModernHero />
         <Skills />
         <Certifications />

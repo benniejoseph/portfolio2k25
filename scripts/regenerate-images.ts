@@ -1,1076 +1,452 @@
 #!/usr/bin/env npx tsx
 /**
- * Regenerate infographic-style images for existing blog posts.
- * 4 visual archetypes: Whiteboard, Comparison, Blueprint (dark), Architecture Map
+ * Regenerate blog artwork with OpenAI GPT Image 2.
  *
- * Usage:
- *   npx tsx scripts/regenerate-images.ts              ← regenerate ALL posts
- *   npx tsx scripts/regenerate-images.ts --slug lwc-to-react-what-salesforce-devs-need-to-know
+ * Examples:
+ *   npx tsx scripts/regenerate-images.ts --slug my-post
+ *   npx tsx scripts/regenerate-images.ts --slug my-post --cover-only
+ *   npx tsx scripts/regenerate-images.ts --all --confirm-all
+ *
+ * Regenerating every post is intentionally guarded because it can create
+ * hundreds of paid image requests.
  */
 
-import { GoogleGenAI } from '@google/genai'
+import OpenAI from 'openai'
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 import {
-  styleWhiteboard,
-  styleComparison,
-  styleBlueprint,
-  styleArchitecture,
+  buildFallbackImageBrief,
+  buildTopicImagePrompt,
+  type BlogPillar,
+  type ImagePurpose,
 } from '../src/lib/image-styles'
 
-// Load .env.local
-const envPath = path.join(process.cwd(), '.env.local')
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf-8')
-  for (const line of envContent.split('\n')) {
+const IMAGE_MODEL = 'gpt-image-2'
+const IMAGE_FORMAT = 'webp'
+const IMAGE_COMPRESSION = 86
+// Accept historical slugs with a trailing hyphen while still excluding path
+// separators, dots, whitespace, shell syntax, and traversal sequences.
+const SAFE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/
+
+interface ImageConfig {
+  title: string
+  keyword: string
+  pillar: BlogPillar
+  cover: string
+  coverAlt: string
+  images: string[]
+  imageAlts: string[]
+}
+
+interface SidecarData {
+  version?: number
+  title?: string
+  keyword?: string
+  pillar?: BlogPillar
+  textModel?: string
+  cover?: string
+  coverAlt?: string
+  images?: unknown
+  imageAlts?: unknown
+}
+
+function loadLocalEnvironment(): void {
+  const envPath = path.join(process.cwd(), '.env.local')
+  if (!fs.existsSync(envPath)) return
+
+  for (const line of fs.readFileSync(envPath, 'utf-8').split('\n')) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
-    const eqIdx = trimmed.indexOf('=')
-    if (eqIdx === -1) continue
-    const key = trimmed.slice(0, eqIdx).trim()
-    const raw = trimmed.slice(eqIdx + 1).trim()
-    const value = raw.replace(/^(['"])(.*)\1$/, '$2')
-    if (key && !process.env[key]) process.env[key] = value
+    const separator = trimmed.indexOf('=')
+    if (separator < 1) continue
+    const key = trimmed.slice(0, separator).trim()
+    const rawValue = trimmed.slice(separator + 1).trim()
+    const value = rawValue.replace(/^(['"])(.*)\1$/, '$2')
+    if (!process.env[key]) process.env[key] = value
   }
 }
 
-const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+loadLocalEnvironment()
 
-
-// Per-post image definitions — using style-specific prompt generators
-const POST_IMAGE_CONFIGS: Record<string, { cover: string; images: string[] }> = {
-  'agentforce-vs-einstein-copilot-what-is-actually-different': {
-    cover: styleComparison({
-      title: 'AGENTFORCE vs EINSTEIN COPILOT',
-      subtitle: 'What Is Actually Different',
-      col1Title: 'EINSTEIN COPILOT — Assistant Mode',
-      col1Points: [
-        'User asks a question → Copilot suggests action',
-        'Human reviews and approves every step',
-        'Single-turn conversational assistant',
-        'Works great for: summarise, draft, search',
-      ],
-      col2Title: 'AGENTFORCE — Autonomous Agent Mode',
-      col2Points: [
-        'Business defines a goal → Atlas executes',
-        'Multi-step tool calls without human approval',
-        'Escalates only on exceptions or low confidence',
-        'Works great for: triage, routing, outreach',
-      ],
-    }),
-    images: [
-      styleBlueprint({
-        title: 'AGENTFORCE ACTION TYPES',
-        subtitle: 'Earn Autonomy Left to Right',
-        badLabel: 'WRITE ACTIONS — HIGH RISK',
-        goodLabel: 'READ ACTIONS — LOW RISK',
-        badCode: `// ❌ Never let agent write without guard
-UpdateCasePriority(caseId, priority)  // no confirmation
-CreateFollowUpTask(accountId)         // no idempotency check`,
-        goodCode: `// ✓ Guard every write action
-if (!agentConfig.allowWrites) return 'read-only mode';
-Result r = CreateFollowUpTask(accountId, dedupKey);
-AgentRunLogger.log(r);`,
-        whyCards: [
-          { label: 'READ ACTIONS — GetAccountHealth, FindOpenCases, CheckEntitlement', icon: 'magnifying glass' },
-          { label: 'DECISION ACTIONS — CalculateDiscount, ClassifyLeadTier, AssessRenewalRisk', icon: 'lightning bolt' },
-          { label: 'WRITE ACTIONS — CreateFollowUpTask, UpdateCasePriority (guard required)', icon: 'warning shield' },
-        ],
-        checklist: [
-          'Start with READ actions only',
-          'Add DECISION actions after 2 weeks of monitoring',
-          'WRITE actions need dedicated approval gate',
-          'Log every agent action to Agent_Run__c',
-          'Build kill switch via Custom Metadata flag',
-        ],
-      }),
-      styleComparison({
-        title: 'COPILOT vs AGENTFORCE',
-        subtitle: 'Decision Matrix: Which Tool for Which Use Case',
-        col1Title: 'EINSTEIN COPILOT ✓',
-        col1Points: [
-          'Email drafting & summarisation',
-          'Account summary before a call',
-          'Call prep with relationship context',
-          'Pipeline inspection (exploratory)',
-          'Ad-hoc Q&A over CRM data',
-        ],
-        col2Title: 'AGENTFORCE ✓',
-        col2Points: [
-          'Lead qualification at volume',
-          'Case triage & auto-routing',
-          'Renewal outreach campaign',
-          'Order status handling (high frequency)',
-          'SLA breach escalation',
-        ],
-      }),
-    ],
-  },
-
-  'building-ai-agent-claude-api-salesforce': {
-    cover: styleArchitecture({
-      title: 'CLAUDE API + SALESFORCE AGENT',
-      subtitle: 'Tool-Use Agent Without Abstraction Layers',
-      layers: [
-        {
-          name: 'Salesforce Org',
-          color: 'neon blue',
-          components: ['Connected App', 'OAuth 2.0 Client Credentials', 'Named Credential', 'API v62.0'],
-        },
-        {
-          name: 'Node.js Agent Loop',
-          color: 'grey',
-          components: ['Tool Definitions', 'executeTool()', 'Turn Limiter (MAX_TURNS=10)', 'Error Handler'],
-        },
-        {
-          name: 'Claude API (Anthropic)',
-          color: 'neon green',
-          components: ['claude-sonnet-4-5', 'tool_use blocks', '200K context window', 'Structured JSON output'],
-        },
-      ],
-      centralNode: 'Agent Loop — runAgent()',
-      integrationModules: ['Anthropic SDK', 'Salesforce REST API v62.0'],
-      bottomPanel: {
-        label: 'CRM DATA FLOW',
-        modules: ['SOQL Query Results', 'Created/Updated Records', 'Agent_Run__c Audit Log'],
-      },
-    }),
-    images: [
-      styleComparison({
-        title: 'CLAUDE vs GPT-4.1',
-        subtitle: 'For Salesforce Agent Workloads',
-        col1Title: 'GPT-4.1 (OpenAI)',
-        col1Points: [
-          '128K context window',
-          'Medium SOQL hallucination risk',
-          'Rich OpenAI ecosystem tooling',
-          '~$2.50 per 1M tokens',
-          'Best for: short context, OpenAI stack',
-        ],
-        col2Title: 'Claude Sonnet 4.5 (Anthropic)',
-        col2Points: [
-          '200K context window',
-          'Low SOQL hallucination risk',
-          'Excellent multi-step tool use',
-          '~$3.00 per 1M tokens',
-          'Best for: 50+ email threads, nested tool chains',
-        ],
-      }),
-      styleBlueprint({
-        title: 'PRODUCTION AGENT CHECKLIST',
-        subtitle: 'Security, Reliability, Observability',
-        badLabel: 'COMMON MISTAKES',
-        goodLabel: 'PRODUCTION STANDARDS',
-        badCode: `// ❌ Never do this
-const apiKey = process.env.SF_PASSWORD   // env var
-const res = await query(\`SELECT * FROM \${obj}\`) // injection
-throw new Error(sfError.message)          // leaks internals`,
-        goodCode: `// ✓ Production-safe
-// Named Credential — no key in code
-const res = await withUserMode(query)    // FLS enforced
-return { type: 'tool_result', error: 'validation_failed' } // safe`,
-        whyCards: [
-          { label: 'SECURITY — Named Credential, WITH USER_MODE, httpOnly tokens', icon: 'lock' },
-          { label: 'RELIABILITY — MAX_TURNS guard, exponential backoff on 429, error as tool_result', icon: 'shield' },
-          { label: 'OBSERVABILITY — Agent_Run__c log, cost monitor, kill switch via Custom Metadata', icon: 'chart' },
-        ],
-        checklist: [
-          'Named Credential (not env var) for Salesforce auth',
-          'WITH USER_MODE on all SOQL queries',
-          'MAX_TURNS = 10 infinite loop guard',
-          'Errors returned as tool_result (not thrown)',
-          'Agent_Run__c audit log for every run',
-          'Custom Metadata kill switch flag',
-        ],
-      }),
-    ],
-  },
-
-  'building-ai-agents-with-openai-and-salesforce': {
-    cover: styleArchitecture({
-      title: 'OPENAI + SALESFORCE AGENT',
-      subtitle: 'The Architecture That Survives Production',
-      layers: [
-        {
-          name: 'Salesforce Org',
-          color: 'neon blue',
-          components: ['LWC Component', 'Apex Service', 'Named Credential', 'Sharing Rules', 'FLS Enforcement'],
-        },
-        {
-          name: 'Apex Control Layer',
-          color: 'grey',
-          components: ['PromptBuilder', 'ToolRegistry', 'AgentRunLogger', 'ValidationService', 'AgentRecommendation__c'],
-        },
-        {
-          name: 'OpenAI API',
-          color: 'neon green',
-          components: ['gpt-4.1 model', 'tool_calls response', 'Natural language output', 'JSON schema enforcement'],
-        },
-      ],
-      centralNode: 'Apex Orchestration Layer',
-      integrationModules: ['OpenAI REST API', 'Named Credential (no key in org)'],
-      bottomPanel: {
-        label: 'SECURITY BOUNDARY',
-        modules: ['OpenAI never sees credentials', 'FLS enforced server-side', 'Audit trail in Agent_Run__c'],
-      },
-    }),
-    images: [
-      styleComparison({
-        title: 'TOOL DESIGN',
-        subtitle: 'Bad God-Action vs Good Business Actions',
-        col1Title: '❌ BAD — God Action (Never Build This)',
-        col1Points: [
-          'update_salesforce(soql_query, object_name, field_map, where_clause, operation_type)',
-          'No permission check — agent can delete anything',
-          'Unpredictable blast radius across entire org',
-          'Zero audit trail — invisible to compliance',
-        ],
-        col2Title: '✓ GOOD — Single-Purpose Business Actions',
-        col2Points: [
-          'summarize_case(caseId) — read only, bounded',
-          'check_entitlement(accountId) — permission-checked',
-          'draft_case_response(caseId, tone) — no DML',
-          'create_escalation_request(caseId, reason) — auditable',
-        ],
-      }),
-      styleBlueprint({
-        title: 'ENTERPRISE GUARDRAILS FRAMEWORK',
-        subtitle: '5 Layers of Defence for Production Agents',
-        badLabel: 'UNGUARDED AGENT',
-        goodLabel: 'ENTERPRISE-SAFE AGENT',
-        badCode: `// ❌ Unguarded — DO NOT DEPLOY
-String soql = 'SELECT ' + fields + ' FROM ' + obj;
-Database.query(soql);  // injection + FLS bypass
-// No audit, no limits, no kill switch`,
-        goodCode: `// ✓ Enterprise-safe pattern
-List<SObject> results = Security.stripInaccessible(
-  AccessType.READABLE,
-  Database.queryWithBinds(safeQuery, binds, AccessLevel.USER_MODE)
-).getRecords();
-AgentRunLogger.log(agentRunId, toolName, results.size());`,
-        whyCards: [
-          { label: 'PERMISSION ENFORCEMENT — WITH USER_MODE, stripInaccessible(), FLS + Sharing', icon: 'lock' },
-          { label: 'FIELD MINIMIZATION — Only required fields, max 5 records to LLM, no full SObject dump', icon: 'filter' },
-          { label: 'AUDITABILITY — Agent_Run__c + Agent_Tool_Call__c + correlation IDs + cost tracking', icon: 'document' },
-        ],
-        checklist: [
-          'WITH USER_MODE on every query',
-          'stripInaccessible() before sending to LLM',
-          'Deterministic Apex validates every tool request',
-          'Agent_Run__c + Agent_Tool_Call__c audit trail',
-          'Timeout handling + retry queue + graceful degradation',
-          'Kill switch via Custom Metadata flag',
-        ],
-      }),
-    ],
-  },
-
-  'building-your-first-ai-agent-with-claude-api-and-salesforce': {
-    cover: styleArchitecture({
-      title: 'CASE TRIAGE AGENT — STEP BY STEP',
-      subtitle: 'Claude API + Salesforce Apex End-to-End',
-      layers: [
-        {
-          name: 'Trigger: Case Created',
-          color: 'neon blue',
-          components: ['Case object trigger fires', 'Queueable enqueued async', 'Context serialised'],
-        },
-        {
-          name: 'Apex Context Builder',
-          color: 'grey',
-          components: ['Case Details', 'Account Tier', 'Entitlement', 'Last 5 Emails', 'Open Escalations'],
-        },
-        {
-          name: 'Claude API Callout',
-          color: 'neon green',
-          components: ['claude-sonnet-4-5', 'Named Credential (no key)', '30s timeout', 'JSON: priority + queue + summary'],
-        },
-      ],
-      centralNode: 'CaseTriageQueueable',
-      integrationModules: ['Anthropic Messages API', 'Salesforce Named Credential'],
-      bottomPanel: {
-        label: 'RESULT: APEX VALIDATES + WRITES',
-        modules: ['Permission check', 'Case.Priority updated', 'Case.OwnerId routed', 'Agent_Run__c logged'],
-      },
-    }),
-    images: [
-      styleBlueprint({
-        title: 'APEX AGENT CLASS DIAGRAM',
-        subtitle: 'CaseTriageQueueable Full Structure',
-        badLabel: 'SYNCHRONOUS — HITS CALLOUT LIMIT',
-        goodLabel: 'QUEUEABLE ASYNC — SAFE PATTERN',
-        badCode: `// ❌ Synchronous trigger callout — ILLEGAL
-trigger CaseTrigger on Case (after insert) {
-  Http h = new Http();
-  h.send(req);  // Error: Callout not allowed in trigger
-}`,
-        goodCode: `// ✓ Queueable pattern — correct approach
-trigger CaseTrigger on Case (after insert) {
-  System.enqueueJob(new CaseTriageQueueable(Trigger.new));
-}
-public class CaseTriageQueueable implements Queueable, Database.AllowsCallouts {
-  public void execute(QueueableContext ctx) { ... }
-}`,
-        whyCards: [
-          { label: 'CaseTriageQueueable implements Queueable, Database.AllowsCallouts', icon: 'code' },
-          { label: 'CaseContextBuilder — serialises Case + Account + Entitlement + Emails', icon: 'database' },
-          { label: 'AgentResponseValidator — validates JSON, checks permissions, writes safely', icon: 'shield' },
-        ],
-        checklist: [
-          'Implement Queueable + Database.AllowsCallouts',
-          'Named Credential — never hardcode API key',
-          'MAX_TURNS = 10 guard on agent loop',
-          'Validate LLM JSON before any DML',
-          'Log to Agent_Run__c with correlation ID',
-          'Unit test with @HttpCalloutMock',
-        ],
-      }),
-      styleBlueprint({
-        title: 'AGENT QUALITY METRICS',
-        subtitle: 'How to Measure Your Triage Agent',
-        badLabel: 'UNMONITORED AGENT',
-        goodLabel: 'PRODUCTION-MONITORED',
-        badCode: `// ❌ No monitoring — blind in production
-System.enqueueJob(new CaseTriageQueueable(cases));
-// Did it work? Who knows.`,
-        goodCode: `// ✓ Instrumented — visibility at every step
-AgentRun__c run = AgentRunLogger.start(caseId);
-AgentRunLogger.logToolCall(run.Id, 'claude', tokens, cost);
-AgentRunLogger.complete(run.Id, priority, queue, overrideFlag);`,
-        whyCards: [
-          { label: 'PRIORITY ACCURACY > 85% — correct classifications / total cases', icon: 'target' },
-          { label: 'QUEUE ACCURACY > 90% — correct routing decisions tracked in Agent_Run__c', icon: 'route' },
-          { label: 'COST PER CASE < $0.05 — token cost logged and aggregated per agent run', icon: 'dollar' },
-        ],
-        checklist: [
-          'Priority Accuracy target: > 85%',
-          'Queue Accuracy target: > 90%',
-          'Escalation Miss Rate target: < 5%',
-          'Human Override Rate target: < 20%',
-          'Handle Time Reduction target: -30%',
-          'Cost per Case target: < $0.05',
-        ],
-      }),
-    ],
-  },
-
-  'lwc-to-react-what-salesforce-devs-need-to-know': {
-    cover: styleComparison({
-      title: 'LWC vs REACT',
-      subtitle: 'What Every Salesforce Developer Must Know',
-      col1Title: '⚡ LWC — Salesforce Native',
-      col1Points: [
-        '@wire for reactive data binding',
-        'Lightning Data Service (LDS) cache',
-        'SLDS design system by default',
-        'FLS + Sharing enforced by platform',
-        'Metadata deployment via SFDX',
-        '@InvocableMethod for Flow integration',
-      ],
-      col2Title: '⚛ React — Application Layer',
-      col2Points: [
-        'useQuery + TanStack for data',
-        'Build your own API + auth layer',
-        'Choose your own design system',
-        'Auth + FLS = your responsibility',
-        'Vercel/Cloud Run deployment',
-        'REST API contracts for integration',
-      ],
-    }),
-    images: [
-      styleComparison({
-        title: 'LWC → REACT CONCEPT MAPPING',
-        subtitle: '14 Core Concepts Side by Side',
-        col1Title: 'LWC CONCEPT',
-        col1Points: [
-          '@api property (parent → child)',
-          '@track state (reactive)',
-          '@wire adapter (data fetch)',
-          'connectedCallback (mount)',
-          'disconnectedCallback (unmount)',
-          'dispatchEvent (child → parent)',
-          'NavigationMixin.Navigate()',
-          'lightning-record-form',
-          'jest.mock apex modules',
-        ],
-        col2Title: 'REACT EQUIVALENT',
-        col2Points: [
-          'props (read-only, one-way)',
-          'useState() hook',
-          'useQuery() / TanStack Query',
-          'useEffect(fn, []) — empty deps',
-          'return () => cleanup in useEffect',
-          'callback prop (onEvent)',
-          'useNavigate() — React Router',
-          'React Hook Form + Zod schema',
-          'msw (Mock Service Worker)',
-        ],
-      }),
-      styleBlueprint({
-        title: 'LWC → REACT MIGRATION CHECKLIST',
-        subtitle: '4 Phases: Architecture, Components, Security, Deploy',
-        badLabel: 'SKIPPED SECURITY PHASE',
-        goodLabel: 'FULL MIGRATION DONE RIGHT',
-        badCode: `// ❌ React dev assumes platform protects them
-const res = await fetch(\`/api/cases/\${id}\`)
-// No auth check — LWC always had platform FLS
-// This React endpoint returns data to anyone`,
-        goodCode: `// ✓ Explicitly enforce in your API layer
-export async function GET(req, { params }) {
-  const session = await getServerSession(authOptions)
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const data = await sfQuery(session.accessToken, params.id)
-  return Response.json(stripInaccessibleFields(data))
-}`,
-        whyCards: [
-          { label: 'ARCHITECTURE — Auth strategy (PKCE/JWT/BFF), Salesforce callout backend, CORS', icon: 'blueprint' },
-          { label: 'COMPONENTS — @wire → useQuery, @api → props, Events → callback props, NavigationMixin → Router', icon: 'component' },
-          { label: 'SECURITY — No API keys in browser, httpOnly tokens, FLS enforced server-side', icon: 'lock' },
-        ],
-        checklist: [
-          'Auth strategy chosen (PKCE/JWT/BFF pattern)',
-          'Backend for Salesforce callouts built',
-          '@wire adapters replaced with useQuery',
-          '@api props replaced with React props',
-          'FLS enforced server-side (not assumed)',
-          'Feature flags + error boundaries in place',
-        ],
-      }),
-    ],
-  },
-
-  'rag-for-salesforce-orgs-index-your-knowledge-base': {
-    cover: styleArchitecture({
-      title: 'RAG FOR SALESFORCE KNOWLEDGE BASE',
-      subtitle: 'Index → Retrieve → Answer',
-      layers: [
-        {
-          name: 'Salesforce Knowledge (Source)',
-          color: 'neon blue',
-          components: ['Knowledge__kav records', 'PublishStatus = Online filter', 'IsLatestVersion = true', 'Visibility + Region + Language metadata'],
-        },
-        {
-          name: 'Indexer Service',
-          color: 'grey',
-          components: ['Delta sync on LastModifiedDate', 'HTML → clean text normalizer', 'Chunker: 1200 chars, 150 overlap', 'Metadata extractor'],
-        },
-        {
-          name: 'Vector Database',
-          color: 'neon green',
-          components: ['text-embedding-3-large', 'pgvector / Pinecone', 'Rich metadata stored with chunk', 'Incremental upsert on sync'],
-        },
-      ],
-      centralNode: 'Permission-Aware Retrieval Engine',
-      integrationModules: ['OpenAI Embeddings API', 'Salesforce REST API v62.0'],
-      bottomPanel: {
-        label: 'ANSWER GENERATION',
-        modules: ['LLM + retrieved chunks', 'Mandatory citation enforced', 'Customer-safe output check', 'Answer confidence score'],
-      },
-    }),
-    images: [
-      styleBlueprint({
-        title: 'KNOWLEDGE → VECTOR DB FIELD MAPPING',
-        subtitle: 'Exactly Which Fields to Index and Why',
-        badLabel: 'NAIVE INDEX — INDEXES EVERYTHING',
-        goodLabel: 'PRODUCTION INDEX — FILTERED + ENRICHED',
-        badCode: `# ❌ Naive — indexes drafts, internal, archived
-records = sf.query("SELECT Id, Answer__c FROM Knowledge__kav")
-for r in records:
-    embed_and_store(r['Answer__c'])  # no metadata, no filters`,
-        goodCode: `# ✓ Production — filtered, enriched, versioned
-records = sf.query("""
-  SELECT Id, Title, Answer__c, Language, Product__c,
-         Region__c, Audience__c, IsVisibleInCsp, LastModifiedDate
-  FROM Knowledge__kav
-  WHERE PublishStatus = 'Online'
-  AND IsLatestVersion = true
-  AND IsVisibleInCsp = true
-""")`,
-        whyCards: [
-          { label: 'SOURCE FIELDS — Id, Title, Answer__c, Language, Product__c, Region__c, Audience__c', icon: 'database' },
-          { label: 'NORMALIZER — strip HTML, remove scripts, unescape entities, collapse whitespace', icon: 'filter' },
-          { label: 'CHUNK DOCUMENT — text, title, language, product, region, audience, articleId, version, url', icon: 'document' },
-        ],
-        checklist: [
-          'Filter PublishStatus = Online AND IsLatestVersion = true',
-          'Filter IsVisibleInCsp / IsVisibleInPfe for customer channels',
-          'Strip HTML with BeautifulSoup before embedding',
-          'Chunk at 1200 chars with 150 char overlap',
-          'Store rich metadata with every chunk',
-          'Delta sync on SystemModstamp every 15 min',
-        ],
-      }),
-      styleBlueprint({
-        title: '5 RAG FAILURE MODES IN SALESFORCE',
-        subtitle: 'What Goes Wrong and Exactly How to Fix It',
-        badLabel: 'COMMON RAG FAILURES',
-        goodLabel: 'PRODUCTION FIXES',
-        badCode: `# ❌ Failure modes in the wild
-results = vectordb.search(query, top_k=10)
-# Returns: draft articles, archived, internal-only,
-# wrong region, stale versions — all look "relevant"`,
-        goodCode: `# ✓ Filtered retrieval — safe for customers
-results = vectordb.search(
-  query=query, top_k=10,
-  filter={
-    "publish_status": "Online",
-    "is_latest_version": True,
-    "audience": user_context.audience,
-    "region": user_context.region,
-    "language": user_context.language,
+function getOpenAIClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is required to regenerate blog images')
   }
-)`,
-        whyCards: [
-          { label: 'WRONG VERSION — Old policy answers → fix: IsLatestVersion=true filter', icon: 'clock' },
-          { label: 'VISIBILITY LEAK — Internal content shown to customers → fix: IsVisibleInCsp filter', icon: 'eye' },
-          { label: 'STALE INDEX — Article updated but not re-indexed → fix: SystemModstamp delta sync every 15 min', icon: 'refresh' },
-        ],
-        checklist: [
-          'WRONG VERSION: filter IsLatestVersion = true at query time',
-          'VISIBILITY LEAK: always filter IsVisibleInCsp/IsVisibleInPfe',
-          'REGION MISMATCH: index + filter Region__c',
-          'HTML NOISE: BeautifulSoup strip before chunking',
-          'STALE INDEX: incremental sync on SystemModstamp',
-        ],
-      }),
-    ],
-  },
-
-  'agentforce-custom-actions-a-builder-playbook': {
-    cover: styleArchitecture({
-      title: 'AGENTFORCE CUSTOM ACTIONS',
-      subtitle: 'A Builder Playbook — Agent Converses. Apex Enforces.',
-      layers: [
-        {
-          name: 'Agentforce Agent (Atlas Reasoning)',
-          color: 'neon blue',
-          components: ['Receives user message', 'Identifies intent', 'Selects action', 'Passes typed inputs'],
-        },
-        {
-          name: 'Apex Actions Layer',
-          color: 'grey',
-          components: ['EvaluateAccountHealth (READ)', 'GenerateEscalationDraft (DECISION)', 'CreateCSMFollowUpTask (WRITE)'],
-        },
-        {
-          name: 'Salesforce Platform',
-          color: 'dark blue',
-          components: ['Account records', 'Case records', 'Task records', 'Agent_Run__c audit log'],
-        },
-      ],
-      centralNode: '@InvocableMethod — Permission-Checked Execution',
-      integrationModules: ['Agentforce Studio', 'Named Credentials for external APIs'],
-      bottomPanel: {
-        label: 'PRINCIPLE',
-        modules: ['Agent converses', 'Apex enforces', 'Salesforce owns the data'],
-      },
-    }),
-    images: [
-      styleComparison({
-        title: 'ACTION SCHEMA DESIGN',
-        subtitle: 'God Action vs Single-Purpose Action',
-        col1Title: '❌ BAD — God Action (Never Build This)',
-        col1Points: [
-          'update_salesforce(soql_query, object_name, field_map, where_clause, operation_type)',
-          'Non-deterministic — agent decides what to update',
-          'No audit trail — invisible to compliance teams',
-          'Blast radius: ENTIRE ORG — agent can delete anything',
-        ],
-        col2Title: '✓ GOOD — CreateRenewalFollowUpTask',
-        col2Points: [
-          'account_id: Id (required) — typed, no injection',
-          'due_date_offset_days: Integer (default 2)',
-          'assignee_queue: String (validated against allowed list)',
-          'risk_reason: String (max 1000 chars, sanitised)',
-        ],
-      }),
-      styleComparison({
-        title: 'FLOW vs APEX FOR CUSTOM ACTIONS',
-        subtitle: '8 Factors — When to Use Which',
-        col1Title: 'USE FLOW',
-        col1Points: [
-          'Builder is Admin or Consultant (no Apex skills)',
-          'Simple conditional logic only',
-          'Prototype / prove-the-logic phase',
-          'Low-risk, non-revenue-touching action',
-          'Quick iteration needed (no deploy cycle)',
-        ],
-        col2Title: 'USE APEX',
-        col2Points: [
-          'Complex validation with multiple conditions',
-          'External REST callout with timeout + retry',
-          'Full try/catch + custom exception handling',
-          'Bulkified patterns required for volume',
-          'Any action that touches revenue or customer data',
-        ],
-      }),
-    ],
-  },
-
-  'flow-vs-apex-in-2026-when-to-use-which': {
-    cover: styleComparison({
-      title: 'FLOW vs APEX IN 2026',
-      subtitle: 'When to Use Which — The Architectural Decision Framework',
-      col1Title: '✓ USE FLOW WHEN...',
-      col1Points: [
-        'Logic is declarative, linear, and easy to visualize',
-        'Admins or business users need to adjust it regularly',
-        'Screen-guided user input or approval routing is needed',
-        'Field updates, notifications, and basic routing apply',
-        'Agentforce 2.0 needs admin-configurable process steps',
-        'Moderate volume — no nested loops or complex joins',
-      ],
-      col2Title: '✓ USE APEX WHEN...',
-      col2Points: [
-        'Logic is algorithmic, high-volume, or multi-object',
-        'You need deterministic behavior and serious unit tests',
-        'Reusable domain services shared across triggers, LWC, agents',
-        'Advanced transaction control, dynamic SOQL, bulk DML',
-        'Exposing safe, typed, tested actions to Agentforce 2.0',
-        'Flow would become a 300-node maze nobody wants to touch',
-      ],
-    }),
-    images: [
-      styleComparison({
-        title: 'FLOW vs APEX: Real Production Scenarios',
-        subtitle: '8 Decision Points — Which Tool Wins and Why',
-        col1Title: 'FLOW WINS',
-        col1Points: [
-          'Lead routing rules that change every quarter → admins own it',
-          'Screen wizard for guided renewal opportunity creation',
-          'Approval escalation with manager notification + task creation',
-          'Agentforce 2.0 triggered process: collect missing billing data',
-          'Record-triggered: if Country = Germany → apply DACH sales path',
-          'Fault email to ops team when exception path fires',
-        ],
-        col2Title: 'APEX WINS',
-        col2Points: [
-          'SLA recalculation across Critical / High / Standard tiers',
-          'Bulk case update: 200+ records, premium tier checks, queue routing',
-          'Dynamic SOQL with multi-object joins and conditional filters',
-          'Invocable action reused by Flow, LWC, Queueable, and agent',
-          'Logic requiring 20+ test methods to trust in production',
-          'Transactional write with idempotency key + audit log insert',
-        ],
-      }),
-      styleBlueprint({
-        title: 'HYBRID PATTERN: FLOW + APEX',
-        subtitle: 'Flow Owns the Process. Apex Owns the Complexity. Agentforce Triggers Both.',
-        badLabel: 'ANTI-PATTERN — All Logic in Flow',
-        goodLabel: 'BEST PRACTICE — Hybrid Boundary',
-        badCode: `// All logic in Flow — the 300-node maze
-// Get Records inside conditional path
-// Duplicated assignment rules across
-//   case-create and case-update flows
-// No unit tests possible for SLA rules
-// Random CPU timeouts under prod volume
-// Admins afraid to touch it`,
-        goodCode: `@InvocableMethod(label='Recalculate Entitlement')
-public static List<Response> recalculate(
-  List<Request> requests
-) {
-  // Flow: detects event, calls this action
-  // Apex: SLA calc, region, escalation tier
-  // Output: typed Response back to Flow
-  // Reusable: Flow + LWC + Agentforce 2.0
-}`,
-        whyCards: [
-          { label: 'Admin Visibility', icon: 'eye' },
-          { label: 'Eng Testability', icon: 'shield' },
-          { label: 'Agent Ready', icon: 'bot' },
-        ],
-        checklist: [
-          'Flow detects business event and calls invocable Apex action',
-          'Apex returns typed Response — no SLA logic inside Flow Builder',
-          'Same Apex action reused by LWC, Queueable, and Agentforce 2.0',
-          'Admins own process steps. Devs own the algorithm.',
-          'All complex rules covered by Apex unit tests at 200-record scale',
-        ],
-        authorLabel: 'Bennie Joseph | Salesforce Architect',
-        footerItems: ['Flow Orchestration', 'Apex Services', 'Invocable Actions', 'Agentforce 2.0'],
-      }),
-    ],
-  },
-
-  'apex-cpu-limit-errors-the-real-fix': {
-    cover: styleComparison({
-      title: 'APEX CPU LIMIT ERRORS: The Real Fix',
-      subtitle: '5 Fake Fixes Teams Try vs The Real Transaction Design Approach',
-      col1Title: '❌ FAKE FIXES — Masking the Problem',
-      col1Points: [
-        'Move everything to Queueable — same bad logic, more headroom',
-        'Add @future — hides the issue, delays the crash',
-        'Reduce debug logs — saves ~10ms, not 6,000ms',
-        'Split batch size — increases total cost, fixes nothing',
-        'Ask Salesforce for a limit increase — they won\'t',
-        'Result: CPU hits 10,000ms, transaction rolls back, user sees error',
-      ],
-      col2Title: '✓ REAL FIX — Reduce Transaction Work',
-      col2Points: [
-        'Map the full transaction: triggers + flows + packages + Agentforce',
-        'Add CpuProbe checkpoints — find where CPU is actually spent',
-        'Filter unchanged records before any loop or query runs',
-        'Replace nested loops (O n²) with maps (O n+n)',
-        'Move only non-critical work async — AI summaries, audit snapshots',
-        'Result: 10,000ms failures → 2,800ms stable transaction',
-      ],
-    }),
-    images: [
-      styleComparison({
-        title: 'CPU TRANSACTION ANATOMY',
-        subtitle: 'Every Layer That Shares Your 10,000ms Budget in a Modern Salesforce Org',
-        col1Title: '❌ UNOPTIMIZED TRANSACTION',
-        col1Points: [
-          'Trigger handler processes ALL 200 records regardless of field changes',
-          'Nested loop: 200 Accounts × 20,000 Contacts = 4,000,000 comparisons',
-          'Query returns all open Cases — 800 records, 400 irrelevant',
-          'Record-triggered Flow re-updates unchanged Cases, fires Case triggers',
-          'Agentforce 2.0 insight write happens synchronously in same transaction',
-          'CPU hits 10,000ms → transaction rolls back → user sees failure',
-        ],
-        col2Title: '✓ OPTIMIZED TRANSACTION',
-        col2Points: [
-          'Change detection first: 200 records → filter to 8 with real field changes',
-          'Map lookup: O(n+n) — 200 + 20,000 passes, not 4,000,000 comparisons',
-          'Selective SOQL: IsClosed = false AND status IN relevant set → 40 records',
-          'Flow decision guard: entry criteria prevents re-processing unchanged records',
-          'Agentforce insight generation enqueued as Queueable — off critical path',
-          'CPU lands at 2,800–4,000ms → transaction commits → user sees success',
-        ],
-      }),
-      styleBlueprint({
-        title: 'TRIGGER EXECUTION GUARD',
-        subtitle: 'Operation-Specific Recursion Guards vs The Global hasRun Anti-Pattern',
-        badLabel: 'ANTI-PATTERN — Global Boolean',
-        goodLabel: 'BEST PRACTICE — Operation-Specific Keys',
-        badCode: `public class BadTriggerGuard {
-  public static Boolean hasRun = false;
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    maxRetries: 1,
+    timeout: 10 * 60 * 1000,
+  })
 }
-// Blocks ALL trigger logic after first run
-// Hides design problems instead of fixing them
-// One flag stops legitimate work in same tx`,
-        goodCode: `public class TriggerExecutionGuard {
-  private static Set<String> executedKeys =
-    new Set<String>();
-  public static Boolean firstRun(String key) {
-    if (executedKeys.contains(key)) return false;
-    executedKeys.add(key);
-    return true;
+
+function assertSafeSlug(slug: string | undefined): asserts slug is string {
+  if (!slug || !SAFE_SLUG_RE.test(slug)) {
+    throw new Error('Slug must contain only lowercase letters, numbers, and hyphens')
   }
 }
-// Usage: firstRun('Account.afterUpdate.v1')`,
-        whyCards: [
-          { label: 'Granular Control', icon: 'target' },
-          { label: 'Idempotent Design', icon: 'shield' },
-          { label: 'Audit Safe', icon: 'checkmark' },
-        ],
-        checklist: [
-          'Use operation-specific keys — not one global flag',
-          'Design handlers to be idempotent by default',
-          'Combine with change-detection filtering for CPU safety',
-          'Never use hasRun to hide a recursion you don\'t understand',
-          'Test with realistic bulk data: 200 records, 5 related each',
-        ],
-        authorLabel: 'Bennie Joseph | Salesforce Architect',
-        footerItems: ['CPU Budget', 'Recursion Guard', 'Idempotency', 'Bulk Safety'],
-      }),
-    ],
-  },
 
-  'multi-agent-workflows-lessons-from-building-in-production': {
-    cover: styleComparison({
-      title: 'MULTI-AGENT WORKFLOWS IN PRODUCTION',
-      subtitle: 'What Actually Works vs What Looks Good in Demos',
-      col1Title: '❌ AGENT SWARM — Demo Pattern',
-      col1Points: [
-        'Agents talk to each other freely',
-        'State is hidden and hard to inspect',
-        'Responsibility is impossible to assign',
-        'Failures cannot be replayed or rolled back',
-        'No audit trail for compliance',
-        'Looks impressive, ships badly',
-      ],
-      col2Title: '✓ ORCHESTRATED WORKFLOW — Production',
-      col2Points: [
-        'One orchestrator owns all workflow state',
-        'Each agent: typed input, typed output, confidence score',
-        'Confidence gates trigger human review automatically',
-        'Agents propose actions — deterministic service commits',
-        'Full audit log before any DML write',
-        'Boring by design. Trusted in production.',
-      ],
-    }),
-    images: [
-      styleComparison({
-        title: 'ORCHESTRATOR vs GROUP CHAT',
-        subtitle: 'The Architecture Decision That Defines Production Readiness',
-        col1Title: '❌ GROUP CHAT — Agents Decide Freely',
-        col1Points: [
-          'Agents message each other without central control',
-          'Workflow state is hidden inside individual agents',
-          'Responsibility for failures is impossible to assign',
-          'Infinite loops: no MAX_TURNS protection',
-          'No confidence gates — agent decides when done',
-          'Impressive in demos. Catastrophic in production.',
-        ],
-        col2Title: '✓ ORCHESTRATOR — Centralized Control',
-        col2Points: [
-          'Single orchestrator owns all workflow state',
-          'Agents: typed input → typed output + confidence score',
-          'Intake < 0.75 confidence → immediate human review',
-          'MAX_TURNS = 10 guard — cannot loop forever',
-          'Full AgentResult audit log before any commit',
-          'Human review as a product feature, not failure state.',
-        ],
-      }),
-      styleBlueprint({
-        title: 'SEPARATE THINKING FROM ACTING',
-        subtitle: 'Agents Propose. Deterministic Services Commit.',
-        badLabel: 'AGENT ACTS DIRECTLY — DANGEROUS',
-        goodLabel: 'AGENT PROPOSES — APEX COMMITS',
-        badCode: `// ❌ Agent acts directly — no safety net
-const agent = new SalesforceAgent()
-agent.updateCase(caseId, { Status: 'Closed', Priority: 'Low' })
-// No idempotency. No permission check. No audit.`,
-        goodCode: `// ✓ Proposal + deterministic commit layer
-type SalesforceUpdateProposal = {
-  caseId: string
-  fields: { Status?: string; Priority?: string }
-  idempotencyKey: string   // prevents duplicate writes
-  requiresApproval: boolean
-}
-// Apex validates: confidence >= 0.85, FLS, idempotency key
-AiCaseUpdateService.applyRecommendation(proposal)`,
-        whyCards: [
-          { label: 'IDEMPOTENCY — AI_Action_Log__c checked before every DML write', icon: 'key' },
-          { label: 'CONFIDENCE THRESHOLD — Apex rejects commit if confidence < 0.85', icon: 'filter' },
-          { label: 'FIELD CONTROL — Apex owns field list, agent cannot write arbitrary fields', icon: 'lock' },
-        ],
-        checklist: [
-          'Agent returns SalesforceUpdateProposal (no DML)',
-          'Apex validates confidence >= 0.85 before commit',
-          'AI_Action_Log__c checked for idempotency key',
-          'FOR UPDATE lock on Case before write',
-          'Action logged with correlation ID',
-          'One retry for timeouts, zero retries for policy conflicts',
-        ],
-        authorLabel: 'Bennie Joseph | Salesforce Architect',
-        footerItems: ['Proposals Only', 'Apex Commits', 'Idempotency Keys', 'Audit Trail'],
-      }),
-    ],
-  },
+function inferPillar(tags: unknown, title: string): BlogPillar {
+  const values = Array.isArray(tags) ? tags.map(String) : []
+  const searchable = `${values.join(' ')} ${title}`.toLowerCase()
+  if (/career|roadmap|leadership/.test(searchable)) return 'career'
+  if (/architecture|integration|governance|multi-org/.test(searchable)) return 'architecture'
+  if (/agent|artificial intelligence|\bai\b|rag|llm|mcp/.test(searchable)) return 'ai-agentic'
+  return 'salesforce'
 }
 
-/**
- * Reference photo of the author (Bennie Joseph), used so Nano Banana 2 can
- * keep his likeness consistent across every generated avatar/profile icon
- * instead of inventing a new face each time.
- */
-const AUTHOR_REFERENCE_PATH = path.join(process.cwd(), 'public/images/profile.webp')
-let authorReferenceCache: { mimeType: string; data: string } | null | undefined
-
-function loadAuthorReferenceImage(): { mimeType: string; data: string } | null {
-  if (authorReferenceCache !== undefined) return authorReferenceCache
-  try {
-    const buf = fs.readFileSync(AUTHOR_REFERENCE_PATH)
-    authorReferenceCache = { mimeType: 'image/webp', data: buf.toString('base64') }
-  } catch {
-    authorReferenceCache = null
+function postPathForSlug(slug: string): string {
+  const postsDirectory = path.resolve(process.cwd(), 'content/posts')
+  const postPath = path.resolve(postsDirectory, `${slug}.mdx`)
+  if (path.dirname(postPath) !== postsDirectory) {
+    throw new Error(`Unsafe post path for slug: ${slug}`)
   }
-  return authorReferenceCache
+  return postPath
 }
 
-/** True if the prompt asks for an avatar/profile portrait of the author. */
-function promptNeedsAuthorPhoto(prompt: string): boolean {
-  return /Bennie Joseph/i.test(prompt)
+function extractHeadings(content: string): string[] {
+  return [...content.matchAll(/^##\s+(.+)$/gm)]
+    .map((match) => match[1].replace(/[*_`]/g, '').trim())
+    .filter((heading) => heading.toLowerCase() !== 'tl;dr')
+    .slice(0, 7)
 }
 
-const AUTHOR_PHOTO_INSTRUCTION = `
+function semanticBrief(
+  title: string,
+  keyword: string,
+  excerpt: string,
+  headings: string[],
+  purpose: ImagePurpose,
+  index = 0
+): string {
+  const fallback = buildFallbackImageBrief(title, keyword, purpose, index)
+  const sectionNames = headings.length ? headings.join('; ') : 'the article’s core implementation sections'
 
-Note: The first attached image is a real reference photo of the author. Use his likeness (face, beard, hairstyle, skin tone) for any avatar or portrait of him in this scene, rendered in the described illustration style.`
+  if (purpose === 'cover') {
+    return `${fallback} Article thesis: ${excerpt}. Draw concrete subject matter from these sections: ${sectionNames}.`
+  }
+  if (purpose === 'concept') {
+    return `${fallback} Use the concepts behind these sections: ${headings.slice(0, 4).join('; ') || sectionNames}. Article thesis: ${excerpt}.`
+  }
+  return `${fallback} Build the flow from these implementation sections: ${headings.slice(2, 7).join('; ') || sectionNames}. Show validation and a recoverable failure path.`
+}
 
-async function generateImage(
-  prompt: string,
-  aspectRatio: '16:9' | '1:1' = '1:1',
-  useAuthorPhoto = true
-): Promise<Buffer> {
-  console.log(`  Prompt preview: ${prompt.slice(0, 120)}...`)
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+}
 
-  let contents: Array<{ inlineData: { mimeType: string; data: string } } | string> | string = prompt
+function loadImageConfig(slug: string): ImageConfig {
+  const postPath = postPathForSlug(slug)
+  if (!fs.existsSync(postPath)) {
+    throw new Error(`No post exists for slug: ${slug}`)
+  }
 
-  if (useAuthorPhoto && promptNeedsAuthorPhoto(prompt)) {
-    const reference = loadAuthorReferenceImage()
-    if (reference) {
-      contents = [
-        { inlineData: { mimeType: reference.mimeType, data: reference.data } },
-        prompt + AUTHOR_PHOTO_INSTRUCTION,
-      ]
-      console.log('  → Attaching author reference photo for likeness consistency')
+  const rawPost = fs.readFileSync(postPath, 'utf-8')
+  const parsedPost = matter(rawPost)
+  const title = String(parsedPost.data.title || slug.replace(/-/g, ' '))
+  const keyword = String(parsedPost.data.keyword || title)
+  const excerpt = String(parsedPost.data.excerpt || title)
+  const pillar = inferPillar(parsedPost.data.tags, title)
+  const headings = extractHeadings(parsedPost.content)
+  const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
+  const sidecar: SidecarData = fs.existsSync(sidecarPath)
+    ? JSON.parse(fs.readFileSync(sidecarPath, 'utf-8')) as SidecarData
+    : {}
+
+  // Version 2 sidecars already contain full, topic-aware GPT Image prompts.
+  if (
+    sidecar.version === 2 &&
+    typeof sidecar.cover === 'string' &&
+    stringArray(sidecar.images).length > 0
+  ) {
+    const prompts = stringArray(sidecar.images)
+    const alts = stringArray(sidecar.imageAlts)
+    return {
+      title: sidecar.title || title,
+      keyword: sidecar.keyword || keyword,
+      pillar: sidecar.pillar || pillar,
+      cover: sidecar.cover,
+      coverAlt: sidecar.coverAlt || `${title} technical cover illustration`,
+      images: prompts,
+      imageAlts: prompts.map((_, index) => alts[index] || `${title} technical diagram ${index + 1}`),
     }
   }
 
-  // Nano Banana 2 — gemini-3.1-flash-image-preview (uses generateContent, not generateImages)
-  const response = await gemini.models.generateContent({
-    model: 'gemini-3.1-flash-image-preview',
-    contents,
-    config: {
-      responseModalities: ['TEXT', 'IMAGE'],
-      imageConfig: {
-        aspectRatio,
-        imageSize: aspectRatio === '16:9' ? '2K' : '1K',
-      },
-    },
+  // Older sidecars encoded rigid visual templates. Rebuild their prompts from
+  // the post semantics so regeneration genuinely changes composition by topic.
+  const existingImageCount = Math.max(
+    stringArray(sidecar.images).length,
+    [...rawPost.matchAll(new RegExp(`/images/blog/${slug}/image-(\\d+)\\.(?:png|webp|jpe?g)`, 'g'))].length,
+    2
+  )
+  const inlinePurposes: ImagePurpose[] = ['concept', 'workflow']
+  const images = Array.from({ length: existingImageCount }, (_, index) => {
+    const purpose = inlinePurposes[index % inlinePurposes.length]
+    return buildTopicImagePrompt({
+      topic: title,
+      keyword,
+      pillar,
+      purpose,
+      brief: semanticBrief(title, keyword, excerpt, headings, purpose, index),
+      variation: index + 1,
+    })
   })
 
-  const parts = response.candidates?.[0]?.content?.parts ?? []
-  const imagePart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data)
-  if (!imagePart?.inlineData?.data) {
-    throw new Error('No image data returned from Nano Banana 2 (gemini-3.1-flash-image-preview)')
+  return {
+    title,
+    keyword,
+    pillar,
+    cover: buildTopicImagePrompt({
+      topic: title,
+      keyword,
+      pillar,
+      purpose: 'cover',
+      brief: semanticBrief(title, keyword, excerpt, headings, 'cover'),
+      variation: 0,
+    }),
+    coverAlt: `${title} technical cover illustration`,
+    images,
+    imageAlts: images.map((_, index) => `${title} technical diagram ${index + 1}`),
   }
+}
 
-  return Buffer.from(imagePart.inlineData.data, 'base64')
+function isRetriable(error: unknown): boolean {
+  const status = typeof error === 'object' && error !== null && 'status' in error
+    ? Number((error as { status?: number }).status)
+    : undefined
+  if (!status || Number.isNaN(status)) return true
+  return status === 408 || status === 409 || status === 429 || status >= 500
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function generateImage(
+  client: OpenAI,
+  prompt: string,
+  purpose: ImagePurpose
+): Promise<Buffer> {
+  const response = await client.images.generate({
+    model: IMAGE_MODEL,
+    prompt,
+    n: 1,
+    size: purpose === 'cover' ? '1536x864' : '1024x1024',
+    quality: purpose === 'cover' ? 'high' : 'medium',
+    output_format: IMAGE_FORMAT,
+    output_compression: IMAGE_COMPRESSION,
+    background: 'opaque',
+  })
+  const base64 = response.data?.[0]?.b64_json
+  if (!base64) throw new Error(`${IMAGE_MODEL} returned no base64 image data`)
+  return Buffer.from(base64, 'base64')
 }
 
 async function generateImageWithRetry(
+  client: OpenAI,
   prompt: string,
-  aspectRatio: '16:9' | '1:1' = '1:1',
+  purpose: ImagePurpose,
   maxAttempts = 3
 ): Promise<Buffer> {
-  let lastError: Error | undefined
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await generateImage(prompt, aspectRatio)
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err))
-      if (attempt < maxAttempts) {
-        const delayMs = attempt * 8000
-        console.log(`  ⚠ Attempt ${attempt} failed: ${lastError.message}`)
-        console.log(`  ↻ Retrying in ${delayMs / 1000}s...`)
-        await new Promise((r) => setTimeout(r, delayMs))
-      }
+      console.log(`  ${IMAGE_MODEL} ${purpose} attempt ${attempt}/${maxAttempts}`)
+      return await generateImage(client, prompt, purpose)
+    } catch (error) {
+      lastError = error
+      if (!isRetriable(error) || attempt === maxAttempts) break
+      const delayMs = 3000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 750)
+      console.warn(`  Attempt failed: ${errorMessage(error)}; retrying in ${Math.round(delayMs / 1000)}s`)
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
     }
   }
 
-  // Last resort: if every attempt with the author's reference photo failed
-  // (e.g. the model returned IMAGE_OTHER for that prompt+image combo), retry
-  // once without the photo so the pipeline doesn't crash.
-  if (promptNeedsAuthorPhoto(prompt)) {
-    try {
-      console.log('  ↻ Retrying without author reference photo as a fallback...')
-      return await generateImage(prompt, aspectRatio, false)
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err))
-    }
-  }
-
-  throw lastError
+  throw new Error(`${IMAGE_MODEL} ${purpose} generation failed: ${errorMessage(lastError)}`)
 }
 
-async function updateCoverImageInFrontmatter(slug: string): Promise<void> {
-  const postPath = path.join(process.cwd(), 'content/posts')
-  const files = fs.readdirSync(postPath).filter((f) => f.endsWith('.mdx'))
+function writeFileAtomic(filePath: string, data: string | Buffer): void {
+  const temporaryPath = `${filePath}.tmp-${process.pid}`
+  fs.writeFileSync(temporaryPath, data)
+  fs.renameSync(temporaryPath, filePath)
+}
 
-  for (const file of files) {
-    const fileSlug = file.replace('.mdx', '')
-    if (fileSlug !== slug && !file.includes(slug.slice(0, 30))) continue
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
-    const raw = fs.readFileSync(path.join(postPath, file), 'utf-8')
-    const { data: fm } = matter(raw)
-    const pngCoverPath = `/images/blog/${slug}/cover.png`
+function updatePostImageReferences(
+  slug: string,
+  imageCount: number,
+  updateCover: boolean,
+  updateInline: boolean,
+  coverAlt: string
+): void {
+  const postPath = postPathForSlug(slug)
+  let raw = fs.readFileSync(postPath, 'utf-8')
+  const encodedSlug = escapeRegExp(slug)
+  const coverPath = `/images/blog/${slug}/cover.${IMAGE_FORMAT}`
 
-    if (!fm.coverImage) {
-      // Add missing coverImage field
-      const updated = raw.replace(/^---\n([\s\S]*?)\n---/, (_, fmBody) => {
-        return `---\n${fmBody}\ncoverImage: ${pngCoverPath}\n---`
-      })
-      fs.writeFileSync(path.join(postPath, file), updated, 'utf-8')
-      console.log(`  ✓ Added coverImage: ${pngCoverPath} to ${file}`)
-    } else if (fm.coverImage !== pngCoverPath) {
-      // Upgrade .webp → .png (or any wrong path → correct path)
-      const updated = raw.replace(
-        /^(coverImage:\s*)(.+)$/m,
-        `$1${pngCoverPath}`
+  if (updateCover) {
+    const coverReference = new RegExp(`/images/blog/${encodedSlug}/cover\\.(?:png|webp|jpe?g)`, 'g')
+    if (coverReference.test(raw)) {
+      raw = raw.replace(coverReference, coverPath)
+    } else if (/^coverImage:/m.test(raw)) {
+      raw = raw.replace(/^coverImage:\s*.*$/m, `coverImage: ${coverPath}`)
+    } else {
+      raw = raw.replace(/^---\n([\s\S]*?)\n---/, `---\n$1\ncoverImage: ${coverPath}\n---`)
+    }
+
+    const coverAltLine = `coverAlt: ${JSON.stringify(coverAlt)}`
+    if (/^coverAlt:/m.test(raw)) {
+      raw = raw.replace(/^coverAlt:\s*.*$/m, coverAltLine)
+    } else {
+      raw = raw.replace(/^coverImage:\s*.*$/m, (coverImageLine) => `${coverImageLine}\n${coverAltLine}`)
+    }
+  }
+
+  if (updateInline) {
+    for (let index = 1; index <= imageCount; index += 1) {
+      const imageReference = new RegExp(
+        `/images/blog/${encodedSlug}/image-${index}\\.(?:png|webp|jpe?g)`,
+        'g'
       )
-      fs.writeFileSync(path.join(postPath, file), updated, 'utf-8')
-      console.log(`  ✓ Updated coverImage: ${fm.coverImage} → ${pngCoverPath}`)
+      raw = raw.replace(imageReference, `/images/blog/${slug}/image-${index}.${IMAGE_FORMAT}`)
+    }
+  }
+
+  writeFileAtomic(postPath, raw)
+}
+
+function removeLegacyAssets(imageDirectory: string, baseNames: string[]): void {
+  for (const baseName of baseNames) {
+    for (const extension of ['png', 'jpg', 'jpeg']) {
+      const legacyPath = path.join(imageDirectory, `${baseName}.${extension}`)
+      if (fs.existsSync(legacyPath)) fs.unlinkSync(legacyPath)
     }
   }
 }
 
-async function regeneratePost(slug: string, coverOnly = false, inlineOnly = false): Promise<void> {
-  let config: { cover: string; images: string[] } | undefined
-
-  // Sidecar JSON wins — it is always the authoritative up-to-date source.
-  // POST_IMAGE_CONFIGS is only a fallback for posts that predate sidecar support.
-  const sidecarPath = path.join(process.cwd(), 'content/posts', `${slug}.images.json`)
-  if (fs.existsSync(sidecarPath)) {
-    const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf-8'))
-    if (sidecar.cover && Array.isArray(sidecar.images)) {
-      config = { cover: sidecar.cover, images: sidecar.images }
-    }
+function saveUpgradedSidecar(slug: string, config: ImageConfig): void {
+  const sidecar = {
+    version: 2,
+    title: config.title,
+    keyword: config.keyword,
+    pillar: config.pillar,
+    textModel: 'existing-post',
+    imageModel: IMAGE_MODEL,
+    format: IMAGE_FORMAT,
+    compression: IMAGE_COMPRESSION,
+    generatedAt: new Date().toISOString(),
+    cover: config.cover,
+    coverAlt: config.coverAlt,
+    images: config.images,
+    imageAlts: config.imageAlts,
   }
+  writeFileAtomic(
+    path.join(process.cwd(), 'content/posts', `${slug}.images.json`),
+    `${JSON.stringify(sidecar, null, 2)}\n`
+  )
+}
 
-  // Fallback to hardcoded config only if no sidecar exists
-  if (!config) {
-    config = POST_IMAGE_CONFIGS[slug]
-  }
-
-  if (!config) {
-    console.log(`  ⚠ No image config found for slug: ${slug} — skipping`)
-    return
-  }
-
-  const imgDir = path.join(process.cwd(), 'public/images/blog', slug)
-  fs.mkdirSync(imgDir, { recursive: true })
-
-  const mode = coverOnly ? 'cover only' : inlineOnly ? 'inline images only' : 'all images'
-  console.log(`\n📸 Regenerating ${mode} for: ${slug}`)
+async function regeneratePost(
+  client: OpenAI,
+  slug: string,
+  coverOnly: boolean,
+  inlineOnly: boolean
+): Promise<void> {
+  const config = loadImageConfig(slug)
+  const imageDirectory = path.join(process.cwd(), 'public/images/blog', slug)
+  fs.mkdirSync(imageDirectory, { recursive: true })
+  const mode = coverOnly ? 'cover' : inlineOnly ? 'inline images' : 'cover and inline images'
+  console.log(`\nRegenerating ${mode}: ${slug}`)
 
   if (!inlineOnly) {
-    console.log('  → Generating cover (16:9)...')
-    const coverBuf = await generateImageWithRetry(config.cover, '16:9')
-    fs.writeFileSync(path.join(imgDir, 'cover.png'), coverBuf)
-    console.log('  ✓ cover.png saved')
-    await updateCoverImageInFrontmatter(slug)
+    const cover = await generateImageWithRetry(client, config.cover, 'cover')
+    writeFileAtomic(path.join(imageDirectory, `cover.${IMAGE_FORMAT}`), cover)
   }
 
   if (!coverOnly) {
-    for (let i = 0; i < config.images.length; i++) {
-      console.log(`  → Generating image-${i + 1} (1:1)...`)
-      const buf = await generateImageWithRetry(config.images[i], '1:1')
-      fs.writeFileSync(path.join(imgDir, `image-${i + 1}.png`), buf)
-      console.log(`  ✓ image-${i + 1}.png saved`)
+    const purposes: ImagePurpose[] = ['concept', 'workflow']
+    for (let index = 0; index < config.images.length; index += 1) {
+      console.log(`  Inline image ${index + 1}/${config.images.length}`)
+      const image = await generateImageWithRetry(
+        client,
+        config.images[index],
+        purposes[index % purposes.length]
+      )
+      writeFileAtomic(path.join(imageDirectory, `image-${index + 1}.${IMAGE_FORMAT}`), image)
     }
   }
+
+  updatePostImageReferences(slug, config.images.length, !inlineOnly, !coverOnly, config.coverAlt)
+  saveUpgradedSidecar(slug, config)
+
+  const convertedNames: string[] = []
+  if (!inlineOnly) convertedNames.push('cover', 'cover-v2')
+  if (!coverOnly) {
+    convertedNames.push(...config.images.map((_, index) => `image-${index + 1}`))
+  }
+  removeLegacyAssets(imageDirectory, convertedNames)
+  console.log(`  ✓ Saved compressed ${IMAGE_FORMAT.toUpperCase()} assets and updated exact MDX references`)
 }
 
-async function main() {
+function parseArguments(): {
+  slugs: string[]
+  coverOnly: boolean
+  inlineOnly: boolean
+} {
   const args = process.argv.slice(2)
-  const slugArg = args.indexOf('--slug')
+  const slugIndex = args.indexOf('--slug')
+  const regenerateAll = args.includes('--all')
+  const confirmAll = args.includes('--confirm-all')
   const coverOnly = args.includes('--cover-only')
   const inlineOnly = args.includes('--inline-only')
 
-  // When no --slug given, regenerate all posts that have a config or sidecar JSON
-  const allSlugs = new Set<string>([
-    ...Object.keys(POST_IMAGE_CONFIGS),
-    ...fs
-      .readdirSync(path.join(process.cwd(), 'content/posts'))
-      .filter((f) => f.endsWith('.images.json'))
-      .map((f) => f.replace('.images.json', '')),
-  ])
-
-  const slugs = slugArg !== -1 ? [args[slugArg + 1]] : [...allSlugs]
-
-  console.log(`\n🔄 Regenerating ${coverOnly ? 'covers only' : 'all images'} for ${slugs.length} post(s)\n`)
-
-  for (const slug of slugs) {
-    await regeneratePost(slug, coverOnly, inlineOnly)
+  if (coverOnly && inlineOnly) {
+    throw new Error('Choose only one of --cover-only or --inline-only')
+  }
+  if (slugIndex !== -1 && regenerateAll) {
+    throw new Error('Choose either --slug or --all, not both')
   }
 
-  console.log('\n✅ All done. Commit public/images/blog/ to deploy.')
+  if (slugIndex !== -1) {
+    const slug = args[slugIndex + 1]
+    assertSafeSlug(slug)
+    return { slugs: [slug], coverOnly, inlineOnly }
+  }
+
+  if (!regenerateAll) {
+    throw new Error('Specify --slug <post-slug>, or use --all --confirm-all for every post')
+  }
+  if (!confirmAll) {
+    throw new Error('Refusing a paid all-post run without the explicit --confirm-all guard')
+  }
+
+  const postsDirectory = path.join(process.cwd(), 'content/posts')
+  const slugs = fs.readdirSync(postsDirectory)
+    .filter((file) => file.endsWith('.mdx'))
+    .map((file) => file.slice(0, -4))
+    .filter((slug) => SAFE_SLUG_RE.test(slug))
+    .sort()
+  return { slugs, coverOnly, inlineOnly }
 }
 
-main().catch((err) => {
-  console.error('Error:', err.message)
+async function main(): Promise<void> {
+  const { slugs, coverOnly, inlineOnly } = parseArguments()
+  const imagesPerPost = coverOnly ? 1 : inlineOnly ? 2 : 3
+  console.log(`Regenerating approximately ${slugs.length * imagesPerPost} image(s) across ${slugs.length} post(s).`)
+  console.log(`Model: ${IMAGE_MODEL}; format: ${IMAGE_FORMAT}; compression: ${IMAGE_COMPRESSION}`)
+
+  const client = getOpenAIClient()
+  for (const slug of slugs) {
+    await regeneratePost(client, slug, coverOnly, inlineOnly)
+  }
+  console.log('\nAll requested blog images were regenerated successfully.')
+}
+
+main().catch((error) => {
+  console.error(`Image regeneration failed: ${errorMessage(error)}`)
   process.exit(1)
 })

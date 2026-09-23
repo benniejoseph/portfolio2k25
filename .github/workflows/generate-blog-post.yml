@@ -1,26 +1,44 @@
 name: Generate Blog Post
 
 on:
-  # Run every Monday at 8am IST (2:30am UTC)
+  # Every Monday at 08:00 IST (02:30 UTC). Scheduled starts can be delayed by GitHub.
   schedule:
     - cron: '30 2 * * 1'
-  # Also allow manual runs from GitHub Actions tab
   workflow_dispatch:
     inputs:
       topic_index:
-        description: 'Topic index (leave blank to auto-pick next unpublished)'
+        description: 'Topic index (blank selects the next unpublished topic)'
         required: false
         default: ''
+
+# Serialize every workflow that writes blog content so scheduled generation and
+# manual image regeneration cannot race each other on the default branch.
+concurrency:
+  group: blog-content-writes
+  cancel-in-progress: false
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
+      - name: Validate manual input
+        env:
+          TOPIC_INDEX: ${{ inputs.topic_index }}
+        run: |
+          if [[ -n "$TOPIC_INDEX" && ! "$TOPIC_INDEX" =~ ^[0-9]+$ ]]; then
+            echo "topic_index must be a non-negative integer" >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -31,40 +49,76 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate post
+      - name: Generate post and topic-specific images
         id: generate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TOPIC_INDEX: ${{ inputs.topic_index }}
         run: |
-          if [ -n "${{ github.event.inputs.topic_index }}" ]; then
-            npx tsx scripts/generate-post.ts --index ${{ github.event.inputs.topic_index }}
+          if [[ -n "$TOPIC_INDEX" ]]; then
+            npx tsx scripts/generate-post.ts --index "$TOPIC_INDEX"
           else
             npx tsx scripts/generate-post.ts
           fi
 
-      - name: Commit new post and images
+      - name: Preserve generated text when image generation fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blog-generation-recovery-${{ github.run_id }}
+          path: ${{ runner.temp }}/portfolio-blog-generation/*.mdx
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Validate generated content
+        run: |
+          git diff --check
+          npm run typecheck
+          npm run audit-blog
+          npm run build
+
+      - name: Commit generated content and open a review pull request
         id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add content/posts/ public/images/blog/
+          git add -A -- \
+            content/posts \
+            public/images/blog \
+            public/robots.txt \
+            public/sitemap.xml \
+            public/sitemap-0.xml
           if git diff --staged --quiet; then
-            echo "No new post generated (all topics already published)"
-            echo "committed=false" >> $GITHUB_OUTPUT
-          else
-            git commit -m "content: auto-generate blog post with images via OpenAI"
-            git push
-            echo "committed=true" >> $GITHUB_OUTPUT
+            echo "No new post generated (the backlog may already be complete)"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          review_branch="automation/blog-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "$review_branch"
+          git commit -m "content: generate sourced blog post with OpenAI"
+          git fetch origin "$GITHUB_REF_NAME"
+          git rebase "origin/$GITHUB_REF_NAME"
+          git push --set-upstream origin "$review_branch"
+
+          pr_url="$(gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$review_branch" \
+            --title "Editorial review: generated Salesforce field note" \
+            --body "Generated with the OpenAI Responses and Image APIs. Review every release-status claim, source, code sample, image, and first-person statement before merging. This pull request is intentionally not auto-merged.")"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+          echo "Opened review pull request: $pr_url"
 
       - name: Generate LinkedIn draft
         if: steps.commit.outputs.committed == 'true'
         run: |
-          if [ -f .generated-slug ]; then
-            SLUG=$(cat .generated-slug)
-            echo "Generating LinkedIn draft for: $SLUG"
-            npx tsx scripts/publish-linkedin.ts --slug "$SLUG"
+          if [[ -f .generated-slug ]]; then
+            slug="$(tr -d '\r\n' < .generated-slug)"
+            echo "Generating LinkedIn draft for: $slug"
+            npx tsx scripts/publish-linkedin.ts --slug "$slug"
           else
-            echo "No .generated-slug file found — skipping LinkedIn draft"
+            echo "No generated slug found; skipping LinkedIn draft"
           fi

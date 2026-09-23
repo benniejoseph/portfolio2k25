@@ -1,167 +1,71 @@
-# 🚀  Portfolio - Bennie Joseph
+# Bennie Joseph — Portfolio and Field Notes
 
-A modern, interactive portfolio website built with Next.js, Three.js, and Framer Motion. Features an experience with 3D models, smooth animations, and a responsive design.
+Personal portfolio and technical blog for Bennie Joseph, Customer Success Manager at Salesforce and Salesforce Certified Application Architect.
 
-## ✨ Features
+The site pairs a Dreamforce 2026-inspired visual system with a file-based MDX publication pipeline for Salesforce, Agentforce, AIforce, Winter '27, enterprise architecture, and customer-success engineering content.
 
-- **Modern Design**: Glass-morphism effects with a navy and mint green color scheme
-- **3D Interactive Model**: Three.js powered 3D model with custom lighting
-- **Smooth Animations**: Framer Motion animations throughout the site
-- **Responsive Design**: Works perfectly on all devices
-- **Gamified Experience**: Interactive elements and hover effects
-- **Performance Optimized**: Built with Next.js 15 for optimal performance
-- **TypeScript**: Fully typed for better development experience
+## Stack
 
-## 🛠️ Tech Stack
+- Next.js 16 App Router, React 19, TypeScript
+- Tailwind CSS and Framer Motion
+- MDX posts with syntax highlighting, RSS, sitemap, structured data, and dynamic OG images
+- OpenAI Responses API for blog drafting
+- OpenAI GPT Image 2 for topic-specific blog artwork
+- GitHub Actions for scheduled generation and review-gated image regeneration
 
-- **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **3D Graphics**: Three.js with React Three Fiber
-- **Animations**: Framer Motion
-- **Icons**: React Icons
-- **Email Service**: EmailJS
-- **Sound Effects**: Custom audio integration
+## Local development
 
-## 🚀 Deployment on Vercel
+Requirements:
 
-### Prerequisites
-- Node.js 18+ installed
-- Git repository
-- Vercel account
+- Node.js 20.9 or newer
+- npm
 
-### Step-by-Step Deployment
-
-1. **Install Vercel CLI** (optional but recommended):
-   ```bash
-   npm i -g vercel
-   ```
-
-2. **Deploy via Vercel Dashboard**:
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your GitHub repository
-   - Vercel will automatically detect Next.js settings
-   - Click "Deploy"
-
-3. **Deploy via CLI**:
-   ```bash
-   # Login to Vercel
-   vercel login
-   
-   # Deploy to production
-   vercel --prod
-   ```
-
-### Environment Variables (if needed)
-If you're using any API keys or secrets, add them in Vercel Dashboard:
-- Go to Project Settings
-- Navigate to Environment Variables
-- Add your variables
-
-### Custom Domain (Optional)
-1. Go to your project in Vercel Dashboard
-2. Navigate to Settings > Domains
-3. Add your custom domain
-4. Follow DNS configuration instructions
-
-## 🏃‍♂️ Local Development
-
-1. **Clone and Install**:
-   ```bash
-   git clone <your-repo-url>
-   cd gamified-portfolio
-   npm install
-   ```
-
-2. **Run Development Server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-3. **Build for Production**:
-   ```bash
-   npm run build
-   npm start
-   ```
-
-## 📁 Project Structure
-
-```
-src/
-├── app/                    # Next.js app directory
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx          # Home page
-├── components/            # React components
-│   ├── CanvasWrapper.tsx  # Three.js canvas wrapper
-│   ├── Certifications.tsx # Certifications section
-│   ├── Contact.tsx        # Contact form
-│   ├── Hero.tsx          # Hero section
-│   ├── Navbar.tsx        # Navigation bar
-│   ├── Projects.tsx      # Projects showcase
-│   ├── Skills.tsx        # Skills section
-│   ├── Work.tsx          # Work experience
-│   └── models/           # 3D models
-│       └── YourModel.tsx # Main 3D model component
-public/
-├── images/               # Images and logos
-├── models/              # 3D model files
-└── sounds/              # Audio files
+```bash
+npm ci
+npm run dev
 ```
 
-## 🎨 Customization
+Open [http://localhost:3000](http://localhost:3000).
 
-### Colors
-Update CSS variables in `src/app/globals.css`:
-```css
-:root {
-  --color-primary: #64ffda;     /* Mint Green */
-  --color-secondary: #0a192f;   /* Navy */
-  --color-accent: #ff6b6b;      /* Coral */
-}
+Useful checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run audit-blog
+npm run build
 ```
 
-### Content
-- Update personal information in `src/components/Hero.tsx`
-- Modify work experience in `src/components/Work.tsx`
-- Add your projects in `src/components/Projects.tsx`
-- Update certifications in `src/components/Certifications.tsx`
+`npm run check` and `npm run audit-blog -- --strict-images` fail when a post references a missing image. The non-strict `npm run audit-blog` command reports those as warnings so content and image migrations can be reviewed independently without weakening the full release gate.
 
-### 3D Model
-Replace the model in `public/models/dog.glb` with your own 3D model and update the path in `src/components/models/YourModel.tsx`.
+## Blog automation
 
-## 🔧 Build Optimizations
+Posts live in `content/posts` and their assets live in `public/images/blog/<slug>`.
 
-- **Image Optimization**: Using Next.js Image component
-- **Code Splitting**: Automatic with Next.js
-- **Tree Shaking**: Enabled by default
-- **Minification**: Production builds are minified
-- **Static Generation**: Pre-rendered for better performance
+```bash
+npm run generate-post:list
+npm run generate-post
+npm run generate-post -- --index 4
+```
 
-## 📱 Browser Support
+Text generation tries `gpt-6-astra` first and falls back to `gpt-5.6-sol` when the primary model is unavailable. Artwork uses `gpt-image-2`. Cover and inline prompts are derived from each article's topic and purpose; the pipeline deliberately varies composition and avoids a single repeated infographic template.
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
+Required local or GitHub secret:
 
-## 🤝 Contributing
+```text
+OPENAI_API_KEY
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+The scheduled workflow creates one unpublished backlog item at a time and opens a pull request; it never auto-merges or pushes generated editorial content straight to the publishing branch. Review every factual claim, source, code sample, image, and first-person statement before merging, especially for preview, beta, pilot, or rolling Salesforce releases.
 
-## 📄 License
+## Content and profile sources
 
-This project is open source and available under the [MIT License](LICENSE).
+- Primary profile metadata: `src/lib/site.ts`
+- Employment history: `src/components/Work.tsx`
+- Blog editorial context and backlog: `src/lib/blog-ai.ts`
+- Existing-image regeneration: `scripts/regenerate-images.ts`
+- Machine-readable profile: `public/llms.txt`
 
-## 🌟 Live Demo
+## Deployment
 
-Visit the live portfolio at: https://portfolio2k25-mu.vercel.app/
-
----
-
-Built with ❤️ by Bennie Joseph
+The production domain is [benniejoseph.dev](https://benniejoseph.dev). Set `NEXT_PUBLIC_SITE_URL` (or `SITE_URL`) when deploying elsewhere so canonical URLs, RSS, sitemap, JSON-LD, and Open Graph metadata stay consistent.

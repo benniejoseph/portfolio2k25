@@ -4,25 +4,27 @@ import { absoluteUrl, siteConfig, siteUrl } from '@/lib/site'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Signal Log - Salesforce & AI Blog',
+  title: 'Field Notes - Salesforce, AI & Customer Success',
   description:
-    'Salesforce architecture, Agentforce, Apex, LWC, and AI agent development articles from a Certified Application Architect with 9+ years of enterprise work.',
+    'Practical Salesforce architecture, Agentforce, Winter ’27 rollout, Dreamforce ’26, AIforce, and customer-success articles from a Salesforce Customer Success Manager and Certified Application Architect.',
   keywords: [
     'Salesforce blog', 'Agentforce tutorial', 'Apex best practices',
     'LWC examples', 'Salesforce AI', 'AI agents Salesforce',
     'Salesforce architect blog', 'Salesforce developer tips',
+    'Winter 27 Salesforce', 'Dreamforce 2026', 'AIforce',
+    'Salesforce customer success', 'Agentic Enterprise',
   ],
   openGraph: {
-    title: 'Signal Log - Salesforce & AI Blog',
-    description: 'Salesforce architecture, Agentforce, AI agents, Apex, and LWC articles from a Certified Application Architect.',
+    title: 'Field Notes - Salesforce, AI & Customer Success',
+    description: 'Practical writing on Salesforce architecture, trusted agents, product releases, and customer outcomes.',
     type: 'website',
     url: absoluteUrl('/blog'),
     images: [{ url: absoluteUrl('/api/og?title=Signal+Log&tags=Salesforce,AI,Architecture'), width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Signal Log - Salesforce & AI Blog',
-    description: 'Salesforce architecture, Agentforce, Apex, LWC, and AI agent development articles.',
+    title: 'Field Notes - Salesforce, AI & Customer Success',
+    description: 'Salesforce architecture, trusted agents, product releases, and customer-success field notes.',
     images: [absoluteUrl('/api/og?title=Signal+Log&tags=Salesforce,AI,Architecture')],
   },
   alternates: {
@@ -40,7 +42,7 @@ export default function BlogPage() {
     '@context': 'https://schema.org',
     '@type': 'Blog',
     '@id': `${siteUrl}/blog#blog`,
-    name: 'Signal Log',
+    name: 'Salesforce & AI Field Notes',
     url: absoluteUrl('/blog'),
     description: metadata.description,
     inLanguage: 'en',

@@ -1,336 +1,244 @@
 'use client'
-import { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+
+import { useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import emailjs from 'emailjs-com'
-import { FiGithub, FiLinkedin, FiMail } from 'react-icons/fi'
+import { FiGithub, FiLinkedin, FiMail, FiSend } from 'react-icons/fi'
 
 const CHANNELS = [
-  { icon: FiMail,     label: 'UPLINK_MAIL',     value: 'benniejoseph.r@gmail.com',         href: 'mailto:benniejoseph.r@gmail.com',            color: 'var(--signal)' },
-  { icon: FiLinkedin, label: 'UPLINK_LINKEDIN',  value: '/in/benniejosephrichard',           href: 'https://linkedin.com/in/benniejosephrichard', color: 'var(--neural)' },
-  { icon: FiGithub,   label: 'UPLINK_GITHUB',    value: '/benniejoseph',                     href: 'https://github.com/benniejoseph',            color: 'var(--live)' },
+  { icon: FiMail, label: 'Email', value: 'benniejoseph.r@gmail.com', href: 'mailto:benniejoseph.r@gmail.com', color: 'var(--signal)' },
+  { icon: FiLinkedin, label: 'LinkedIn', value: 'benniejosephrichard', href: 'https://linkedin.com/in/benniejosephrichard', color: 'var(--neural)' },
+  { icon: FiGithub, label: 'GitHub', value: 'benniejoseph', href: 'https://github.com/benniejoseph', color: 'var(--live)' },
 ]
 
 export default function Contact() {
   const form = useRef<HTMLFormElement>(null)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [focused, setFocused] = useState<string | null>(null)
 
-  const SERVICE_ID  = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID
-  const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID
-  const USER_ID     = process.env.NEXT_PUBLIC_EMAILJS_USER_ID
+  const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID
+  const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID
+  const userId = process.env.NEXT_PUBLIC_EMAILJS_USER_ID
 
-  const send = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setErr(null)
-    if (!SERVICE_ID || !TEMPLATE_ID || !USER_ID) {
-      setErr('UPLINK_CONFIG_MISSING — EmailJS credentials not set')
+  const send = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setErrorMessage(null)
+
+    const formData = new FormData(event.currentTarget)
+    if (String(formData.get('website') || '').trim()) return
+
+    if (!serviceId || !templateId || !userId) {
+      setErrorMessage('The contact form is not configured right now. Please email me directly instead.')
       return
     }
+
     setSending(true)
-    emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, form.current!, USER_ID)
+    emailjs.sendForm(serviceId, templateId, form.current!, userId)
       .then(() => {
         setSent(true)
         setSending(false)
         form.current?.reset()
         setTimeout(() => setSent(false), 6000)
-      }, (error) => {
-        setErr(`TRANSMIT_FAILED — ${error.text}`)
+      }, () => {
+        setErrorMessage('The message could not be sent. Please try again or email me directly.')
         setSending(false)
       })
   }
 
-  const inputStyle = (name: string) => ({
-    background: 'transparent',
-    border: 'none',
-    borderBottom: `1px solid ${focused === name ? 'var(--signal)' : 'var(--border-2)'}`,
-    borderRadius: 0,
-    color: 'var(--text)',
-    fontFamily: 'var(--font-mono, monospace)',
-    fontSize: '12px',
-    letterSpacing: '0.1em',
-    padding: '8px 0',
+  const fieldStyle = (name: string) => ({
     width: '100%',
+    minHeight: '48px',
+    padding: '12px 14px',
+    borderRadius: '14px',
+    border: `1px solid ${focused === name ? 'var(--signal)' : 'var(--border-2)'}`,
+    background: 'color-mix(in srgb, var(--panel-2) 80%, transparent)',
+    color: 'var(--text)',
+    fontFamily: 'var(--font-inter, sans-serif)',
+    fontSize: '16px',
     outline: 'none',
-    transition: 'border-color 0.2s',
-    boxShadow: focused === name ? '0 1px 0 0 var(--signal)' : 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    boxShadow: focused === name ? '0 0 0 3px color-mix(in srgb, var(--signal) 16%, transparent)' : 'none',
   } as React.CSSProperties)
 
   return (
-    <section id="contact" className="relative py-24 px-6 lg:px-12">
-      <div className="max-w-5xl mx-auto">
-
-        {/* Header */}
+    <section id="contact" className="relative px-6 py-24 lg:px-12">
+      <div className="mx-auto max-w-5xl">
         <motion.div
-          className="mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          className="mb-14 max-w-3xl"
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.55 }}
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <span className="status-dot dot-live" />
-            <span className="sys-label">UPLINK_05 // OPEN_CHANNEL</span>
+            <span className="sys-label">Contact</span>
           </div>
           <h2
-            className="display-headline crt-text"
-            style={{ fontSize: 'clamp(36px, 6vw, 64px)', color: 'var(--text)' }}
+            className="display-headline"
+            style={{ fontSize: 'clamp(38px, 6vw, 68px)', color: 'var(--text)', lineHeight: 0.98 }}
           >
-            ESTABLISH
-            <span style={{ color: 'var(--signal)' }}> UPLINK</span>
+            Let&apos;s compare notes on what makes{' '}
+            <span style={{ color: 'var(--signal)' }}>customer value real.</span>
           </h2>
-          <p
-            className="sys-label mt-3"
-            style={{ fontSize: '11px', color: 'var(--text-3)', letterSpacing: '0.2em' }}
-          >
-            SIGNAL AVAILABLE · RESPONSE TIME &lt;24H · COLLABORATION OPEN
+          <p className="mt-5 max-w-2xl text-sm leading-7" style={{ color: 'var(--text-2)' }}>
+            Reach out to talk Salesforce, customer success, enterprise architecture, or the practical path from an AI idea to a trusted production experience.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-
-          {/* Terminal form */}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <motion.div
-            className="sys-panel overflow-hidden relative"
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            className="overflow-hidden rounded-[30px] border p-6 sm:p-8"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--signal) 30%, var(--border))',
+              background: 'color-mix(in srgb, var(--panel) 86%, transparent)',
+              backdropFilter: 'blur(22px)',
+            }}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.55 }}
           >
-            {/* Scanline sweep animation */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: 'linear-gradient(180deg, transparent 0%, rgba(0,212,255,0.03) 50%, transparent 100%)',
-                backgroundSize: '100% 200%',
-              }}
-              animate={{ backgroundPositionY: ['0%', '200%'] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
-            />
-
-            {/* Terminal header bar */}
-            <div
-              className="sys-panel-header flex items-center gap-3 px-5 py-3"
-              style={{ borderBottom: '1px solid var(--border)' }}
-            >
-              <span className="status-dot dot-signal" />
-              <span className="sys-label" style={{ fontSize: '9px', letterSpacing: '0.18em' }}>
-                TERMINAL — UPLINK_TRANSMIT v1.0
-              </span>
-              <span
-                className="sys-label ml-auto"
-                style={{ fontSize: '8px', color: 'var(--live)' }}
-              >
-                ● CHANNEL_OPEN
-              </span>
+            <div className="mb-7">
+              <h3 className="text-xl font-semibold" style={{ color: 'var(--text)' }}>Send a message</h3>
+              <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-2)' }}>A little context helps me give you a useful reply.</p>
             </div>
 
-            <form ref={form} onSubmit={send} className="p-6 space-y-6 relative z-10">
-
-              {/* Prompt prefix lines */}
+            <form ref={form} onSubmit={send} className="space-y-5">
+              <div aria-hidden="true" style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}>
+                <label htmlFor="contact-website">Leave this field empty</label>
+                <input id="contact-website" type="text" name="website" tabIndex={-1} autoComplete="off" />
+              </div>
               <div>
-                <div
-                  className="sys-label mb-2"
-                  style={{ fontSize: '9px', color: 'var(--signal)', letterSpacing: '0.16em' }}
-                >
-                  INPUT_IDENT
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="sys-label" style={{ fontSize: '10px', color: 'var(--text-3)' }}>›</span>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="your_name"
-                    required
-                    style={inputStyle('name')}
-                    onFocus={() => setFocused('name')}
-                    onBlur={() => setFocused(null)}
-                  />
-                </div>
+                <label htmlFor="contact-name" className="mb-2 block text-sm font-medium" style={{ color: 'var(--text)' }}>Name</label>
+                <input
+                  id="contact-name"
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  maxLength={100}
+                  required
+                  style={fieldStyle('name')}
+                  onFocus={() => setFocused('name')}
+                  onBlur={() => setFocused(null)}
+                />
               </div>
 
               <div>
-                <div
-                  className="sys-label mb-2"
-                  style={{ fontSize: '9px', color: 'var(--signal)', letterSpacing: '0.16em' }}
-                >
-                  RETURN_ADDRESS
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="sys-label" style={{ fontSize: '10px', color: 'var(--text-3)' }}>›</span>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="you@domain.com"
-                    required
-                    style={inputStyle('email')}
-                    onFocus={() => setFocused('email')}
-                    onBlur={() => setFocused(null)}
-                  />
-                </div>
+                <label htmlFor="contact-email" className="mb-2 block text-sm font-medium" style={{ color: 'var(--text)' }}>Email</label>
+                <input
+                  id="contact-email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                  style={fieldStyle('email')}
+                  onFocus={() => setFocused('email')}
+                  onBlur={() => setFocused(null)}
+                />
               </div>
 
               <div>
-                <div
-                  className="sys-label mb-2"
-                  style={{ fontSize: '9px', color: 'var(--signal)', letterSpacing: '0.16em' }}
-                >
-                  MESSAGE_PAYLOAD
-                </div>
-                <div className="flex gap-2">
-                  <span
-                    className="sys-label mt-2"
-                    style={{ fontSize: '10px', color: 'var(--text-3)' }}
-                  >›</span>
-                  <textarea
-                    name="message"
-                    placeholder="describe_your_mission..."
-                    required
-                    rows={5}
-                    style={{
-                      ...inputStyle('message'),
-                      borderBottom: 'none',
-                      border: `1px solid ${focused === 'message' ? 'var(--signal)' : 'var(--border-2)'}`,
-                      padding: '10px',
-                      resize: 'none',
-                    }}
-                    onFocus={() => setFocused('message')}
-                    onBlur={() => setFocused(null)}
-                  />
-                </div>
+                <label htmlFor="contact-message" className="mb-2 block text-sm font-medium" style={{ color: 'var(--text)' }}>What would you like to discuss?</label>
+                <textarea
+                  id="contact-message"
+                  name="message"
+                  required
+                  maxLength={3000}
+                  rows={6}
+                  style={{ ...fieldStyle('message'), minHeight: '150px', resize: 'vertical' }}
+                  onFocus={() => setFocused('message')}
+                  onBlur={() => setFocused(null)}
+                />
               </div>
 
               <motion.button
                 type="submit"
                 disabled={sending || sent}
-                className="terminal-cmd terminal-cmd-solid w-full justify-center"
-                style={{ fontSize: '10px', padding: '12px', letterSpacing: '0.18em' }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
+                className="terminal-cmd terminal-cmd-solid min-h-12 w-full justify-center rounded-full text-sm disabled:cursor-not-allowed disabled:opacity-70"
+                whileHover={{ scale: sending || sent ? 1 : 1.01 }}
+                whileTap={{ scale: sending || sent ? 1 : 0.985 }}
               >
-                {sending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <motion.span
-                      animate={{ opacity: [1, 0, 1] }}
-                      transition={{ duration: 0.8, repeat: Infinity }}
-                    >
-                      █
-                    </motion.span>
-                    TRANSMITTING...
-                  </span>
-                ) : sent ? (
-                  '✓ SIGNAL_RECEIVED — AWAITING_RESPONSE'
-                ) : (
-                  '▶ TRANSMIT_MESSAGE'
-                )}
+                <FiSend size={15} aria-hidden="true" />
+                {sending ? 'Sending…' : sent ? 'Message sent' : 'Send message'}
               </motion.button>
 
-              <AnimatePresence>
-                {err && (
-                  <motion.div
-                    className="sys-label px-3 py-2 rounded-sm"
-                    style={{ fontSize: '9px', color: 'var(--fire)', border: '1px solid var(--fire)', background: 'rgba(245,158,11,0.06)' }}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    {err}
-                  </motion.div>
-                )}
-                {sent && (
-                  <motion.div
-                    className="sys-label px-3 py-2 rounded-sm text-center"
-                    style={{ fontSize: '9px', color: 'var(--live)', border: '1px solid var(--live)', background: 'rgba(16,185,129,0.06)' }}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    UPLINK_ESTABLISHED — MESSAGE QUEUED FOR DELIVERY
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div aria-live="polite" aria-atomic="true">
+                <AnimatePresence mode="wait">
+                  {errorMessage && (
+                    <motion.p
+                      key="error"
+                      role="alert"
+                      className="rounded-2xl border px-4 py-3 text-sm leading-6"
+                      style={{ color: 'var(--fire)', borderColor: 'color-mix(in srgb, var(--fire) 44%, transparent)', background: 'color-mix(in srgb, var(--fire) 8%, transparent)' }}
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      {errorMessage}
+                    </motion.p>
+                  )}
+                  {sent && (
+                    <motion.p
+                      key="success"
+                      role="status"
+                      className="rounded-2xl border px-4 py-3 text-sm leading-6"
+                      style={{ color: 'var(--live)', borderColor: 'color-mix(in srgb, var(--live) 44%, transparent)', background: 'color-mix(in srgb, var(--live) 8%, transparent)' }}
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      Thanks — your message has been sent.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
             </form>
           </motion.div>
 
-          {/* Channel index */}
-          <motion.div
+          <motion.aside
             className="flex flex-col gap-4"
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.15 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
           >
-            {/* Status card */}
-            <div className="sys-panel p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="status-dot dot-live" style={{ animation: 'blink 1.4s ease-in-out infinite' }} />
-                <span className="sys-label" style={{ fontSize: '9px', color: 'var(--live)', letterSpacing: '0.18em' }}>
-                  OPERATOR_STATUS
-                </span>
-              </div>
-              <div
-                className="display-headline"
-                style={{ fontSize: '18px', color: 'var(--live)', marginBottom: '6px' }}
-              >
-                AVAILABLE
-              </div>
-              <p className="sys-label-dim" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
-                Open to new missions, consulting, and collaboration.<br />
-                Response latency: &lt;24h.
-              </p>
+            <div
+              className="rounded-[26px] border p-6"
+              style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--panel) 84%, transparent)', backdropFilter: 'blur(18px)' }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--signal)' }}>Current chapter</p>
+              <h3 className="mt-3 text-xl font-semibold" style={{ color: 'var(--text)' }}>Customer Success at Salesforce</h3>
+              <p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-2)' }}>Started September 2026, bringing an architect&apos;s perspective to adoption and customer outcomes.</p>
             </div>
 
-            {/* Channel links */}
-            <div className="sys-panel p-5 space-y-3">
-              <div
-                className="sys-label mb-4"
-                style={{ fontSize: '9px', color: 'var(--text-3)', letterSpacing: '0.18em' }}
-              >
-                ACTIVE_CHANNELS
-              </div>
-              {CHANNELS.map((ch, i) => (
-                <motion.a
-                  key={ch.label}
-                  href={ch.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 py-2 transition-colors group"
-                  style={{ color: 'var(--text-3)', textDecoration: 'none' }}
-                  initial={{ opacity: 0, x: 15 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3 + i * 0.1 }}
-                  onMouseEnter={e => (e.currentTarget.style.color = ch.color)}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+            <div
+              className="rounded-[26px] border p-4"
+              style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--panel) 84%, transparent)', backdropFilter: 'blur(18px)' }}
+            >
+              {CHANNELS.map((channel) => (
+                <a
+                  key={channel.label}
+                  href={channel.href}
+                  target={channel.label === 'Email' ? undefined : '_blank'}
+                  rel={channel.label === 'Email' ? undefined : 'noopener noreferrer'}
+                  className="flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-[var(--signal-dim)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{ color: 'var(--text-2)', outlineColor: channel.color }}
                 >
-                  <ch.icon size={13} />
-                  <div>
-                    <div
-                      className="sys-label"
-                      style={{ fontSize: '8px', letterSpacing: '0.14em', color: 'inherit' }}
-                    >
-                      {ch.label}
-                    </div>
-                    <div className="sys-label-dim" style={{ fontSize: '9px', letterSpacing: '0.06em' }}>
-                      {ch.value}
-                    </div>
-                  </div>
-                </motion.a>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ color: channel.color, background: `color-mix(in srgb, ${channel.color} 10%, transparent)` }}>
+                    <channel.icon size={17} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold" style={{ color: 'var(--text)' }}>{channel.label}</span>
+                    <span className="block truncate text-xs">{channel.value}</span>
+                  </span>
+                </a>
               ))}
             </div>
-
-            {/* ASCII signature */}
-            <div
-              className="sys-panel p-4"
-              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '9px', lineHeight: '1.5', color: 'var(--text-3)', opacity: 0.5 }}
-            >
-              <div>{'// BJR_SYS v9.0'}</div>
-              <div>{'// SALESFORCE_ARCH'}</div>
-              <div>{'// AI_AGENTIC_DEV'}</div>
-              <div>{'// READY_TO_EVOLVE'}</div>
-            </div>
-          </motion.div>
+          </motion.aside>
         </div>
       </div>
     </section>

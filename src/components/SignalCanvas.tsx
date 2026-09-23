@@ -1,145 +1,159 @@
 'use client'
+
 import { useEffect, useRef } from 'react'
 
-// Predefined wire paths as [xFraction, yFraction] waypoints
-// Right-angle paths only — PCB aesthetic
-const WIRE_PATHS = [
-  [[0.0, 0.15], [0.20, 0.15], [0.20, 0.42], [0.50, 0.42], [0.50, 0.70], [0.82, 0.70], [0.82, 0.90], [1.0, 0.90]],
-  [[0.12, 0.0],  [0.12, 0.28], [0.38, 0.28], [0.38, 0.58], [0.68, 0.58], [0.68, 0.32], [0.92, 0.32], [0.92, 0.0]],
-  [[0.62, 0.0],  [0.62, 0.22], [0.88, 0.22], [0.88, 0.52], [1.0,  0.52]],
-  [[0.0,  0.52], [0.16, 0.52], [0.16, 0.78], [0.44, 0.78], [0.44, 0.95], [0.72, 0.95]],
-  [[0.48, 0.0],  [0.48, 0.35], [0.76, 0.35], [0.76, 0.82], [1.0,  0.82]],
-  [[0.0,  0.78], [0.28, 0.78], [0.28, 0.55], [0.58, 0.55], [0.58, 0.18], [0.78, 0.18], [0.78, 0.0]],
-  [[0.0,  0.35], [0.08, 0.35], [0.08, 0.62], [0.32, 0.62], [0.32, 0.88], [0.55, 0.88]],
-  [[0.72, 0.0],  [0.72, 0.48], [0.42, 0.48], [0.42, 0.68], [0.18, 0.68], [0.18, 1.0]],
-]
-
-interface Packet {
-  pathIdx: number
-  segIdx: number
-  progress: number
+interface Mote {
+  x: number
+  y: number
+  radius: number
+  phase: number
   speed: number
-  colorBase: string
-  trail: Array<[number, number]>
+  color: number
+  drift: number
 }
+
+const MOTES: Mote[] = Array.from({ length: 24 }, (_, index) => ({
+  x: ((index * 47) % 97) / 100,
+  y: ((index * 71 + 13) % 101) / 100,
+  radius: 1.1 + (index % 4) * 0.55,
+  phase: index * 0.93,
+  speed: 0.1 + (index % 5) * 0.025,
+  color: index % 3,
+  drift: 8 + (index % 6) * 3,
+}))
 
 export default function SignalCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const context = canvas?.getContext('2d')
+    if (!canvas || !context) return
 
-    let W = 0, H = 0, animId: number
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let reducedMotion = motionQuery.matches
+    let animationFrame = 0
+    let lastPaint = 0
+    let width = window.innerWidth
+    let height = window.innerHeight
+
+    const palette = () => {
+      const isLight = document.documentElement.dataset.theme === 'light'
+      return isLight
+        ? ['0, 111, 187', '101, 64, 204', '196, 62, 86']
+        : ['53, 221, 234', '139, 108, 245', '255, 122, 114']
+    }
 
     const resize = () => {
-      W = window.innerWidth
-      H = window.innerHeight
-      canvas.width = W
-      canvas.height = H
-    }
-    resize()
-    window.addEventListener('resize', resize)
-
-    const toPixel = (path: number[][]): [number, number][] =>
-      path.map(([fx, fy]) => [fx * W, fy * H])
-
-    const packets: Packet[] = []
-
-    const spawnPacket = () => {
-      if (packets.length > 14) return
-      const pathIdx = Math.floor(Math.random() * WIRE_PATHS.length)
-      const colors = ['rgba(0,212,255,', 'rgba(0,212,255,', 'rgba(124,58,237,']
-      packets.push({
-        pathIdx,
-        segIdx: 0,
-        progress: 0,
-        speed: 0.003 + Math.random() * 0.004,
-        colorBase: colors[Math.floor(Math.random() * colors.length)],
-        trail: [],
-      })
+      width = window.innerWidth
+      height = window.innerHeight
+      const density = Math.min(window.devicePixelRatio || 1, 1.75)
+      canvas.width = Math.round(width * density)
+      canvas.height = Math.round(height * density)
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      context.setTransform(density, 0, 0, density, 0, 0)
+      draw(performance.now())
     }
 
-    // Stagger initial spawns
-    for (let i = 0; i < 9; i++) setTimeout(spawnPacket, i * 700)
-    const respawnId = setInterval(spawnPacket, 1600)
+    const drawRibbon = (
+      color: string,
+      y: number,
+      amplitude: number,
+      phase: number,
+      opacity: number
+    ) => {
+      const gradient = context.createLinearGradient(0, 0, width, 0)
+      gradient.addColorStop(0, `rgba(${color}, 0)`)
+      gradient.addColorStop(0.24, `rgba(${color}, ${opacity})`)
+      gradient.addColorStop(0.72, `rgba(${color}, ${opacity * 0.72})`)
+      gradient.addColorStop(1, `rgba(${color}, 0)`)
 
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H)
+      context.beginPath()
+      context.moveTo(-60, y + Math.sin(phase) * amplitude)
+      context.bezierCurveTo(
+        width * 0.22,
+        y - amplitude + Math.cos(phase * 0.7) * 18,
+        width * 0.67,
+        y + amplitude + Math.sin(phase * 0.45) * 24,
+        width + 60,
+        y - Math.cos(phase) * amplitude * 0.5
+      )
+      context.strokeStyle = gradient
+      context.lineWidth = 1.2
+      context.stroke()
+    }
 
-      // Draw wire paths (static, very faint)
-      ctx.strokeStyle = 'rgba(0,212,255,0.04)'
-      ctx.lineWidth = 1
-      WIRE_PATHS.forEach(path => {
-        const pts = toPixel(path)
-        ctx.beginPath()
-        pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y))
-        ctx.stroke()
+    const draw = (time: number) => {
+      context.clearRect(0, 0, width, height)
+      const colors = palette()
+      const seconds = reducedMotion ? 0 : time / 1000
+      const isLight = document.documentElement.dataset.theme === 'light'
+
+      context.save()
+      drawRibbon(colors[0], height * 0.22, 42, seconds * 0.14, isLight ? 0.13 : 0.2)
+      drawRibbon(colors[1], height * 0.54, 58, seconds * -0.1 + 2.1, isLight ? 0.1 : 0.17)
+      drawRibbon(colors[2], height * 0.82, 34, seconds * 0.12 + 4.4, isLight ? 0.08 : 0.13)
+
+      MOTES.forEach((mote) => {
+        const x = mote.x * width + Math.sin(seconds * mote.speed + mote.phase) * mote.drift
+        const y = mote.y * height + Math.cos(seconds * mote.speed * 0.8 + mote.phase) * mote.drift
+        const color = colors[mote.color]
+        const pulse = reducedMotion ? 0.72 : 0.62 + Math.sin(seconds * 0.55 + mote.phase) * 0.2
+
+        const halo = context.createRadialGradient(x, y, 0, x, y, mote.radius * 7)
+        halo.addColorStop(0, `rgba(${color}, ${pulse * (isLight ? 0.2 : 0.28)})`)
+        halo.addColorStop(1, `rgba(${color}, 0)`)
+        context.beginPath()
+        context.arc(x, y, mote.radius * 7, 0, Math.PI * 2)
+        context.fillStyle = halo
+        context.fill()
+
+        context.beginPath()
+        context.arc(x, y, mote.radius, 0, Math.PI * 2)
+        context.fillStyle = `rgba(${color}, ${pulse * (isLight ? 0.45 : 0.68)})`
+        context.fill()
       })
+      context.restore()
+    }
 
-      // Draw packets
-      for (let i = packets.length - 1; i >= 0; i--) {
-        const p = packets[i]
-        const path = WIRE_PATHS[p.pathIdx]
-        const pts = toPixel(path)
-
-        if (p.segIdx >= pts.length - 1) { packets.splice(i, 1); continue }
-
-        const [sx, sy] = pts[p.segIdx]
-        const [ex, ey] = pts[p.segIdx + 1]
-        const cx = sx + (ex - sx) * p.progress
-        const cy = sy + (ey - sy) * p.progress
-
-        p.trail.push([cx, cy])
-        if (p.trail.length > 14) p.trail.shift()
-
-        // Trail
-        p.trail.forEach(([tx, ty], ti) => {
-          const ratio = ti / p.trail.length
-          ctx.beginPath()
-          ctx.arc(tx, ty, 0.8 + ratio * 1.4, 0, Math.PI * 2)
-          ctx.fillStyle = `${p.colorBase}${ratio * 0.55})`
-          ctx.fill()
-        })
-
-        // Head
-        ctx.beginPath()
-        ctx.arc(cx, cy, 2.5, 0, Math.PI * 2)
-        ctx.fillStyle = `${p.colorBase}0.9)`
-        ctx.fill()
-
-        // Glow halo
-        const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 9)
-        grd.addColorStop(0, `${p.colorBase}0.28)`)
-        grd.addColorStop(1, `${p.colorBase}0)`)
-        ctx.beginPath()
-        ctx.arc(cx, cy, 9, 0, Math.PI * 2)
-        ctx.fillStyle = grd
-        ctx.fill()
-
-        // Advance
-        p.progress += p.speed
-        if (p.progress >= 1) { p.progress = 0; p.segIdx++; p.trail = [] }
+    const animate = (time: number) => {
+      if (time - lastPaint >= 33) {
+        draw(time)
+        lastPaint = time
       }
-
-      animId = requestAnimationFrame(draw)
+      animationFrame = window.requestAnimationFrame(animate)
     }
-    draw()
+
+    const handleMotionChange = (event: MediaQueryListEvent) => {
+      reducedMotion = event.matches
+      window.cancelAnimationFrame(animationFrame)
+      if (reducedMotion) {
+        draw(performance.now())
+      } else {
+        lastPaint = 0
+        animationFrame = window.requestAnimationFrame(animate)
+      }
+    }
+
+    const themeObserver = new MutationObserver(() => draw(performance.now()))
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+
+    window.addEventListener('resize', resize, { passive: true })
+    motionQuery.addEventListener('change', handleMotionChange)
+    resize()
+    if (!reducedMotion) animationFrame = window.requestAnimationFrame(animate)
 
     return () => {
-      cancelAnimationFrame(animId)
-      clearInterval(respawnId)
+      window.cancelAnimationFrame(animationFrame)
       window.removeEventListener('resize', resize)
+      motionQuery.removeEventListener('change', handleMotionChange)
+      themeObserver.disconnect()
     }
   }, [])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 pointer-events-none"
-      style={{ zIndex: 1 }}
-    />
-  )
+  return <canvas ref={canvasRef} className="signal-canvas" aria-hidden="true" />
 }

@@ -1,6 +1,6 @@
 # Bennie Joseph
 
-> Salesforce Certified Application Architect and AI agent builder focused on Agentforce, Apex, LWC, Salesforce integrations, RAG systems, and enterprise AI workflows.
+> Customer Success Manager at Salesforce and Salesforce Certified Application Architect focused on customer outcomes, Agentforce, Apex, LWC, integrations, RAG systems, and enterprise AI workflows.
 
 Site: https://benniejoseph.dev
 Blog: https://benniejoseph.dev/blog
@@ -8,8 +8,8 @@ RSS: https://benniejoseph.dev/blog/rss.xml
 
 ## Primary Pages
 
-- [Portfolio](https://benniejoseph.dev): Salesforce architect profile, projects, work history, certifications, and contact details.
-- [Signal Log](https://benniejoseph.dev/blog): Practical Salesforce, Agentforce, Apex, LWC, and AI agent engineering articles.
+- [Portfolio](https://benniejoseph.dev): Customer success profile, technical projects, work history, certifications, and contact details.
+- [Field Notes](https://benniejoseph.dev/blog): Practical Salesforce, Agentforce, Winter '27, AIforce, Apex, LWC, and enterprise AI articles.
 
 ## Recommended Articles
 
@@ -22,4 +22,4 @@ RSS: https://benniejoseph.dev/blog/rss.xml
 
 ## Topics
 
-Salesforce architecture, Agentforce, Apex performance, Lightning Web Components, Salesforce AI, RAG, multi-agent workflows, SOQL optimization, enterprise integrations, nCino, SaaS engineering.
+Customer success, Salesforce architecture, Agentforce, AIforce, Winter '27, Apex performance, Lightning Web Components, Salesforce AI, RAG, multi-agent workflows, SOQL optimization, enterprise integrations, nCino, SaaS engineering.

@@ -1,13 +1,13 @@
 export const siteConfig = {
   name: 'Bennie Joseph',
-  title: 'Bennie Joseph | Salesforce Architect & AI Agent Builder',
+  title: 'Bennie Joseph | Customer Success Manager at Salesforce',
   url: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://benniejoseph.dev',
   description:
-    'Salesforce Certified Application Architect with 9+ years building enterprise Salesforce, Agentforce, AI agent, Apex, LWC, and SaaS systems.',
+    'Salesforce Customer Success Manager and Certified Application Architect helping teams connect Salesforce, AI agents, and enterprise architecture to measurable customer outcomes.',
   author: {
     name: 'Bennie Joseph',
     email: 'benniejoseph.r@gmail.com',
-    title: 'Salesforce Certified Application Architect',
+    title: 'Customer Success Manager at Salesforce',
     location: 'Bengaluru, India',
     linkedin: 'https://linkedin.com/in/benniejosephrichard',
     github: 'https://github.com/benniejoseph',
@@ -15,18 +15,20 @@ export const siteConfig = {
   keywords: [
     'Salesforce Application Architect',
     'Salesforce Certified Architect',
+    'Salesforce Customer Success Manager',
+    'Salesforce customer success',
+    'Agentic Enterprise',
+    'AIforce',
     'Agentforce developer',
-    'Salesforce AI consultant',
+    'Salesforce AI architecture',
     'Apex developer',
     'Lightning Web Components developer',
     'Salesforce integration architect',
-    'Salesforce freelance consultant',
     'AI agent development',
     'Salesforce nCino',
     'Salesforce agentic systems',
     'enterprise Salesforce developer India',
     'Salesforce AI builder',
-    'hire Salesforce architect',
   ],
 } as const
 

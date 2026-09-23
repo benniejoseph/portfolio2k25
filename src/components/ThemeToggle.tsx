@@ -7,11 +7,12 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex items-center justify-center w-8 h-8 rounded-sm transition-colors hover:bg-white/5"
-      style={{ color: 'var(--text-3)', border: '1px solid var(--border)' }}
-      aria-label="Toggle theme"
+      className="flex items-center justify-center w-11 h-11 rounded-full transition-colors hover:bg-white/10"
+      style={{ color: 'var(--text-2)', border: '1px solid var(--border-2)' }}
+      aria-label={isDark ? 'Use light theme' : 'Use dark theme'}
+      title={isDark ? 'Use light theme' : 'Use dark theme'}
     >
-      {isDark ? <FiSun size={13} /> : <FiMoon size={13} />}
+      {isDark ? <FiSun size={17} /> : <FiMoon size={17} />}
     </button>
   )
 }
