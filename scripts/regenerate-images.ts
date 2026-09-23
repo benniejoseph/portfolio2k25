@@ -25,6 +25,7 @@ import {
 const IMAGE_MODEL = 'gpt-image-2'
 const IMAGE_FORMAT = 'webp'
 const IMAGE_COMPRESSION = 86
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://us.api.openai.com/v1'
 // Accept historical slugs with a trailing hyphen while still excluding path
 // separators, dots, whitespace, shell syntax, and traversal sequences.
 const SAFE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/
@@ -75,6 +76,7 @@ function getOpenAIClient(): OpenAI {
   }
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
+    baseURL: OPENAI_BASE_URL,
     maxRetries: 1,
     timeout: 10 * 60 * 1000,
   })

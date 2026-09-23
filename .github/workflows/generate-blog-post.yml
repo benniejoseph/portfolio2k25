@@ -53,6 +53,7 @@ jobs:
         id: generate
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: https://us.api.openai.com/v1
           TOPIC_INDEX: ${{ inputs.topic_index }}
         run: |
           if [[ -n "$TOPIC_INDEX" ]]; then

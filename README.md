@@ -56,6 +56,8 @@ Required local or GitHub secret:
 OPENAI_API_KEY
 ```
 
+The OpenAI client defaults to the project’s required U.S. regional endpoint, `https://us.api.openai.com/v1`. Override `OPENAI_BASE_URL` only when the API project is configured for another supported processing region.
+
 The scheduled workflow creates one unpublished backlog item at a time and opens a pull request; it never auto-merges or pushes generated editorial content straight to the publishing branch. Review every factual claim, source, code sample, image, and first-person statement before merging, especially for preview, beta, pilot, or rolling Salesforce releases.
 
 ## Content and profile sources

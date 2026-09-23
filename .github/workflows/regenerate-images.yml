@@ -73,6 +73,7 @@ jobs:
       - name: Regenerate topic-specific WebP images
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: https://us.api.openai.com/v1
           POST_SLUG: ${{ inputs.slug }}
           CONFIRM_ALL: ${{ inputs.confirm_all }}
           IMAGE_SCOPE: ${{ inputs.scope }}

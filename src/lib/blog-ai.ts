@@ -14,6 +14,7 @@ export const BLOG_IMAGE_MODEL = 'gpt-image-2'
 export const BLOG_IMAGE_FORMAT = 'webp'
 const BLOG_IMAGE_COMPRESSION = 86
 const FACT_SNAPSHOT_DATE = '2026-09-23'
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://us.api.openai.com/v1'
 
 let openAIClient: OpenAI | undefined
 
@@ -25,6 +26,7 @@ function getOpenAIClient(): OpenAI {
 
   openAIClient ??= new OpenAI({
     apiKey,
+    baseURL: OPENAI_BASE_URL,
     maxRetries: 1,
     timeout: 10 * 60 * 1000,
   })
