@@ -24,14 +24,19 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('light'); // Default to light
+  const [theme, setTheme] = useState<Theme>('dark')
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const savedTheme = window.localStorage?.getItem('theme') as Theme | null;
-    setTheme(savedTheme === 'dark' ? 'dark' : 'light'); // honour saved pref; default light
-    setMounted(true);
+    const frame = window.requestAnimationFrame(() => {
+      const savedTheme = window.localStorage?.getItem('theme') as Theme | null;
+      const systemTheme: Theme = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      setTheme(savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : systemTheme)
+      setMounted(true);
+    })
+
+    return () => window.cancelAnimationFrame(frame)
   }, []);
 
   useEffect(() => {
@@ -55,4 +60,4 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       {children}
     </ThemeContext.Provider>
   );
-}; 
+};

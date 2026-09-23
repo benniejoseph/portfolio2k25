@@ -1,195 +1,166 @@
 /**
- * Infographic style prompt generators for Gemini Imagen 4.
- * 4 distinct visual archetypes — pick the right one per post type.
+ * Topic-aware art direction for blog images generated with OpenAI GPT Image 2.
+ *
+ * The previous image system reused four rigid infographic templates, so unrelated
+ * posts converged on the same layout. These directions are deliberately selected
+ * from the topic, image purpose, and variation number. A cover and its inline
+ * images therefore remain visually related without being copies of one another.
  */
 
-export interface WhiteboardData {
-  title: string
-  subtitle: string
-  sections: Array<{ title: string; points: string[] }>
-  footerQuote?: string
+export type BlogPillar = 'salesforce' | 'ai-agentic' | 'career' | 'architecture'
+export type ImagePurpose = 'cover' | 'concept' | 'workflow'
+
+export interface TopicImagePromptInput {
+  topic: string
+  keyword: string
+  pillar: BlogPillar
+  purpose: ImagePurpose
+  brief: string
+  variation?: number
 }
 
-export interface ComparisonData {
-  title: string
-  subtitle: string
-  col1Title: string
-  col1Points: string[]
-  col2Title: string
-  col2Points: string[]
+interface VisualDirection {
+  name: string
+  composition: string
+  medium: string
+  detail: string
 }
 
-export interface BlueprintData {
-  title: string
-  subtitle: string
-  badCode?: string
-  goodCode?: string
-  badLabel?: string
-  goodLabel?: string
-  whyCards?: Array<{ label: string; icon: string }>
-  checklist?: string[]
-  authorLabel?: string
-  footerItems?: string[]
+const VISUAL_DIRECTIONS: VisualDirection[] = [
+  {
+    name: 'luminous systems cartography',
+    composition: 'an asymmetric map of named systems connected by precise routes, with one strong focal node and generous negative space',
+    medium: 'crisp editorial vector art with subtle volumetric light and fine technical linework',
+    detail: 'encode hierarchy through route weight, node scale, and small geometric status markers',
+  },
+  {
+    name: 'exploded technical cutaway',
+    composition: 'an exploded isometric cutaway that separates the topic into concrete layers, interfaces, and failure boundaries',
+    medium: 'high-end product illustration combining clean 3D forms with flat annotation lines',
+    detail: 'show the actual components from the brief rather than generic servers, clouds, or agent-loop icons',
+  },
+  {
+    name: 'data topography',
+    composition: 'a landscape of flowing data contours, checkpoints, and sharply defined elevation changes that reveal bottlenecks and scale',
+    medium: 'cinematic data visualization with glassy contours, grain, and controlled neon highlights',
+    detail: 'make throughput, latency, trust boundaries, or record volume visible as spatial structure',
+  },
+  {
+    name: 'engineering field notes',
+    composition: 'a photographed desk-spread of diagrams, code fragments, arrows, and compact decision notes arranged around one central sketch',
+    medium: 'tactile ink, marker, paper, and blueprint fragments with realistic shadows',
+    detail: 'use topic-specific snippets and symbols; avoid motivational sticky-note filler',
+  },
+  {
+    name: 'terminal macro study',
+    composition: 'a dramatic close crop of a terminal or code editor where a few real topic-specific lines become the visual architecture',
+    medium: 'dark editorial macro photography blended with razor-sharp syntax highlighting and restrained holographic overlays',
+    detail: 'contrast one risky pattern with one safer pattern without turning the image into a generic before-and-after template',
+  },
+  {
+    name: 'kinetic transit diagram',
+    composition: 'a bold transit-style flow with branching decisions, retries, queues, and terminal states arranged for instant scanning',
+    medium: 'Swiss information design with vivid route colors, modular symbols, and subtle depth',
+    detail: 'every route and junction must correspond to a named process or decision in the brief',
+  },
+  {
+    name: 'editorial paper cutaway',
+    composition: 'layered paper-cut shapes form a surprising visual metaphor for the topic, with technical details embedded inside the layers',
+    medium: 'premium magazine cover art with dimensional paper texture, soft shadows, and selective foil accents',
+    detail: 'favor a memorable metaphor tied to the topic; do not use generic robots, brains, handshakes, or cloud logos',
+  },
+  {
+    name: 'mission-control evidence board',
+    composition: 'a focused control-room panel built around traces, evaluations, policy gates, and a single live system path',
+    medium: 'polished dark interface illustration with physical switches, charts, and luminous diagnostic overlays',
+    detail: 'show measurable evidence such as confidence, latency, cost, errors, or rollout state when the brief supports it',
+  },
+  {
+    name: 'constellation knowledge graph',
+    composition: 'a deep spatial graph of concepts and dependencies with a few highlighted paths that explain the core idea',
+    medium: 'scientific visualization with atmospheric depth, fine particles, and precise diagram geometry',
+    detail: 'use meaningful clusters and edges from the brief, never decorative random nodes',
+  },
+  {
+    name: 'modular object collection',
+    composition: 'a curated grid of distinctive physical objects, each representing one concrete concept, arranged with strong editorial rhythm',
+    medium: 'playful but sophisticated studio 3D illustration with clay, glass, metal, and fabric materials',
+    detail: 'make every object semantically specific to the topic and vary scale, angle, and material',
+  },
+]
+
+const PALETTES = [
+  'Salesforce navy and cloud blue with aurora violet and warm coral accents',
+  'midnight indigo with electric cyan, signal lime, and a small amount of amber',
+  'ink black and cobalt with bright turquoise, magenta, and cool white highlights',
+  'deep ocean blue with ultramarine, tangerine, mint, and soft lavender',
+  'charcoal and royal blue with acid yellow, sky blue, and restrained red alerts',
+  'cream and graphite with saturated cloud blue, violet, and vermilion accents',
+]
+
+function stableHash(value: string): number {
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
 }
 
-export interface ArchitectureData {
-  title: string
-  subtitle: string
-  layers: Array<{ name: string; color: string; components: string[] }>
-  centralNode?: string
-  integrationModules?: string[]
-  bottomPanel?: { label: string; modules: string[] }
+function selectDirection(input: TopicImagePromptInput): VisualDirection {
+  const purposeOffset = input.purpose === 'cover' ? 0 : input.purpose === 'concept' ? 3 : 6
+  const index = (stableHash(`${input.topic}|${input.keyword}`) + purposeOffset + (input.variation ?? 0)) % VISUAL_DIRECTIONS.length
+  return VISUAL_DIRECTIONS[index]
 }
 
-// ─────────────────────────────────────────────
-// Style 1 — Napkin Sketch / Hand-drawn Whiteboard
-// Best for: Career posts, mindset pieces, overview/intro posts
-// ─────────────────────────────────────────────
-export function styleWhiteboard(data: WhiteboardData): string {
-  const sectionPrompts = data.sections
-    .map((s) => {
-      const pts = s.points.map((p) => `"${p}"`).join(', ')
-      return `A section titled "${s.title}" featuring hand-drawn boxes and points: ${pts}.`
-    })
-    .join('\n- ')
+/**
+ * Wrap an article-specific brief in a deterministic but varied visual direction.
+ * The source brief provides semantics; this function supplies composition and
+ * production constraints. This is also used when regenerating older sidecars.
+ */
+export function buildTopicImagePrompt(input: TopicImagePromptInput): string {
+  const direction = selectDirection(input)
+  const palette = PALETTES[(stableHash(`${input.keyword}|${input.purpose}`) + (input.variation ?? 0)) % PALETTES.length]
+  const dimensions = input.purpose === 'cover' ? 'wide 16:9 editorial composition' : 'square editorial composition'
+  const purposeGuidance = input.purpose === 'cover'
+    ? 'Create one instantly recognizable hero idea with a clear focal point and uncluttered edges for responsive cropping.'
+    : input.purpose === 'concept'
+      ? 'Explain one mental model at a glance; prioritize relationships and tradeoffs over decoration.'
+      : 'Show sequence, branching, inputs, outputs, trust boundaries, and failure or retry paths where relevant.'
 
-  const quote = data.footerQuote ?? 'Build the future with code and cloud!'
+  return `Create a ${dimensions} for a technical article titled "${input.topic}".
 
-  return `An educational napkin-sketch style infographic whiteboard on the topic of "${data.title}: ${data.subtitle}".
-Overall Aesthetic: Hand-drawn, creative, warm, and highly organized whiteboard layout on an off-white paper canvas background.
-Main Header: The title "${data.title}" is written in a bold, prominent, hand-drawn black marker font at the top-center, underlined with two rough black pen lines. Below it, the subtitle "${data.subtitle}" is written in a smaller blue marker font.
+ARTICLE SUBJECT: ${input.keyword}
+ARTICLE-SPECIFIC VISUAL BRIEF: ${input.brief}
+PURPOSE: ${purposeGuidance}
 
-Visual Elements and Sections:
-- A square pastel yellow sticky note pinned with a blue push-pin in the top-left corner with the exact text "Salesforce + AI".
-- A square pastel pink sticky note in the center-left displaying "BIG OPPORTUNITIES!".
-- A square pastel blue sticky note in the center-right displaying "MINDSET MATTERS!".
-- ${sectionPrompts}
-- Assorted small hand-drawn doodle icons like clouds, stars, checkmarks, and simple hand-drawn arrows connecting the sections to show progression and relationships.
-- A foot banner at the very bottom with a hand-written motivational quote in blue marker: "${quote}".
+VISUAL DIRECTION — ${direction.name.toUpperCase()}:
+- Composition: ${direction.composition}.
+- Medium: ${direction.medium}.
+- Semantic detail: ${direction.detail}.
+- Palette: ${palette}. Keep contrast accessible and the main silhouette readable at thumbnail size.
 
-Style Details: Sharp focus, flat design, authentic hand-drawn whiteboard marker textures, high contrast, clean line drawings, absolutely no rendering artifacts, perfectly legible hand-written typography. Use a color scheme of black, blue, pink, and yellow against a clean cream-colored background.`
+NON-NEGOTIABLES:
+- Depict the named technologies, decisions, states, or code concepts in the brief. Do not substitute a generic cloud diagram or generic AI-agent loop.
+- Prefer no embedded text. When a diagram cannot work without it, use at most two short labels. No paragraphs, fake code, gibberish typography, watermarks, company logos, or portraits.
+- Do not reproduce Salesforce trademarks or UI screenshots. Brand influence should come from color and energetic trailblazer-era optimism, not copied assets.
+- Keep this image compositionally distinct from companion images for the same article.
+- Polished publication quality, precise geometry, crisp edges, and no visual artifacts.`
 }
 
-// ─────────────────────────────────────────────
-// Style 2 — Modern Tech Before vs After Comparison
-// Best for: Migration posts, Agentforce vs Copilot, LWC vs React, Flow vs Apex
-// ─────────────────────────────────────────────
-export function styleComparison(data: ComparisonData): string {
-  const col1Blocks = data.col1Points
-    .map((p) => `A block for "${p}" describing the old problem with a small icon.`)
-    .join('\n  - ')
+export function buildFallbackImageBrief(
+  topic: string,
+  keyword: string,
+  purpose: ImagePurpose,
+  inlineIndex = 0
+): string {
+  if (purpose === 'cover') {
+    return `Turn the defining technical tension in "${topic}" into a concrete visual metaphor. Center the real subject "${keyword}" and reveal the most important boundary, decision, or transformation.`
+  }
 
-  const col2Blocks = data.col2Points
-    .map((p) => `A block for "${p}" describing the modern solution with a clean icon.`)
-    .join('\n  - ')
+  if (purpose === 'concept') {
+    return `Visualize the core mental model behind "${topic}": the actors, constraints, and tradeoffs a practitioner must understand before implementation. Focus on "${keyword}".`
+  }
 
-  return `A clean, modern, high-tech comparison infographic illustrating "${data.title}: ${data.subtitle}".
-Overall Layout: A split vertical column layout comparing the old way on the left and the new way on the right, divided by a subtle gradient vertical divider in the center.
-
-Header:
-- At the top, a bold, clean sans-serif headline: "${data.title}" in deep navy blue.
-- Directly beneath, a smaller subtitle in dark gray: "${data.subtitle}".
-
-Left Column (${data.col1Title}):
-- Header: "${data.col1Title}" in a clear bold blue-gray box.
-- Colors: Soft reddish and greyish pastel accents to denote complexity/inefficiency.
-- Content Blocks:
-  - ${col1Blocks}
-  - A central technical flow diagram showing tangled colored lines (representing complexity) between blocks, labeled with the most relevant components.
-
-Right Column (${data.col2Title}):
-- Header: "${data.col2Title}" in a clean bold bright blue box.
-- Colors: Soft green and bright blue vector elements to represent efficiency, speed, and order.
-- Content Blocks:
-  - ${col2Blocks}
-  - A central technical diagram showing a beautiful, glowing central geometric node labeled "Single Source of Truth", with clean, straight, organized blue lines connected directly to key blocks.
-  - A flat vector speedometer graphic labeled "FAST" with the needle pointing to the green zone.
-
-Style Details: Clean vector illustration style, modern SaaS interface aesthetic, professional layout, flat design, high-quality typography, crisp lines, bright and professional tech color palette (deep navy, teal, bright blue, soft red, soft green, on a light blue-grey background), perfectly sharp rendering, zero text noise or spelling errors.`
-}
-
-// ─────────────────────────────────────────────
-// Style 3 — High-Fidelity Technical Blueprint (Dark Mode)
-// Best for: Apex/code deep dives, governor limits, performance, security
-// Closest match to the "Bulkify Your Apex" reference image
-// ─────────────────────────────────────────────
-export function styleBlueprint(data: BlueprintData): string {
-  const badLabel = data.badLabel ?? 'BEFORE — ANTI-PATTERN'
-  const goodLabel = data.goodLabel ?? 'AFTER — BEST PRACTICE'
-  const badCode = data.badCode ?? '// bad pattern here'
-  const goodCode = data.goodCode ?? '// good pattern here'
-  const whyCards = (data.whyCards ?? []).map((c) => `"${c.label}" with a ${c.icon} icon`).join(', ')
-  const checklistItems = (data.checklist ?? []).map((i) => `"${i}"`).join(', ')
-  const authorLabel = data.authorLabel ?? 'Bennie Joseph | Salesforce Architect'
-  const footerItems = (data.footerItems ?? ['Salesforce Expertise', 'AI Agents', 'Automation', 'Integration']).join('", "')
-
-  return `A highly detailed, technical blueprint-style developer infographic poster on the theme of "${data.title}".
-Overall Theme: High-tech dark mode developer dashboard, cybersecurity blueprint, with sharp glowing lines and neat borders.
-Colors: Deep dark navy background with glowing neon blue, electric cyan, warning red, and success green highlights.
-
-Header:
-- A prominent top-center glowing blue header: "${data.title}".
-- Below it, a clean subtitle: "${data.subtitle}" with a small Salesforce logo on the top-left and an "APEX BEST PRACTICES" badge on the top-right.
-
-Section 1: "WHY IT MATTERS" (Top Row, 3 Horizontal Cards)
-- ${whyCards || '"Architecture" with a server icon, "Performance" with a flame icon, "Reliability" with a shield icon'}
-
-Section 2: "THE COST" (Middle Row, Side-by-Side Comparison)
-- Left Box (Red Theme): "${badLabel}". Shows a red status pill "DANGER — ANTI-PATTERN".
-- Right Box (Green Theme): "${goodLabel}". Shows a green status pill "SUCCESS — BEST PRACTICE".
-
-Section 3: "CODE PATTERNS" (Main Center)
-- Left Column (Bad Code in Red Border):
-  - Heading: "// BAD"
-  - Code block:
-    ${badCode}
-- Right Column (Good Code in Green Border):
-  - Heading: "// GOOD"
-  - Code block:
-    ${goodCode}
-
-Section 4: "DEVELOPER PROFILE & CHECKLIST" (Bottom Row)
-- Left Side: A 3D Pixar-style cartoon avatar portrait of Bennie Joseph (see attached reference photo for his real likeness — match his face shape, skin tone, beard, and hairstyle), with a warm friendly smile showing teeth, wearing a grey crew-neck sweatshirt with the word "MAGNETIC" on it, set against a warm orange bokeh background. The avatar is labeled "${authorLabel}". Next to it is a quote bubble: "Architecting intuitive systems, engineering scalable solutions."
-- Right Side: A checklist with points: ${checklistItems || '"Follow best practices", "Test thoroughly", "Document everything"'}.
-- Footer: A thin bar with icons for "${footerItems}" and the text "CODE SMART. AUTOMATE FASTER. DELIVER EXCELLENCE."
-
-Style Details: Super high resolution, technical drawing grid, razor-sharp white and neon text, crisp layout, developer IDE aesthetic, flat vector graphics with subtle glow, highly legible monospace font for code blocks, professional presentation.`
-}
-
-// ─────────────────────────────────────────────
-// Style 4 — System Architecture & Flow Map
-// Best for: RAG pipelines, multi-agent workflows, integration architecture
-// ─────────────────────────────────────────────
-export function styleArchitecture(data: ArchitectureData): string {
-  const layerDescriptions = data.layers
-    .map((l) => {
-      const comps = l.components.map((c) => `"${c}"`).join(', ')
-      return `A "${l.name}" container (colored in ${l.color}) containing modules: ${comps}.`
-    })
-    .join('\n- ')
-
-  const centralNode = data.centralNode ?? 'Central Processing Node'
-  const integrationMods = (data.integrationModules ?? ['API Gateway', 'External Services'])
-    .map((m) => `"${m}"`)
-    .join(' and ')
-  const bottomPanel = data.bottomPanel
-    ? `A bottom panel labeled "${data.bottomPanel.label}" with sub-modules ${data.bottomPanel.modules.map((m) => `"${m}"`).join(', ')}.`
-    : ''
-
-  return `A high-quality architectural system block diagram illustrating the "${data.title}".
-Overall Theme: Technical architecture map, clean flow chart, analytical, educational, modern and well-structured layout.
-Background: A very clean, subtle light gray background with faint grid lines.
-
-Header:
-- At the top-center, a massive dark bold rounded header block displaying "${data.title}".
-- Below the title, a small subtitle: "${data.subtitle}".
-- In the top-right corner, a small circular profile icon showing Bennie Joseph's likeness (see attached reference photo — match his face, skin tone, beard, and hairstyle, rendered as a clean flat-vector portrait icon), labeled "Bennie Joseph | Architect".
-
-Architecture Layers (Arranged hierarchically with clear connections):
-- ${layerDescriptions}
-- A central block at the heart of the system labeled "${centralNode}" with a rotating arrow icon. This central node has multiple dotted directional connector lines feeding into and out of all surrounding layers.
-- An "INTEGRATION LAYER" box on the upper right with modules ${integrationMods}.
-- ${bottomPanel}
-
-Style Details: Technical blueprint style, clean rounded rectangle containers, precise dotted lines with arrowheads showing control and data flow, soft pastel color scheme (pale yellows, soft blues, light greens, and dark blues), micro vector icons inside each block, neat modern sans-serif fonts, absolutely crisp rendering, no blurred elements, zero spelling mistakes, publication-ready engineering diagram.`
+  return `Map a realistic implementation path for "${topic}" from input through validation and execution to observable outcome. Include the likely failure boundary and recovery path. Variation ${inlineIndex + 1}; subject: "${keyword}".`
 }

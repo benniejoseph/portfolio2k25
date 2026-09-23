@@ -34,10 +34,10 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${escapeXml(siteConfig.name)} - Signal Log</title>
+    <title>${escapeXml(siteConfig.name)} - Field Notes</title>
     <link>${blogUrl}</link>
     <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
-    <description>${escapeXml('Salesforce architecture, Agentforce, Apex, LWC, and AI agent development articles by Bennie Joseph.')}</description>
+    <description>${escapeXml('Salesforce architecture, customer success, Agentforce, Winter ’27, AIforce, Apex, LWC, and trusted AI articles by Bennie Joseph.')}</description>
     <language>en</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     ${items}

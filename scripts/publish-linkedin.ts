@@ -36,7 +36,8 @@ const title   = (data.title   as string) ?? slug
 const excerpt = (data.excerpt as string) ?? ''
 const tags    = (data.tags    as string[]) ?? []
 
-const postUrl    = `https://www.bennierichard.com/blog/${slug}`
+const canonicalSite = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://www.bennierichard.com').replace(/\/$/, '')
+const postUrl    = `${canonicalSite}/blog/${slug}`
 const shareUrl   = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`
 const hashtags   = tags.map(t => `#${t.replace(/[^a-zA-Z0-9]/g, '')}`).join(' ')
 
@@ -141,7 +142,7 @@ ${linkedInPost}
 | Action | Link |
 |--------|------|
 | 🔗 Open LinkedIn share dialog (URL pre-filled) | [Share on LinkedIn](${shareUrl}) |
-| 📖 Preview post on site | [bennierichard.com/blog/${slug}](${postUrl}) |
+| 📖 Preview post on site | [${canonicalSite.replace(/^https?:\/\//, '')}/blog/${slug}](${postUrl}) |
 
 > **Tip:** Open the share link → paste the text above → post. Takes ~30 seconds.
 `

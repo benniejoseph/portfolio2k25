@@ -1,8 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
-export const runtime = 'edge'
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const title = searchParams.get('title') ?? 'Bennie Joseph'
@@ -12,7 +10,7 @@ export async function GET(req: NextRequest) {
     (
       <div
         style={{
-          background: 'linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%)',
+          background: 'linear-gradient(135deg, #012AC1 0%, #2B2AE8 48%, #7C3AED 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -22,14 +20,13 @@ export async function GET(req: NextRequest) {
           position: 'relative',
         }}
       >
-        {/* Grid lines background */}
+        {/* Soft constellation field */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             backgroundImage:
-              'linear-gradient(rgba(59,130,246,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.05) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
+              'radial-gradient(circle at 18% 24%, rgba(130,240,229,0.36) 0 2px, transparent 3px), radial-gradient(circle at 82% 18%, rgba(254,138,167,0.44) 0 3px, transparent 4px), radial-gradient(circle at 72% 78%, rgba(209,125,254,0.42) 0 2px, transparent 3px)',
           }}
         />
 
@@ -41,7 +38,7 @@ export async function GET(req: NextRequest) {
             left: 0,
             right: 0,
             height: '4px',
-            background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)',
+            background: 'linear-gradient(90deg, #82F0E5, #D17DFE, #FE8AA7)',
           }}
         />
 
@@ -51,13 +48,13 @@ export async function GET(req: NextRequest) {
             <div
               key={tag}
               style={{
-                background: 'rgba(59,130,246,0.15)',
-                border: '1px solid rgba(59,130,246,0.3)',
-                color: '#60a5fa',
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.24)',
+                color: '#FFFFFF',
                 fontSize: '14px',
                 padding: '4px 14px',
                 borderRadius: '999px',
-                fontFamily: 'monospace',
+                fontFamily: 'sans-serif',
               }}
             >
               {tag}
@@ -70,7 +67,7 @@ export async function GET(req: NextRequest) {
           style={{
             fontSize: title.length > 60 ? '40px' : '52px',
             fontWeight: 900,
-            color: '#f0f6fc',
+            color: '#FFFFFF',
             lineHeight: 1.15,
             flex: 1,
             display: 'flex',
@@ -88,11 +85,11 @@ export async function GET(req: NextRequest) {
                 width: '44px',
                 height: '44px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                background: 'linear-gradient(135deg, #82F0E5, #D17DFE)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
+                color: '#08206F',
                 fontWeight: 800,
                 fontSize: '18px',
               }}
@@ -100,21 +97,21 @@ export async function GET(req: NextRequest) {
               B
             </div>
             <div>
-              <div style={{ color: '#f0f6fc', fontWeight: 700, fontSize: '16px' }}>Bennie Joseph</div>
-              <div style={{ color: '#8b949e', fontSize: '13px', fontFamily: 'monospace' }}>
-                Salesforce Architect · AI Builder
+              <div style={{ color: '#FFFFFF', fontWeight: 700, fontSize: '16px' }}>Bennie Joseph</div>
+              <div style={{ color: '#DDE8FF', fontSize: '13px' }}>
+                Customer Success Manager · Salesforce
               </div>
             </div>
           </div>
           <div
             style={{
-              color: '#3b82f6',
+              color: '#82F0E5',
               fontSize: '14px',
-              fontFamily: 'monospace',
+              fontFamily: 'sans-serif',
               opacity: 0.7,
             }}
           >
-            benniejoseph.dev/blog
+            bennierichard.com/blog
           </div>
         </div>
       </div>

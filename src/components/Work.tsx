@@ -1,33 +1,56 @@
 'use client'
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import Image from 'next/image'
 
-const MISSIONS = [
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import Image from 'next/image'
+import { FiChevronDown } from 'react-icons/fi'
+
+const EXPERIENCE = [
+  {
+    company: 'Salesforce',
+    logo: null,
+    mark: 'SF',
+    duration: 'Present',
+    period: 'Sep 2026 – Present',
+    current: true,
+    color: 'var(--signal)',
+    roles: [
+      {
+        title: 'Customer Success Manager',
+        period: 'Sep 2026 – Present',
+        location: 'India',
+        brief:
+          'Joined Salesforce in September 2026 to begin a new chapter in customer success. The focus is helping customers connect platform adoption, trusted AI, and the Agentic Enterprise to outcomes that last.',
+        stack: ['Customer Success', 'Salesforce Platform', 'Agentic Enterprise', 'Adoption'],
+        highlights: [] as string[],
+      },
+    ],
+  },
   {
     company: 'Deloitte USI',
     logo: '/images/deloitte.webp',
-    code: 'MSNO-001',
-    duration: '4 YRS 10 MOS',
-    period: 'May 2021 – Present',
-    color: 'var(--signal)',
-    colorRaw: 'rgba(0,212,255,',
+    mark: 'D',
+    duration: '5 yrs 4 mos',
+    period: 'May 2021 – Sep 2026',
+    current: false,
+    color: 'var(--neural)',
     roles: [
       {
         title: 'Senior Consultant — Salesforce Application Engineer (GenAI & Salesforce)',
-        period: 'May 2021 – Present',
+        period: 'May 2021 – Sep 2026',
         location: 'Bengaluru, India · Hybrid',
-        brief: 'Architected and led full-stack Salesforce + GenAI solutions for 19+ enterprise clients. Built agentic platforms, AI voice assistants, and intelligent Salesforce automations.',
+        brief:
+          'Architected and led full-stack Salesforce and GenAI solutions for 19+ enterprise clients, translating complex delivery needs into reusable platforms, automations, and engineering standards.',
         stack: ['Apex', 'LWC', 'LangGraph', 'RAG', 'OpenAI', 'Python', 'nCino', 'CI/CD'],
-        log: [
-          'Architected "Agent Assemble" — LangGraph + RAG agentic platform enabling natural-language workflow definition, spawning autonomous API-executing agents.',
-          'Developed "Mona" — real-time AI assistant in MS Teams/Zoom using Twilio, LiveKit, OpenAI Realtime API for transcription and parallel task execution.',
-          'Engineered "GenAI Copilot" on Salesforce Service Cloud — NLP entity extraction to auto-create cases and generate AI-powered investigation summaries.',
-          'Built multilingual AI Chatbot with LWC — dynamic context-based Salesforce record creation and retrieval via REST APIs with backend NLP services.',
-          'Developed Oregon DMV portal on OmniScript with Gemini AI — automated form-filling, Computer Vision image validation, fraud analysis.',
-          'Implemented CI/CD pipelines using AutoRabbit + Git for Deloitte nCino Accelerator — 25% implementation cost reduction across 19 Loan Origination Institutions.',
-          'Designed Apex trigger frameworks, Platform Event exception logging, reusable LWC libraries — 30% cross-project development effort reduction.',
-          'Mentored 5+ engineers; established design and code review standards adopted across the Salesforce practice.',
+        highlights: [
+          'Architected “Agent Assemble” — a LangGraph + RAG platform that turns natural-language workflows into autonomous, API-executing agents.',
+          'Developed “Mona” — a real-time AI assistant for Microsoft Teams and Zoom using Twilio, LiveKit, and the OpenAI Realtime API.',
+          'Engineered a GenAI Copilot on Salesforce Service Cloud that extracts entities, creates cases, and generates investigation summaries.',
+          'Built a multilingual LWC chatbot for contextual Salesforce record creation and retrieval through REST APIs and NLP services.',
+          'Developed an Oregon DMV portal on OmniScript with Gemini-assisted form filling, computer-vision validation, and fraud analysis.',
+          'Implemented AutoRABIT and Git CI/CD pipelines for the Deloitte nCino Accelerator, reducing implementation cost by 25% across 19 loan-origination institutions.',
+          'Designed Apex trigger frameworks, Platform Event exception logging, and reusable LWC libraries that reduced cross-project development effort by 30%.',
+          'Mentored 5+ engineers and established design and code-review standards adopted across the Salesforce practice.',
         ],
       },
     ],
@@ -35,25 +58,26 @@ const MISSIONS = [
   {
     company: 'Accenture Solutions',
     logo: '/images/acn.webp',
-    code: 'MSNO-002',
-    duration: '4 YRS 6 MOS',
+    mark: 'A',
+    duration: '4 yrs 6 mos',
     period: 'Dec 2016 – May 2021',
-    color: 'var(--neural)',
-    colorRaw: 'rgba(124,58,237,',
+    current: false,
+    color: 'var(--live)',
     roles: [
       {
         title: 'Application Senior Analyst — Salesforce Developer',
         period: 'Dec 2016 – May 2021',
         location: 'Bengaluru, India',
-        brief: 'Led full-stack Salesforce Service Cloud development for a Life Sciences client supporting 10,000+ community users. Built secure portals, REST/SOAP integrations, automation pipelines.',
+        brief:
+          'Led full-stack Salesforce Service Cloud development for a life-sciences client serving 10,000+ community users, with an emphasis on secure access, reliable integrations, and lower support effort.',
         stack: ['LWC', 'Apex', 'Service Cloud', 'SAML/SSO', 'REST APIs', 'SOAP APIs', 'Git'],
-        log: [
-          'Led development of custom LWC components, Apex classes, and Salesforce Flows for a Life Sciences client supporting 10,000+ community users.',
-          'Developed secure community portals with external authentication using SAML & SSO — enterprise security compliance.',
-          'Architected resilient REST and SOAP API integrations with multiple external enterprise systems — 40% data reliability improvement.',
-          'Built custom automated PDF generation module using Apex + LWC — eliminated 80% of manual activity, saving 200+ person-hours monthly.',
-          'Implemented Salesforce knowledge base automation — 50% help desk dependency reduction, significantly improved case resolution time.',
-          'Managed branching, merging, release processes using Git and SVN; Agile/Scrum sprint planning, design reviews, retrospectives.',
+        highlights: [
+          'Led development of custom LWC components, Apex classes, and Salesforce Flows for a life-sciences community serving 10,000+ users.',
+          'Developed secure community portals with external authentication using SAML and SSO.',
+          'Architected resilient REST and SOAP integrations with external enterprise systems, improving data reliability by 40%.',
+          'Built an automated PDF generation module with Apex and LWC, eliminating 80% of manual activity and saving 200+ person-hours monthly.',
+          'Implemented Salesforce knowledge-base automation that reduced help-desk dependency by 50% and improved case resolution.',
+          'Managed branching, merging, and releases with Git and SVN while contributing to Agile planning, design reviews, and retrospectives.',
         ],
       },
     ],
@@ -61,254 +85,177 @@ const MISSIONS = [
 ]
 
 export default function Work() {
-  const [expanded, setExpanded] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<string | null>('Deloitte USI-0')
 
   return (
-    <section id="work" className="relative py-24 px-6 lg:px-12">
-      <div className="max-w-4xl mx-auto">
-
-        {/* Header */}
+    <section id="work" className="relative px-6 py-24 lg:px-12">
+      <div className="mx-auto max-w-5xl">
         <motion.div
-          className="mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          className="mb-14 max-w-3xl"
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.55 }}
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <span className="status-dot dot-signal" />
-            <span className="sys-label">MISSION_LOG // {MISSIONS.length} DEPLOYMENTS</span>
+            <span className="sys-label">Experience</span>
           </div>
           <h2
-            className="display-headline crt-text"
-            style={{ fontSize: 'clamp(36px, 6vw, 64px)', color: 'var(--text)' }}
+            className="display-headline"
+            style={{ fontSize: 'clamp(38px, 6vw, 68px)', color: 'var(--text)', lineHeight: 0.98 }}
           >
-            MISSION
-            <span style={{ color: 'var(--signal)' }}> HISTORY</span>
+            From building the platform to helping customers{' '}
+            <span style={{ color: 'var(--signal)' }}>realize its value.</span>
           </h2>
-          <p
-            className="sys-label mt-3"
-            style={{ fontSize: '11px', color: 'var(--text-3)', letterSpacing: '0.2em' }}
-          >
-            9+ YEARS FIELD EXPERIENCE · ENTERPRISE DEPLOYMENTS · 19+ CLIENTS
+          <p className="mt-5 max-w-2xl text-sm leading-7" style={{ color: 'var(--text-2)' }}>
+            Nine-plus years across Salesforce engineering, enterprise architecture, AI products, and now customer success.
           </p>
         </motion.div>
 
-        {/* Timeline */}
-        <div className="relative">
-          {/* Vertical signal wire */}
+        <div className="relative space-y-6 pl-5 sm:pl-10">
           <div
-            className="absolute left-6 top-0 bottom-0 w-px"
-            style={{ background: 'linear-gradient(180deg, var(--signal) 0%, var(--neural) 100%)', opacity: 0.25 }}
+            className="absolute bottom-3 left-0 top-3 w-px sm:left-4"
+            style={{ background: 'linear-gradient(180deg, var(--signal), var(--neural), var(--live))', opacity: 0.35 }}
           />
 
-          {/* Animated electron dots travelling down the wire */}
-          {[0, 1, 2].map(i => (
-            <motion.div
-              key={i}
-              className="absolute left-[22px] w-2 h-2 rounded-full"
+          {EXPERIENCE.map((experience, experienceIndex) => (
+            <motion.article
+              key={experience.company}
+              className="relative rounded-[28px] border"
               style={{
-                background: i === 0 ? 'var(--signal)' : i === 1 ? 'var(--neural)' : 'var(--live)',
-                boxShadow: `0 0 6px ${i === 0 ? 'var(--signal)' : i === 1 ? 'var(--neural)' : 'var(--live)'}`,
+                borderColor: `color-mix(in srgb, ${experience.color} 28%, var(--border))`,
+                background: 'color-mix(in srgb, var(--panel) 84%, transparent)',
+                boxShadow: experience.current ? '0 22px 70px color-mix(in srgb, var(--signal) 16%, transparent)' : 'none',
+                backdropFilter: 'blur(20px)',
               }}
-              animate={{ top: ['0%', '100%'] }}
-              transition={{
-                duration: 4 + i * 1.5,
-                repeat: Infinity,
-                ease: 'linear',
-                delay: i * 1.8,
-              }}
-            />
-          ))}
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: experienceIndex * 0.1 }}
+            >
+              <span
+                className="absolute -left-[25px] top-9 h-3 w-3 rounded-full sm:-left-[31px]"
+                style={{ background: experience.color, boxShadow: `0 0 18px ${experience.color}` }}
+              />
 
-          <div className="space-y-10 pl-16">
-            {MISSIONS.map((m, mi) => {
-              return (
-                <motion.div
-                  key={m.code}
-                  initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-40px' }}
-                  transition={{ duration: 0.6, delay: mi * 0.2 }}
+              <header
+                className="flex flex-wrap items-center gap-4 rounded-t-[28px] border-b px-5 py-5 sm:px-7"
+                style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--panel-2) 70%, transparent)' }}
+              >
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl border text-xs font-bold"
+                  style={{ borderColor: 'var(--border-2)', background: 'var(--panel)', color: experience.color }}
                 >
-                  {/* Mission node */}
-                  <div
-                    className="absolute -left-0"
-                    style={{
-                      top: `calc(${mi * 280}px + 20px)`,
-                      width: '13px',
-                      height: '13px',
-                      borderRadius: '2px',
-                      border: `1.5px solid ${m.color}`,
-                      background: 'var(--base)',
-                      left: '0px',
-                      marginTop: mi === 0 ? '0' : undefined,
-                    }}
-                  />
+                  {experience.logo ? (
+                    <Image
+                      src={experience.logo}
+                      alt={`${experience.company} logo`}
+                      width={36}
+                      height={36}
+                      className="max-h-9 max-w-9 object-contain"
+                      style={{ width: 'auto', height: 'auto' }}
+                    />
+                  ) : (
+                    experience.mark
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{experience.company}</h3>
+                  <p className="mt-0.5 text-xs" style={{ color: 'var(--text-2)' }}>
+                    {experience.period} · {experience.duration}
+                  </p>
+                </div>
+                <span
+                  className="rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                  style={{
+                    color: experience.current ? 'var(--signal)' : 'var(--text-2)',
+                    borderColor: experience.current ? 'color-mix(in srgb, var(--signal) 40%, transparent)' : 'var(--border)',
+                    background: experience.current ? 'color-mix(in srgb, var(--signal) 10%, transparent)' : 'transparent',
+                  }}
+                >
+                  {experience.current ? 'Current role' : 'Previous role'}
+                </span>
+              </header>
 
-                  <div
-                    className="sys-panel overflow-hidden"
-                    style={{ border: `1px solid ${m.colorRaw}0.3)` }}
-                  >
-                    {/* Company header */}
-                    <div
-                      className="sys-panel-header px-5 py-3 flex items-center gap-4"
-                      style={{ borderBottom: `1px solid ${m.colorRaw}0.2)` }}
+              {experience.roles.map((role, roleIndex) => {
+                const key = `${experience.company}-${roleIndex}`
+                const open = expanded === key
+                const hasHighlights = role.highlights.length > 0
+
+                return (
+                  <div key={key} className="px-5 py-6 sm:px-7">
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => hasHighlights && setExpanded(open ? null : key)}
+                      aria-expanded={hasHighlights ? open : undefined}
+                      disabled={!hasHighlights}
                     >
-                      {m.logo && (
-                        <div
-                          className="w-9 h-9 rounded-sm overflow-hidden shrink-0 flex items-center justify-center"
-                          style={{ background: 'var(--panel)', border: '1px solid var(--border)' }}
-                        >
-                          <Image
-                            src={m.logo}
-                            alt={m.company}
-                            width={32}
-                            height={32}
-                            className="object-contain"
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className="text-base font-semibold leading-snug" style={{ color: 'var(--text)' }}>{role.title}</h4>
+                          <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>{role.period} · {role.location}</p>
+                        </div>
+                        {hasHighlights && (
+                          <FiChevronDown
+                            aria-hidden="true"
+                            className="mt-1 shrink-0 transition-transform duration-300"
+                            size={18}
+                            style={{ color: experience.color, transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
                           />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <div
-                          className="sys-label"
-                          style={{ fontSize: '12px', color: m.color, letterSpacing: '0.1em' }}
-                        >
-                          {m.company}
-                        </div>
-                        <div className="sys-label-dim" style={{ fontSize: '8px' }}>
-                          {m.code} · {m.period} · {m.duration}
-                        </div>
+                        )}
                       </div>
-                      <span
-                        className="sys-label"
-                        style={{ fontSize: '8px', color: 'var(--live)' }}
-                      >
-                        ● COMPLETED
-                      </span>
-                    </div>
 
-                    {/* Role */}
-                    {m.roles.map((role, ri) => {
-                      const rkey = `${m.code}-${ri}`
-                      const open = expanded === rkey
+                      <p className="mt-4 max-w-3xl text-sm leading-7" style={{ color: 'var(--text-2)' }}>{role.brief}</p>
 
-                      return (
-                        <div key={ri} className="p-5">
-                          <button
-                            className="w-full text-left"
-                            onClick={() => setExpanded(open ? null : rkey)}
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {role.stack.map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-full border px-3 py-1 text-[10px] font-medium"
+                            style={{
+                              color: experience.color,
+                              borderColor: `color-mix(in srgb, ${experience.color} 26%, transparent)`,
+                              background: `color-mix(in srgb, ${experience.color} 8%, transparent)`,
+                            }}
                           >
-                            <div className="flex items-start justify-between gap-4 mb-3">
-                              <div>
-                                <div
-                                  className="sys-label mb-1"
-                                  style={{ fontSize: '12px', color: 'var(--text)', letterSpacing: '0.04em', lineHeight: 1.4 }}
-                                >
-                                  {role.title}
-                                </div>
-                                <div className="sys-label-dim" style={{ fontSize: '9px' }}>
-                                  {role.period} · {role.location}
-                                </div>
-                              </div>
-                              <span
-                                className="sys-label shrink-0 mt-0.5"
-                                style={{ fontSize: '10px', color: m.color }}
-                              >
-                                {open ? '▲' : '▼'}
-                              </span>
-                            </div>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
 
-                            <p
-                              className="leading-relaxed mb-4"
-                              style={{
-                                fontFamily: 'var(--font-inter, sans-serif)',
-                                fontSize: '12px',
-                                color: 'var(--text-2)',
-                              }}
-                            >
-                              {role.brief}
+                    <AnimatePresence initial={false}>
+                      {open && hasHighlights && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-6 border-t pt-5" style={{ borderColor: 'var(--border)' }}>
+                            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: experience.color }}>
+                              Selected outcomes
                             </p>
-
-                            {/* Stack */}
-                            <div className="flex flex-wrap gap-1.5">
-                              {role.stack.map(s => (
-                                <span
-                                  key={s}
-                                  className="sys-label px-2 py-0.5 rounded-sm"
-                                  style={{
-                                    fontSize: '8px',
-                                    color: m.color,
-                                    border: `1px solid ${m.colorRaw}0.25)`,
-                                    background: `${m.colorRaw}0.05)`,
-                                  }}
-                                >
-                                  [{s}]
-                                </span>
+                            <ul className="grid gap-3">
+                              {role.highlights.map((item) => (
+                                <li key={item} className="flex gap-3 text-sm leading-6" style={{ color: 'var(--text-2)' }}>
+                                  <span aria-hidden="true" style={{ color: experience.color }}>•</span>
+                                  <span>{item}</span>
+                                </li>
                               ))}
-                            </div>
-                          </button>
-
-                          {/* Expandable mission log */}
-                          <AnimatePresence initial={false}>
-                            {open && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                                className="overflow-hidden"
-                              >
-                                <div
-                                  className="mt-5 pt-4"
-                                  style={{ borderTop: `1px solid ${m.colorRaw}0.2)` }}
-                                >
-                                  <div
-                                    className="sys-label mb-3"
-                                    style={{ fontSize: '9px', color: m.color }}
-                                  >
-                                    MISSION_OBJECTIVES
-                                  </div>
-                                  <ul className="space-y-3">
-                                    {role.log.map((item, li) => (
-                                      <motion.li
-                                        key={li}
-                                        className="flex gap-3"
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: li * 0.05 }}
-                                      >
-                                        <span
-                                          className="sys-label shrink-0 mt-0.5"
-                                          style={{ fontSize: '9px', color: m.color }}
-                                        >
-                                          ◈
-                                        </span>
-                                        <span
-                                          style={{
-                                            fontFamily: 'var(--font-inter, sans-serif)',
-                                            fontSize: '12px',
-                                            color: 'var(--text-2)',
-                                            lineHeight: 1.6,
-                                          }}
-                                        >
-                                          {item}
-                                        </span>
-                                      </motion.li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      )
-                    })}
+                            </ul>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </motion.div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </motion.article>
+          ))}
         </div>
       </div>
     </section>

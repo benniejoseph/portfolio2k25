@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Host
-Host: https://benniejoseph.dev
+Host: https://www.bennierichard.com
 
 # Sitemaps
-Sitemap: https://benniejoseph.dev/sitemap.xml
+Sitemap: https://www.bennierichard.com/sitemap.xml

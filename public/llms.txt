@@ -1,25 +1,25 @@
 # Bennie Joseph
 
-> Salesforce Certified Application Architect and AI agent builder focused on Agentforce, Apex, LWC, Salesforce integrations, RAG systems, and enterprise AI workflows.
+> Customer Success Manager at Salesforce and Salesforce Certified Application Architect focused on customer outcomes, Agentforce, Apex, LWC, integrations, RAG systems, and enterprise AI workflows.
 
-Site: https://benniejoseph.dev
-Blog: https://benniejoseph.dev/blog
-RSS: https://benniejoseph.dev/blog/rss.xml
+Site: https://www.bennierichard.com
+Blog: https://www.bennierichard.com/blog
+RSS: https://www.bennierichard.com/blog/rss.xml
 
 ## Primary Pages
 
-- [Portfolio](https://benniejoseph.dev): Salesforce architect profile, projects, work history, certifications, and contact details.
-- [Signal Log](https://benniejoseph.dev/blog): Practical Salesforce, Agentforce, Apex, LWC, and AI agent engineering articles.
+- [Portfolio](https://www.bennierichard.com): Customer success profile, technical projects, work history, certifications, and contact details.
+- [Field Notes](https://www.bennierichard.com/blog): Practical Salesforce, Agentforce, Winter '27, AIforce, Apex, LWC, and enterprise AI articles.
 
 ## Recommended Articles
 
-- [SOQL Optimization: The Missing Guide](https://benniejoseph.dev/blog/soql-optimization-the-missing-guide)
-- [Prompt Engineering for Salesforce Admins](https://benniejoseph.dev/blog/prompt-engineering-for-salesforce-admins)
-- [Flow vs Apex in 2026: When to Use Which](https://benniejoseph.dev/blog/flow-vs-apex-in-2026-when-to-use-which)
-- [Agentforce Custom Actions: A Builder Playbook](https://benniejoseph.dev/blog/agentforce-custom-actions-a-builder-playbook)
-- [Building AI Agents with OpenAI and Salesforce](https://benniejoseph.dev/blog/building-ai-agents-with-openai-and-salesforce)
-- [RAG for Salesforce Orgs: Index Your Knowledge Base](https://benniejoseph.dev/blog/rag-for-salesforce-orgs-index-your-knowledge-base)
+- [SOQL Optimization: The Missing Guide](https://www.bennierichard.com/blog/soql-optimization-the-missing-guide)
+- [Prompt Engineering for Salesforce Admins](https://www.bennierichard.com/blog/prompt-engineering-for-salesforce-admins)
+- [Flow vs Apex in 2026: When to Use Which](https://www.bennierichard.com/blog/flow-vs-apex-in-2026-when-to-use-which)
+- [Agentforce Custom Actions: A Builder Playbook](https://www.bennierichard.com/blog/agentforce-custom-actions-a-builder-playbook)
+- [Building AI Agents with OpenAI and Salesforce](https://www.bennierichard.com/blog/building-ai-agents-with-openai-and-salesforce)
+- [RAG for Salesforce Orgs: Index Your Knowledge Base](https://www.bennierichard.com/blog/rag-for-salesforce-orgs-index-your-knowledge-base)
 
 ## Topics
 
-Salesforce architecture, Agentforce, Apex performance, Lightning Web Components, Salesforce AI, RAG, multi-agent workflows, SOQL optimization, enterprise integrations, nCino, SaaS engineering.
+Customer success, Salesforce architecture, Agentforce, AIforce, Winter '27, Apex performance, Lightning Web Components, Salesforce AI, RAG, multi-agent workflows, SOQL optimization, enterprise integrations, nCino, SaaS engineering.

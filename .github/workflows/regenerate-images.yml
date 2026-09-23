@@ -1,23 +1,65 @@
-name: Regenerate Blog Images (Infographic Style)
+name: Regenerate Blog Images
 
 on:
-  # Manual trigger only — run once to upgrade all existing post images
   workflow_dispatch:
     inputs:
       slug:
-        description: 'Specific post slug to regenerate (leave blank to regenerate ALL posts)'
+        description: 'Specific lowercase post slug (leave blank only for an intentional all-post run)'
         required: false
         default: ''
+      scope:
+        description: 'Which assets to regenerate'
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - cover
+          - inline
+      confirm_all:
+        description: 'I understand a blank slug regenerates paid images for every post'
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: blog-content-writes
+  cancel-in-progress: false
 
 jobs:
   regenerate:
     runs-on: ubuntu-latest
+    timeout-minutes: 330
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
+      - name: Validate regeneration request
+        env:
+          POST_SLUG: ${{ inputs.slug }}
+          CONFIRM_ALL: ${{ inputs.confirm_all }}
+          IMAGE_SCOPE: ${{ inputs.scope }}
+        run: |
+          if [[ -n "$POST_SLUG" ]]; then
+            if [[ ! "$POST_SLUG" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+              echo "slug must contain only lowercase letters, numbers, and hyphens" >&2
+              exit 1
+            fi
+          elif [[ "$CONFIRM_ALL" != "true" ]]; then
+            echo "A blank slug is an all-post run. Check confirm_all to authorize the cost." >&2
+            exit 1
+          fi
+
+          if [[ "$IMAGE_SCOPE" != "all" && "$IMAGE_SCOPE" != "cover" && "$IMAGE_SCOPE" != "inline" ]]; then
+            echo "Invalid image scope" >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,27 +70,91 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Regenerate images
+      - name: Regenerate topic-specific WebP images
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POST_SLUG: ${{ inputs.slug }}
+          CONFIRM_ALL: ${{ inputs.confirm_all }}
+          IMAGE_SCOPE: ${{ inputs.scope }}
         run: |
-          if [ -n "${{ github.event.inputs.slug }}" ]; then
-            echo "Regenerating images for slug: ${{ github.event.inputs.slug }}"
-            npx tsx scripts/regenerate-images.ts --slug "${{ github.event.inputs.slug }}"
+          args=()
+          if [[ -n "$POST_SLUG" ]]; then
+            args+=(--slug "$POST_SLUG")
           else
-            echo "Regenerating images for ALL posts"
-            npx tsx scripts/regenerate-images.ts
+            args+=(--all --confirm-all)
           fi
 
-      - name: Commit updated images
+          if [[ "$IMAGE_SCOPE" == "cover" ]]; then
+            args+=(--cover-only)
+          elif [[ "$IMAGE_SCOPE" == "inline" ]]; then
+            args+=(--inline-only)
+          fi
+
+          npx tsx scripts/regenerate-images.ts "${args[@]}"
+
+      - name: Validate updated content
+        env:
+          POST_SLUG: ${{ inputs.slug }}
+        run: |
+          git diff --check
+          if [[ -n "$POST_SLUG" ]]; then
+            npm run audit-blog -- --strict-images --slug "$POST_SLUG"
+          else
+            npm run audit-blog -- --strict-images
+          fi
+          npm run typecheck
+          npm run build
+
+      - name: Commit updated images and open a review pull request
+        id: commit
+        env:
+          POST_SLUG: ${{ inputs.slug }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/images/blog/ content/posts/
+
+          if [[ -n "$POST_SLUG" ]]; then
+            git add -A -- \
+              "public/images/blog/$POST_SLUG" \
+              "content/posts/$POST_SLUG.mdx" \
+              "content/posts/$POST_SLUG.images.json" \
+              public/robots.txt \
+              public/sitemap.xml \
+              public/sitemap-0.xml
+          else
+            git add -A -- \
+              public/images/blog \
+              content/posts \
+              public/robots.txt \
+              public/sitemap.xml \
+              public/sitemap-0.xml
+          fi
+
           if git diff --staged --quiet; then
             echo "No image changes to commit"
-          else
-            git commit -m "images: regenerate blog images as professional infographics"
-            git push
-            echo "✅ Images committed and pushed — Vercel will auto-deploy"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          review_branch="automation/images-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "$review_branch"
+          git commit -m "images: regenerate topic-specific blog artwork with OpenAI"
+          git fetch origin "$GITHUB_REF_NAME"
+          git rebase "origin/$GITHUB_REF_NAME"
+          git push --set-upstream origin "$review_branch"
+
+          if [[ -n "$POST_SLUG" ]]; then
+            review_scope="$POST_SLUG"
+          else
+            review_scope="all blog posts"
+          fi
+
+          pr_url="$(gh pr create \
+            --base "$GITHUB_REF_NAME" \
+            --head "$review_branch" \
+            --title "Visual review: regenerate topic-specific blog artwork" \
+            --body "Regenerated GPT Image 2 artwork for $review_scope. Review topic fit, visual variety, accessibility text, and any removed legacy assets before merging. This pull request is intentionally not auto-merged.")"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+          echo "Opened review pull request: $pr_url"

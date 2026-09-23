@@ -1,10 +1,11 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Syne, Inter, JetBrains_Mono } from 'next/font/google'
+import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import MotionProvider from '@/components/MotionProvider'
 import { absoluteUrl, siteConfig, siteUrl } from '@/lib/site'
 
-const syne = Syne({ subsets: ['latin'], variable: '--font-syne', weight: ['400','500','600','700','800'] })
+const display = Space_Grotesk({ subsets: ['latin'], variable: '--font-syne', weight: ['400','500','600','700'] })
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['300','400','500','600','700'] })
 
@@ -64,16 +65,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${inter.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${inter.variable} ${mono.variable}`}>
       <body className="antialiased" style={{ fontFamily: 'var(--font-inter, Inter, system-ui, sans-serif)' }}>
-        {/* FOUC prevention — runs before React hydrates. Default: light. */}
+        {/* Resolve the saved or system theme before React hydrates. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t||'light');}catch(e){document.documentElement.setAttribute('data-theme','light');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var s=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t==='dark'||t==='light'?t:s);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
           }}
         />
         <ThemeProvider>
-          {children}
+          <MotionProvider>{children}</MotionProvider>
         </ThemeProvider>
       </body>
     </html>

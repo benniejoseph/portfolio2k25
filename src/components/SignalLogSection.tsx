@@ -1,4 +1,5 @@
 'use client'
+
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -7,171 +8,145 @@ import type { PostFrontmatter } from '@/lib/mdx'
 
 const TAG_COLOR: Record<string, string> = {
   Salesforce: 'var(--signal)',
-  AI:         'var(--neural)',
-  Agents:     'var(--neural)',
+  AI: 'var(--neural)',
+  Agents: 'var(--neural)',
   Agentforce: 'var(--signal)',
-  Apex:       'var(--live)',
-  LWC:        'var(--fire)',
-  Career:     'var(--neural)',
-  RAG:        'var(--neural)',
-  Performance:'var(--live)',
-  Architecture:'var(--neural)',
+  AIforce: 'var(--neural)',
+  Winter27: 'var(--signal)',
+  Dreamforce26: 'var(--fire)',
+  'Customer Success': 'var(--live)',
+  Apex: 'var(--live)',
+  LWC: 'var(--fire)',
+  Architecture: 'var(--neural)',
+  Security: 'var(--fire)',
+  API: 'var(--live)',
+}
+
+const EDITORIAL_FOCUS = ['Winter ’27 rollout', 'Dreamforce ’26', 'AIforce', 'Customer Success']
+
+function tagColor(tag: string) {
+  return TAG_COLOR[tag] ?? 'var(--signal)'
 }
 
 export default function SignalLogSection({ posts }: { posts: PostFrontmatter[] }) {
   return (
-    <section id="blog" className="relative py-24 px-6 lg:px-12">
-      <div className="max-w-6xl mx-auto">
-
-        {/* ── Header ── */}
+    <section id="blog" className="relative px-6 py-24 lg:px-12">
+      <div className="mx-auto max-w-6xl">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.55 }}
           className="mb-12"
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <span className="status-dot dot-signal" />
-            <span className="sys-label">DATASTREAM_06 // INTELLIGENCE_FEED</span>
+            <span className="sys-label">Field notes</span>
           </div>
 
-          <div className="flex items-end justify-between flex-wrap gap-4">
-            <h2
-              className="display-headline crt-text"
-              style={{ fontSize: 'clamp(32px, 5vw, 56px)', color: 'var(--text)' }}
-            >
-              SIGNAL
-              <span style={{ color: 'var(--signal)' }}> LOG</span>
-            </h2>
-            <Link
-              href="/blog"
-              className="terminal-cmd hidden md:flex items-center gap-1.5"
-              style={{ fontSize: '9px' }}
-            >
-              VIEW_ALL_POSTS <FiArrowRight size={10} />
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-3xl">
+              <h2
+                className="display-headline"
+                style={{ fontSize: 'clamp(38px, 6vw, 68px)', color: 'var(--text)', lineHeight: 0.98 }}
+              >
+                Practical thinking for the{' '}
+                <span style={{ color: 'var(--signal)' }}>Agentic Enterprise.</span>
+              </h2>
+              <p className="mt-5 max-w-2xl text-sm leading-7" style={{ color: 'var(--text-2)' }}>
+                Salesforce architecture, trusted agents, platform releases, and the customer-success decisions that turn new capabilities into useful outcomes.
+              </p>
+            </div>
+            <Link href="/blog" className="terminal-cmd rounded-full">
+              Explore all writing <FiArrowRight size={13} />
             </Link>
           </div>
 
-          <p style={{
-            fontFamily: 'var(--font-inter, sans-serif)',
-            fontSize: '13px',
-            color: 'var(--text-2)',
-            marginTop: '0.75rem',
-            maxWidth: '480px',
-            lineHeight: 1.7,
-          }}>
-            Practical takes on Salesforce architecture, AI agents, and building products as an indie developer.
-          </p>
+          <div className="mt-7 flex flex-wrap gap-2">
+            {EDITORIAL_FOCUS.map((focus, index) => (
+              <span
+                key={focus}
+                className="rounded-full border px-3 py-1.5 text-[10px] font-semibold"
+                style={{
+                  color: index === 3 ? 'var(--live)' : index === 2 ? 'var(--neural)' : index === 1 ? 'var(--fire)' : 'var(--signal)',
+                  borderColor: 'var(--border-2)',
+                  background: 'color-mix(in srgb, var(--panel) 76%, transparent)',
+                }}
+              >
+                {focus}
+              </span>
+            ))}
+          </div>
         </motion.div>
 
-        {/* ── Post grid ── */}
         {posts.length === 0 ? (
-          <div className="sys-panel p-10 text-center">
-            <span className="sys-label-dim" style={{ fontSize: '10px' }}>
-              NO_POSTS_YET — CHECK_BACK_SOON
-            </span>
+          <div
+            className="rounded-[28px] border p-10 text-center"
+            style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--panel) 84%, transparent)' }}
+          >
+            <p className="text-sm" style={{ color: 'var(--text-2)' }}>New field notes are in progress. Please check back soon.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {posts.map((post, i) => (
+          <div className="mb-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((post, index) => (
               <motion.article
                 key={post.slug}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
+                transition={{ duration: 0.42, delay: index * 0.08 }}
               >
-                <Link href={`/blog/${post.slug}`} className="block group h-full">
-                  <div className="sys-panel blog-post-card h-full flex flex-col overflow-hidden">
-
-                    {/* Cover image */}
+                <Link href={`/blog/${post.slug}`} className="group block h-full">
+                  <div
+                    className="flex h-full flex-col overflow-hidden rounded-[26px] border transition-transform duration-300 group-hover:-translate-y-1"
+                    style={{
+                      borderColor: 'var(--border)',
+                      background: 'color-mix(in srgb, var(--panel) 86%, transparent)',
+                      backdropFilter: 'blur(18px)',
+                    }}
+                  >
                     {post.coverImage && (
-                      <div
-                        className="relative w-full flex-shrink-0 overflow-hidden"
-                        style={{ aspectRatio: '3/2' }}
-                      >
+                      <div className="relative aspect-[3/2] w-full shrink-0 overflow-hidden">
                         <Image
                           src={post.coverImage}
-                          alt={post.title}
+                          alt={post.coverAlt || post.title}
                           fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
-                        <div
-                          className="absolute inset-0"
-                          style={{ background: 'linear-gradient(to bottom, transparent 40%, var(--void) 100%)' }}
-                        />
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 44%, color-mix(in srgb, var(--panel) 92%, transparent))' }} />
                       </div>
                     )}
 
-                    <div className="p-5 flex flex-col flex-1">
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {post.tags.slice(0, 2).map(tag => (
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="mb-4 flex flex-wrap gap-1.5">
+                        {post.tags.slice(0, 2).map((tag) => (
                           <span
                             key={tag}
-                            className="sys-label px-2 py-0.5 rounded-sm"
+                            className="rounded-full border px-2.5 py-1 text-[9px] font-semibold"
                             style={{
-                              fontSize: '8px',
-                              color: TAG_COLOR[tag] ?? 'var(--signal)',
-                              border: `1px solid ${TAG_COLOR[tag] ?? 'var(--signal)'}33`,
-                              background: `${TAG_COLOR[tag] ?? 'var(--signal)'}0A`,
+                              color: tagColor(tag),
+                              borderColor: `color-mix(in srgb, ${tagColor(tag)} 30%, transparent)`,
+                              background: `color-mix(in srgb, ${tagColor(tag)} 8%, transparent)`,
                             }}
                           >
-                            [{tag}]
+                            {tag}
                           </span>
                         ))}
                       </div>
 
-                      {/* Title */}
-                      <h3
-                        className="display-headline blog-post-title mb-2 flex-1 line-clamp-2"
-                        style={{
-                          fontSize: '0.95rem',
-                          lineHeight: 1.35,
-                          color: 'var(--text)',
-                          transition: 'color 0.2s',
-                        }}
-                      >
-                        {post.title}
-                      </h3>
+                      <h3 className="line-clamp-2 text-lg font-semibold leading-snug" style={{ color: 'var(--text)' }}>{post.title}</h3>
+                      <p className="mt-3 line-clamp-3 text-xs leading-6" style={{ color: 'var(--text-2)' }}>{post.excerpt}</p>
 
-                      {/* Excerpt */}
-                      <p
-                        className="line-clamp-2 mb-4"
-                        style={{
-                          fontFamily: 'var(--font-inter, sans-serif)',
-                          fontSize: '11px',
-                          color: 'var(--text-2)',
-                          lineHeight: 1.65,
-                        }}
-                      >
-                        {post.excerpt}
-                      </p>
-
-                      {/* Meta */}
-                      <div
-                        className="flex items-center justify-between pt-3"
-                        style={{ borderTop: '1px solid var(--border)' }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="sys-label-dim flex items-center gap-1" style={{ fontSize: '8px' }}>
-                            <FiCalendar size={9} />
-                            {new Date(post.date).toLocaleDateString('en-IN', {
-                              day: 'numeric', month: 'short', year: 'numeric',
-                            })}
+                      <div className="mt-auto flex items-center justify-between border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                        <div className="flex flex-wrap items-center gap-3 text-[10px]" style={{ color: 'var(--text-3)' }}>
+                          <span className="flex items-center gap-1.5">
+                            <FiCalendar size={11} />
+                            {new Date(post.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                           </span>
-                          <span className="sys-label-dim flex items-center gap-1" style={{ fontSize: '8px' }}>
-                            <FiClock size={9} />
-                            {post.readingTime}
-                          </span>
+                          <span className="flex items-center gap-1.5"><FiClock size={11} />{post.readingTime}</span>
                         </div>
-                        <FiArrowRight
-                          size={12}
-                          style={{ color: 'var(--signal)', opacity: 0, transition: 'opacity 0.2s' }}
-                          className="group-hover:opacity-100 group-hover:translate-x-0.5 transition-transform"
-                        />
+                        <FiArrowRight className="transition-transform duration-200 group-hover:translate-x-1" size={14} style={{ color: 'var(--signal)' }} />
                       </div>
                     </div>
                   </div>
@@ -180,14 +155,6 @@ export default function SignalLogSection({ posts }: { posts: PostFrontmatter[] }
             ))}
           </div>
         )}
-
-        {/* Mobile view-all */}
-        <div className="flex justify-center md:hidden mt-2">
-          <Link href="/blog" className="terminal-cmd flex items-center gap-1.5" style={{ fontSize: '9px' }}>
-            VIEW_ALL_POSTS <FiArrowRight size={10} />
-          </Link>
-        </div>
-
       </div>
     </section>
   )

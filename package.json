@@ -3,55 +3,47 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "NODE_OPTIONS='--localstorage-file=/tmp/next-localstorage' next dev",
     "build": "next build && next-sitemap",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "audit-blog": "tsx scripts/audit-blog.ts",
+    "check": "npm run lint && npm run typecheck && npm run audit-blog -- --strict-images && npm run build",
     "generate-post": "npx tsx scripts/generate-post.ts",
     "generate-post:list": "npx tsx scripts/generate-post.ts --list"
   },
   "dependencies": {
-    "@google/genai": "^2.5.0",
-    "@react-three/drei": "^10.0.7",
-    "@react-three/fiber": "^9.1.2",
-    "@vercel/og": "^0.11.1",
-    "canvas-confetti": "^1.9.3",
     "emailjs-com": "^3.2.0",
     "framer-motion": "^12.7.4",
     "gray-matter": "^4.0.3",
-    "next": "^16.2.6",
+    "next": "^16.3.6",
     "next-mdx-remote": "^6.0.0",
     "next-sitemap": "^4.2.3",
-    "openai": "^6.38.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-hot-toast": "^2.5.2",
+    "openai": "^6.49.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "react-icons": "^5.5.0",
-    "react-scroll": "^1.9.3",
     "reading-time": "^1.5.0",
     "rehype-pretty-code": "^0.14.3",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "shiki": "^1.29.2",
-    "three": "^0.175.0",
-    "use-sound": "^5.0.0"
+    "shiki": "^1.29.2"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.97.0",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/react-scroll": "^1.8.10",
-    "autoprefixer": "^10.4.21",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.6.1",
     "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "postcss": "^8.4.35",
+    "eslint-config-next": "^16.3.6",
+    "postcss": "^8.5.28",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.22.3",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
   }
 }
