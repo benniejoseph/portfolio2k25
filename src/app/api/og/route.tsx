@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
               opacity: 0.7,
             }}
           >
-            benniejoseph.dev/blog
+            bennierichard.com/blog
           </div>
         </div>
       </div>

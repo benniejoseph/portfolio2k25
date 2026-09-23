@@ -68,4 +68,4 @@ The scheduled workflow creates one unpublished backlog item at a time and opens 
 
 ## Deployment
 
-The production domain is [benniejoseph.dev](https://benniejoseph.dev). Set `NEXT_PUBLIC_SITE_URL` (or `SITE_URL`) when deploying elsewhere so canonical URLs, RSS, sitemap, JSON-LD, and Open Graph metadata stay consistent.
+The production domain is [www.bennierichard.com](https://www.bennierichard.com). Set `NEXT_PUBLIC_SITE_URL` (or `SITE_URL`) when deploying elsewhere so canonical URLs, RSS, sitemap, JSON-LD, and Open Graph metadata stay consistent.

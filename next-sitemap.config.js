@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const matter = require('gray-matter')
 
-const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://benniejoseph.dev'
+const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.bennierichard.com'
 const postsDir = path.join(process.cwd(), 'content/posts')
 
 function getPostMetadata() {

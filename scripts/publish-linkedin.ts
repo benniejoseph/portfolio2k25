@@ -36,7 +36,7 @@ const title   = (data.title   as string) ?? slug
 const excerpt = (data.excerpt as string) ?? ''
 const tags    = (data.tags    as string[]) ?? []
 
-const canonicalSite = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://benniejoseph.dev').replace(/\/$/, '')
+const canonicalSite = (process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://www.bennierichard.com').replace(/\/$/, '')
 const postUrl    = `${canonicalSite}/blog/${slug}`
 const shareUrl   = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`
 const hashtags   = tags.map(t => `#${t.replace(/[^a-zA-Z0-9]/g, '')}`).join(' ')

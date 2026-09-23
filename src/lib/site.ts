@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: 'Bennie Joseph',
   title: 'Bennie Joseph | Customer Success Manager at Salesforce',
-  url: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://benniejoseph.dev',
+  url: process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://www.bennierichard.com',
   description:
     'Salesforce Customer Success Manager and Certified Application Architect helping teams connect Salesforce, AI agents, and enterprise architecture to measurable customer outcomes.',
   author: {
