@@ -18,6 +18,7 @@ import {
   TOPIC_BACKLOG,
   toPostSlug,
 } from '../src/lib/blog-ai'
+import { generateLinkedInDraft } from '../src/lib/linkedin-draft'
 
 function loadLocalEnvironment(): void {
   const envPath = path.join(process.cwd(), '.env.local')
@@ -117,6 +118,12 @@ async function main(): Promise<void> {
   const generatedSlug = await generateAndSave(topic, { force })
   console.log(`✓ Post saved: content/posts/${generatedSlug}.mdx`)
   console.log(`  Preview: http://localhost:3000/blog/${generatedSlug}`)
+
+  const linkedInDraft = await generateLinkedInDraft({ slug: generatedSlug, force })
+  console.log(
+    `✓ LinkedIn draft saved: content/linkedin-drafts/${generatedSlug}.md ` +
+    `(${linkedInDraft.wordCount}/${linkedInDraft.limits.maxWords} words)`
+  )
 
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(process.env.GITHUB_OUTPUT, `slug=${generatedSlug}\n`, 'utf-8')

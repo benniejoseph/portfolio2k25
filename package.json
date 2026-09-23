@@ -12,9 +12,11 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "audit-blog": "tsx scripts/audit-blog.ts",
-    "check": "npm run lint && npm run typecheck && npm run audit-blog -- --strict-images && npm run build",
+    "audit-linkedin": "tsx scripts/audit-linkedin.ts",
+    "check": "npm run lint && npm run typecheck && npm run audit-blog -- --strict-images && npm run audit-linkedin && npm run build",
     "generate-post": "npx tsx scripts/generate-post.ts",
-    "generate-post:list": "npx tsx scripts/generate-post.ts --list"
+    "generate-post:list": "npx tsx scripts/generate-post.ts --list",
+    "generate-linkedin": "npx tsx scripts/publish-linkedin.ts"
   },
   "dependencies": {
     "emailjs-com": "^3.2.0",

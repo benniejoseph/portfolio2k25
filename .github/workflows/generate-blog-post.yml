@@ -76,7 +76,20 @@ jobs:
           git diff --check
           npm run typecheck
           npm run audit-blog
+          if [[ -f .generated-slug ]]; then
+            slug="$(tr -d '\r\n' < .generated-slug)"
+            npm run audit-linkedin -- --slug "$slug"
+          fi
           npm run build
+
+      - name: Upload paste-ready LinkedIn draft
+        if: steps.generate.outputs.slug != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: linkedin-draft-${{ steps.generate.outputs.slug }}
+          path: content/linkedin-drafts/${{ steps.generate.outputs.slug }}.md
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Commit generated content and open a review pull request
         id: commit
@@ -87,6 +100,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A -- \
             content/posts \
+            content/linkedin-drafts \
             public/images/blog \
             public/robots.txt \
             public/sitemap.xml \
@@ -108,18 +122,7 @@ jobs:
             --base "$GITHUB_REF_NAME" \
             --head "$review_branch" \
             --title "Editorial review: generated Salesforce field note" \
-            --body "Generated with the OpenAI Responses and Image APIs. Review every release-status claim, source, code sample, image, and first-person statement before merging. This pull request is intentionally not auto-merged.")"
+            --body "Generated with the OpenAI Responses and Image APIs. Includes a paste-ready LinkedIn draft with explicit word and character budgets. Review every release-status claim, source, code sample, image, and first-person statement before merging. This pull request is intentionally not auto-merged.")"
           echo "committed=true" >> "$GITHUB_OUTPUT"
           echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
           echo "Opened review pull request: $pr_url"
-
-      - name: Generate LinkedIn draft
-        if: steps.commit.outputs.committed == 'true'
-        run: |
-          if [[ -f .generated-slug ]]; then
-            slug="$(tr -d '\r\n' < .generated-slug)"
-            echo "Generating LinkedIn draft for: $slug"
-            npx tsx scripts/publish-linkedin.ts --slug "$slug"
-          else
-            echo "No generated slug found; skipping LinkedIn draft"
-          fi
