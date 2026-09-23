@@ -55,7 +55,7 @@ const VISUAL_DIRECTIONS: VisualDirection[] = [
     name: 'terminal macro study',
     composition: 'a dramatic close crop of a terminal or code editor where a few real topic-specific lines become the visual architecture',
     medium: 'dark editorial macro photography blended with razor-sharp syntax highlighting and restrained holographic overlays',
-    detail: 'contrast one risky pattern with one safer pattern without turning the image into a generic before-and-after template',
+    detail: 'show only contrasts explicitly supported by the brief; never invent that a stable baseline version fails merely because a newer version exists',
   },
   {
     name: 'kinetic transit diagram',
@@ -142,6 +142,7 @@ VISUAL DIRECTION — ${direction.name.toUpperCase()}:
 
 NON-NEGOTIABLES:
 - Depict the named technologies, decisions, states, or code concepts in the brief. Do not substitute a generic cloud diagram or generic AI-agent loop.
+- Preserve the brief's factual meaning. Do not invent success or failure states, and never portray an older supported API or release as broken solely because a newer version exists.
 - Prefer no embedded text. When a diagram cannot work without it, use at most two short labels. No paragraphs, fake code, gibberish typography, watermarks, company logos, or portraits.
 - Do not reproduce Salesforce trademarks or UI screenshots. Brand influence should come from color and energetic trailblazer-era optimism, not copied assets.
 - Keep this image compositionally distinct from companion images for the same article.
