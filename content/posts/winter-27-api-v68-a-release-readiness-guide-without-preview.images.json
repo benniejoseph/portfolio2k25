@@ -3,11 +3,11 @@
   "title": "Winter '27 API v68: A Release Readiness Guide Without Preview Surprises",
   "keyword": "salesforce winter 27 api v68 release readiness",
   "pillar": "salesforce",
-  "textModel": "gpt-5.6-sol",
+  "textModel": "existing-post",
   "imageModel": "gpt-image-2",
   "format": "webp",
   "compression": 86,
-  "generatedAt": "2026-09-23T07:14:14.361Z",
+  "generatedAt": "2026-09-23T07:20:17.369Z",
   "cover": "Create a wide 16:9 editorial composition for a technical article titled \"Winter '27 API v68: A Release Readiness Guide Without Preview Surprises\".\n\nARTICLE SUBJECT: salesforce winter 27 api v68 release readiness\nARTICLE-SPECIFIC VISUAL BRIEF: A deployment control room with three Salesforce environments represented as distinct server racks: preview sandbox, upgraded production instance, and not-yet-upgraded production instance. A guarded API v68 package waits at a release gate while a v67 package continues through the stable lane, emphasizing instance-aware rollout rather than a single global launch.\nPURPOSE: Create one instantly recognizable hero idea with a clear focal point and uncluttered edges for responsive cropping.\n\nVISUAL DIRECTION — LUMINOUS SYSTEMS CARTOGRAPHY:\n- Composition: an asymmetric map of named systems connected by precise routes, with one strong focal node and generous negative space.\n- Medium: crisp editorial vector art with subtle volumetric light and fine technical linework.\n- Semantic detail: encode hierarchy through route weight, node scale, and small geometric status markers.\n- Palette: Salesforce navy and cloud blue with aurora violet and warm coral accents. Keep contrast accessible and the main silhouette readable at thumbnail size.\n\nNON-NEGOTIABLES:\n- Depict the named technologies, decisions, states, or code concepts in the brief. Do not substitute a generic cloud diagram or generic AI-agent loop.\n- Prefer no embedded text. When a diagram cannot work without it, use at most two short labels. No paragraphs, fake code, gibberish typography, watermarks, company logos, or portraits.\n- Do not reproduce Salesforce trademarks or UI screenshots. Brand influence should come from color and energetic trailblazer-era optimism, not copied assets.\n- Keep this image compositionally distinct from companion images for the same article.\n- Polished publication quality, precise geometry, crisp edges, and no visual artifacts.",
   "coverAlt": "API v68 moving through instance-aware Winter 27 release gates",
   "images": [
