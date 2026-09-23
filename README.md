@@ -40,12 +40,13 @@ npm run build
 
 ## Blog automation
 
-Posts live in `content/posts` and their assets live in `public/images/blog/<slug>`.
+Posts live in `content/posts`, their assets live in `public/images/blog/<slug>`, and each generated article gets a paste-ready draft in `content/linkedin-drafts/<slug>.md`.
 
 ```bash
 npm run generate-post:list
 npm run generate-post
 npm run generate-post -- --index 4
+npm run generate-linkedin -- --slug existing-post-slug --force
 ```
 
 Text generation tries `gpt-6-astra` first and falls back to `gpt-5.6-sol` when the primary model is unavailable. Artwork uses `gpt-image-2`. Cover and inline prompts are derived from each article's topic and purpose; the pipeline deliberately varies composition and avoids a single repeated infographic template.
@@ -58,7 +59,9 @@ OPENAI_API_KEY
 
 The OpenAI client defaults to the project’s required U.S. regional endpoint, `https://us.api.openai.com/v1`. Override `OPENAI_BASE_URL` only when the API project is configured for another supported processing region.
 
-The scheduled workflow creates one unpublished backlog item at a time and opens a pull request; it never auto-merges or pushes generated editorial content straight to the publishing branch. Review every factual claim, source, code sample, image, and first-person statement before merging, especially for preview, beta, pilot, or rolling Salesforce releases.
+LinkedIn copy uses the same text-model fallback chain and is grounded in the finished article. The default budget is 180 words and 2,600 characters, with a 120–160 word target, no more than three hashtags, and one canonical article link. Override the hard budgets with `LINKEDIN_MAX_WORDS` and `LINKEDIN_MAX_CHARACTERS`; the latter can never exceed LinkedIn’s 3,000-character platform limit. The saved frontmatter records the actual counts, limits, and model. Run `npm run audit-linkedin` to verify every saved draft; the audit requires a matching draft for every article dated September 23, 2026, or later while leaving older archive posts exempt from backfill.
+
+The scheduled workflow creates one unpublished backlog item at a time, saves and uploads its LinkedIn draft, and opens a pull request; it never auto-merges or pushes generated editorial content straight to the publishing branch. Review every factual claim, source, code sample, image, LinkedIn phrase, and first-person statement before merging, especially for preview, beta, pilot, or rolling Salesforce releases.
 
 ## Content and profile sources
 
