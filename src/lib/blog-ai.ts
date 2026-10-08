@@ -9,7 +9,7 @@ import {
   type ImagePurpose,
 } from './image-styles'
 
-const DEFAULT_TEXT_MODELS = ['gpt-6-astra', 'gpt-5.6-sol'] as const
+const DEFAULT_TEXT_MODELS = ['gpt-6-astra', 'gpt-6.1-sol'] as const
 export const BLOG_IMAGE_MODEL = 'gpt-image-2.5-sunburst'
 export const BLOG_IMAGE_FORMAT = 'webp'
 const BLOG_IMAGE_COMPRESSION = 86
