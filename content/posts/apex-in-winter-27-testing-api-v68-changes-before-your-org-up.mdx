@@ -1,0 +1,299 @@
+---
+title: "Apex in Winter '27: Testing API v68 Changes Before Your Org Upgrades"
+excerpt: "Separate Apex compile versions from org runtime, test Winter ’27 heap and tooling changes, and build a repeatable API v68 regression plan."
+date: "2026-10-08"
+lastVerified: "2026-10-08"
+tags: ["Salesforce", "Apex", "Winter27", "Testing"]
+keyword: "apex winter 27 api v68 changes testing"
+featured: false
+coverImage: /images/blog/apex-in-winter-27-testing-api-v68-changes-before-your-org-up/cover.webp
+coverAlt: "Identical Apex code tested against two runtime environments with different memory capacity"
+---
+
+The safest Winter ’27 upgrade test starts with **unchanged Apex**, not a repository-wide API version bump.
+
+First, establish whether your existing code behaves correctly on the upgraded runtime. Then test deliberate moves to API v68.0. Keep those results separate.
+
+Salesforce stores API version settings on Apex classes and triggers, while Winter ’27 also introduces changes controlled by the org’s release and settings. The documented heap-limit increase is a concrete example: its activation follows the org upgrade schedule, not a requirement to recompile every class at v68.0. See [Manage Version Settings for Apex](https://help.salesforce.com/s/articleView?id=platform.code_version_settings_apex.htm&language=en_US&type=5) and [Handle Larger Datasets with Increased Apex Heap Limits](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_heap_limit.htm&language=en_US&type=5). ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=platform.code_version_settings_apex.htm&language=en_US&type=5))
+
+This post turns that distinction into a practical regression plan. The examples are a **hypothetical architecture scenario**, not a customer implementation or reported project outcome.
+
+## Establish the target org’s release before testing
+
+The [Admin Release Countdown: Get Ready for Winter ’27](https://admin.salesforce.com/blog/2026/admin-winter-27-release-countdown) lists production deployment dates of **September 4, October 2, and October 9, 2026**. The October 8 publication date therefore does not imply that every production org has upgraded. Verify your target instance’s maintenance window and enabled features. ([admin.salesforce.com](https://admin.salesforce.com/blog/2026/admin-winter-27-release-countdown))
+
+Use these status distinctions throughout your test plan:
+
+- **Preview:** An environment or capability available for preproduction evaluation. Preview success is not proof of production availability.
+- **Rollout-dependent:** A documented change whose availability depends on the target org’s upgrade.
+- **Developer Preview or Beta:** Preserve the feature’s explicit designation and restrictions.
+- **Pilot:** Do not assume access without confirmed participation.
+- **GA:** Use only when supported by the capability’s documentation—not merely because it appears in seasonal notes.
+
+For this article, the [Winter ’27 Apex release notes](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex.htm&language=en_US&type=5) explicitly identify HTTP integration tests as **Developer Preview** and elastic limits for Batch Apex as **Beta**. Neither becomes GA just because an org supports v68.0. ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex.htm&language=en_US&type=5))
+
+**Source check:** The supplied [release-notes URL containing `release=220`](https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&language=en_US&release=220&type=5) did not expose readable release content during verification. This article instead uses the [current release-notes page displaying Winter ’27](https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&language=en_US&type=5) and its individual Apex notes. Treat a URL parameter as navigation, not evidence of release identity.
+
+## Separate three different version controls
+
+“Apex API version” is often used too loosely in upgrade discussions. Record three independent controls:
+
+| Control | What to record | What the test isolates |
+|---|---|---|
+| Apex compile version | Each relevant class and trigger’s saved API version | Versioned language and behavior contracts |
+| Org runtime and settings | Release, instance, Apex Settings, release updates | Platform behavior affecting execution |
+| Client API version | REST or Tooling API version used by automation | Request parameters and endpoint contracts |
+
+The first control is documented in [Apex version settings](https://help.salesforce.com/s/articleView?id=platform.code_version_settings_apex.htm&language=en_US&type=5). The second appears in the [heap-limit rollout note](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_heap_limit.htm&language=en_US&type=5). The third matters for the [v68 Test Discovery API parameter change](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_discovery_api_testlevel.htm&language=en_US&type=5).
+
+My recommended test matrix is:
+
+| Test lane | Apex compile version | Org runtime | Decision supported |
+|---|---|---|---|
+| Baseline | Existing versions, unchanged | Summer ’26 | Capture current behavior |
+| Upgrade compatibility | Same versions and source | Winter ’27 preview or upgraded sandbox | Identify runtime or configuration differences |
+| v68 adoption | Selected classes at 68.0 | Same Winter ’27 environment | Evaluate deliberate version migration |
+| Mixed-release deployment | Production-compatible versions | Winter ’27 nonproduction with older heap setting | Check compatibility before production upgrades |
+
+Keep package versions, permissions, fixtures, and relevant automation aligned. If they differ, record the difference rather than attributing every failure to Winter ’27.
+
+Do not normalize an older repository to v67 before establishing the baseline. That would introduce another migration into the experiment.
+
+
+![Three independent controls for Apex compile version, org runtime, and client API requests](/images/blog/apex-in-winter-27-testing-api-v68-changes-before-your-org-up/image-1.webp)
+
+
+## Prioritize the changes that can alter your results
+
+### Heap limits: runtime rollout, not a v68 compile switch
+
+Salesforce documents synchronous Apex heap increasing from **6 MB to 10 MB**, and asynchronous heap from **12 MB to 25 MB**. The increase is enabled automatically according to the Winter ’27 release schedule. Confirm the actual transaction limit with `Limits.getLimitHeapSize()`. See [Handle Larger Datasets with Increased Apex Heap Limits](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_heap_limit.htm&language=en_US&type=5). ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_heap_limit.htm&language=en_US&type=5))
+
+The same note documents a nonproduction Apex setting, **Enforce the Summer ’26 Apex heap limit**, for testing against the older limits while production remains on Summer ’26.
+
+**Compile-version behavior:** Hold class versions constant.
+
+**Org-runtime behavior:** Compare the reported limits and application results across runtime/settings combinations.
+
+My recommendation: retain payload-size and chunking budgets during rollout. Do not make an oversized transaction pass in preview and assume it will pass in a production org that has not upgraded.
+
+### Test Discovery: a client API contract change
+
+At API v68.0 and later, Test Discovery uses `testLevel` instead of `showAllMethods`. The older parameter remains available only through v67.0. The documented request for local tests is:
+
+```http
+GET /services/data/v68.0/tooling/tests?testLevel=RunLocalTests
+```
+
+`RunLocalTests` includes tests in the org’s namespace and flow tests, while excluding installed managed-package tests. Omitting `testLevel` defaults to `RunAllTestsInOrg`. See [Filter Test Discovery API Results with the testLevel Parameter](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_discovery_api_testlevel.htm&language=en_US&type=5). ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_discovery_api_testlevel.htm&language=en_US&type=5))
+
+**Compile-version behavior:** This request does not change any Apex class’s saved version.
+
+**Org-runtime behavior:** The target must support the requested API version.
+
+**Client behavior:** The request’s version and parameter determine discovery semantics.
+
+For custom CI tooling, compare discovered test identities—not just HTTP success. Fail the pipeline on an unexpected empty result or unexplained scope change. Discovery success is not evidence that tests ran.
+
+### HTTP integration tests: Developer Preview, not a replacement for unit tests
+
+Winter ’27 documents real HTTP callouts in Apex integration tests for eligible scratch orgs, with the `ApexIntegrationTests` feature enabled. The capability remains **Developer Preview**, with explicit guidance against production implementation. It also introduces shared setup through `@BeforeClass` and cleanup considerations for committed data. See [Test External Services and HTTP Callouts in Apex Integration Tests](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_integration_tests.htm&language=en_US&type=5). ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_integration_tests.htm&language=en_US&type=5))
+
+**Compile-version behavior:** Validate preview annotations against the supported compiler; do not infer availability from a metadata edit alone.
+
+**Org-runtime behavior:** Scratch-org eligibility and feature enablement remain necessary.
+
+Keep deterministic, mocked unit tests as the deployment gate. Evaluate live-callout tests separately with synthetic data, nonproduction credentials, idempotent operations, and cleanup procedures. Budget for external API usage and avoid automatic retries of operations with irreversible side effects.
+
+### Elastic Batch limits: Beta with throughput tradeoffs
+
+The [elastic limits for Batch jobs release note](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_elastic_limits_batch.htm&language=en_US&type=5) describes a **Beta** setting that extends elastic processing to Batch Apex. Above the standard asynchronous limit, processing is throttled and new Batch jobs are limited to one active job at a time. ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_elastic_limits_batch.htm&language=en_US&type=5))
+
+**Compile-version behavior:** Do not treat a v68 class change as the enablement mechanism.
+
+**Org-runtime behavior:** Eligible editions, the Beta setting, and asynchronous usage govern behavior.
+
+Test completion deadlines, oldest queued-job age, and backlog recovery—not only successful enqueueing. Use the documented nonproduction limit override rather than generating unnecessary load.
+
+### Managed-package anonymous Apex: release-update testing
+
+The [managed-package anonymous Apex release update](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_block_exec_anon_ru.htm&language=en_US&type=5) blocks affected managed-package sessions from authenticating anonymous Apex. The note schedules enforcement for **Summer ’27** and documents separate restrictions for namespaces created in Summer ’26 or later. ([help.salesforce.com](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_block_exec_anon_ru.htm&language=en_US&type=5))
+
+**Compile-version behavior:** Changing subscriber classes to v68 is not the test.
+
+**Org-runtime behavior:** Package namespace history and the release-update state matter.
+
+Review the documented impact assessment and rehearse affected package workflows in a sandbox. Coordinate remediation with the package publisher; do not compensate by broadening permissions.
+
+## Run a small Apex probe before the full regression suite
+
+This self-contained test models serialization of a synthetic export payload. It provides:
+
+- A deterministic payload assertion.
+- Synchronous and Queueable execution paths.
+- Runtime heap-limit observations.
+- No database writes, credentials, or external calls.
+
+Save it as `Winter27RuntimeProbeTest.cls`.
+
+```apex
+@IsTest
+private class Winter27RuntimeProbeTest {
+    private static void verifyPayload(String executionPath) {
+        List<Account> source = new List<Account>();
+        for (Integer i = 0; i < 200; i++) {
+            source.add(new Account(
+                Name = 'Synthetic Export ' + i,
+                Description = 'Synthetic data for release regression'
+            ));
+        }
+
+        String payload = JSON.serialize(source);
+        List<Account> restored = (List<Account>) JSON.deserialize(
+            payload,
+            List<Account>.class
+        );
+
+        System.assertEquals(200, restored.size());
+        System.assertEquals(source[0].Name, restored[0].Name);
+        System.assertEquals(source[199].Name, restored[199].Name);
+
+        // Application budget, not a Salesforce governor-limit value.
+        System.assert(
+            payload.length() < 250000,
+            'Synthetic export exceeded its character budget'
+        );
+
+        Map<String, Object> observation = new Map<String, Object>{
+            'probe' => 'winter27-payload',
+            'executionPath' => executionPath,
+            'recordCount' => restored.size(),
+            'payloadCharacters' => payload.length(),
+            'heapBytesAtSample' => Limits.getHeapSize(),
+            'heapLimitBytes' => Limits.getLimitHeapSize(),
+            'cpuMillisecondsAtSample' => Limits.getCpuTime()
+        };
+        System.debug(
+            LoggingLevel.INFO,
+            'RELEASE_PROBE ' + JSON.serialize(observation)
+        );
+    }
+
+    private class PayloadJob implements Queueable {
+        public void execute(QueueableContext context) {
+            Winter27RuntimeProbeTest.verifyPayload('queueable');
+        }
+    }
+
+    @IsTest
+    static void synchronousPayload() {
+        Test.startTest();
+        verifyPayload('synchronous');
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void asynchronousPayload() {
+        Test.startTest();
+        System.enqueueJob(new PayloadJob());
+        Test.stopTest();
+    }
+}
+```
+
+Use this companion `Winter27RuntimeProbeTest.cls-meta.xml` for the v67 baseline:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ApexClass xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <status>Active</status>
+</ApexClass>
+```
+
+The test uses established Apex testing patterns; Salesforce documents Queueable execution during `Test.stopTest()` in its [test-event delivery example](https://developer.salesforce.com/docs/platform/platform-events/guide/platform-events-test-deliver.html). The heap release note explicitly recommends `Limits.getLimitHeapSize()` for verification.
+
+### Execute the probe without confusing the variables
+
+1. Run the v67 test in the Summer ’26 baseline environment.
+2. Run identical source and metadata in Winter ’27 nonproduction.
+3. Where available, repeat with the Summer ’26 heap enforcement setting enabled.
+4. On the same Winter ’27 runtime, change only this test’s metadata to `68.0` and rerun.
+
+**Compile-version behavior:** Steps 1–3 preserve v67. Step 4 deliberately changes it.
+
+**Org-runtime behavior:** Record the release and heap setting for every run. Do not derive either from the test class’s version.
+
+The code observes the available limit; it deliberately does not hard-code an expected Winter ’27 byte count. It also does not prove heap-boundary safety, authorization, or production throughput.
+
+Treat the heap and CPU values as samples, not peak measurements or service-level guarantees. Replace the synthetic payload routine with calls to your actual serializers and services when extending the regression suite. Keep those services’ compile versions explicit too.
+
+## Build regression cases around business contracts
+
+For the hypothetical export service, I would require these cases:
+
+| Case | Assertion |
+|---|---|
+| Empty input | Documented empty output, no unexpected work |
+| Representative bulk input | Correct record count and field values |
+| Large permitted payload | Meets the application’s size and processing budget |
+| Invalid input | Predictable error contract |
+| Restricted user | No unauthorized records or fields returned |
+| Remote failure | Controlled timeout, retry, and error handling |
+| Replayed request | No duplicate externally visible operation |
+
+Run each applicable case first with unchanged compile versions across runtimes, then with selected v68 migrations on a fixed Winter ’27 environment.
+
+Be especially careful when a “v68 migration” actually jumps from v66 or earlier. Salesforce’s [Summer ’26 developer guide](https://developer.salesforce.com/blogs/2026/06/the-salesforce-developers-guide-to-the-summer-26-release) documents v67 security changes, including default user-mode database operations and changes to implicit sharing. Those are **v67 changes crossed during migration**, not newly introduced Winter ’27 behavior. ([developer.salesforce.com](https://developer.salesforce.com/blogs/2026/06/the-salesforce-developers-guide-to-the-summer-26-release))
+
+Use explicit security intent and limited-permission test identities. Do not resolve an authorization regression by automatically switching operations to system mode.
+
+
+![Release workflow progressing from baseline evidence through runtime comparison and controlled API version migration](/images/blog/apex-in-winter-27-testing-api-v68-changes-before-your-org-up/image-2.webp)
+
+
+## Scale the test strategy to the application
+
+These are recommended operating patterns, not Salesforce product limits.
+
+| Scale | Recommended approach | Principal tradeoff |
+|---|---|---|
+| Small: one application and team | Baseline results, one preview sandbox, focused critical-path suite | Low setup cost; limited configuration coverage |
+| Medium: several integrations and packages | Separate compatibility and adoption branches; nightly permission and integration suites | More environment coordination and CI time |
+| Enterprise: multiple orgs and high-volume asynchronous work | Per-instance rollout inventory, package/version matrix, controlled load tests, explicit owners | Higher maintenance cost; stronger failure isolation |
+
+For a small application, avoid building a complex test platform solely for this release.
+
+For a medium estate, prioritize repeatable fixtures and contract tests at integration boundaries.
+
+For enterprise scale, separate transaction correctness from workload completion. A passing Queueable unit test is not evidence that an overnight backlog meets its deadline. Elastic throttling makes that distinction particularly important, as documented in the [Batch elastic limits note](https://help.salesforce.com/s/articleView?id=release-notes.rn_apex_elastic_limits_batch.htm&language=en_US&type=5).
+
+My recommended evidence bundle contains:
+
+- Source commit and deployed component versions.
+- Org release, instance, settings, and package inventory.
+- Client API version and test-selection parameters.
+- Test identities, failures, and sanitized diagnostics.
+- Runtime observations and named approval owner.
+
+Keep customer payloads, session IDs, and tokens out of that bundle. Give logs an access policy and retention period.
+
+## Make rollout approval narrower than “all tests passed”
+
+Use three separate approvals:
+
+1. **Runtime compatibility:** Existing code passes on the upgraded runtime.
+2. **Version adoption:** Selected v68 changes pass on a fixed runtime.
+3. **Optional feature adoption:** Each Beta, preview, or release update receives its own assessment.
+
+My recommended stop conditions are an authorization mismatch, unexplained test-discovery change, failed business assertion, or workload completion outside the agreed budget.
+
+Prepare a deployable previous application revision and a documented configuration recovery path. Treat those as application recovery measures—not a plan to reverse Salesforce’s seasonal upgrade. Where a feature cannot be safely disabled, prepare containment: pause a scheduled process, reduce batch scope, or route work to a manual queue.
+
+The practical goal is not “everything compiled at v68.” It is **evidence that distinguishes runtime readiness from intentional API-version adoption**.
+
+## TL;DR
+
+- Test unchanged Apex on Winter ’27 first; migrate selected classes to v68 only in a separate comparison.
+- Verify the target org’s release and settings, and preserve each feature’s documented preview or Beta status.
+- Gate rollout on business contracts, authorization, test scope, and workload completion—not compilation or coverage alone.
